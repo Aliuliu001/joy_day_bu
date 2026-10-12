@@ -1,0 +1,339 @@
+/****************************************************
+ * JOY DẠY BÙ — Code.gs
+ * Chạy trong Google Apps Script (gắn với Google Sheet DẠY BÙ)
+ * Cách dùng: copy toàn bộ file này vào Apps Script → chạy setupDayBu() 1 lần
+ ****************************************************/
+
+// ===== CẤU HÌNH — bạn chỉ cần sửa chỗ này =====
+var CFG = {
+  GROUP_ID: '-1004378772858', // nhóm Học Bù
+  TOPIC_ID: 2,                // topic Học Bù
+  HAN_TRA_LOI: '12h trưa Thứ 4', // quá hạn không trả lời = đẩy tuần sau
+  TOI_DA_CA: 4,               // mỗi ca tối đa 4 bé
+  TOI_DA_TRINH_DO: 2,         // mỗi ca tối đa 2 trình độ chung
+  HONG_ANH_DEN_HT: '2026-10-31', // Ms. Hồng Anh làm hết tháng 10
+};
+
+var TRINH_DO = ['Kids', 'SP0', 'SP1', 'SP2', 'SP3', 'SP4'];
+
+// 25 lớp thật (đã bỏ 7 dòng Kem/Ketoan/G1.001)
+var LOP_LIST = [
+  // Mr. Đức Anh — bé nhỏ
+  'S1.006 - Lychee', 'S2.004 - Cherry', 'C2.004 - Kiwi', 'T1.001 - Apple', 'W2.001 - Cookie',
+  // Ms. Vân
+  'S1.005 - Peach', 'S2.003 - Peanut', 'C2.002 - Chestnut', 'W1.002 - Ice-cream', 'T2.004 - Pea',
+  // Ms. Hồng Anh (tới hết T10/2026)
+  'S1.004 - Watermelon', 'S2.002 - Blueberry', 'C2.003 - Tomato', 'T2.002 - Carrot',
+  // Mr. Ngọc
+  'S1.001 - Cashew', 'S2.001 - Pumpkin Seed', 'C2.005 - Pineapple', 'W1.003 - Tiramisu',
+  // Ms. Trâm
+  'S1.003 - Hazelnut', 'S2.005 - Acorn', 'C2.006 - Broccoli', 'T2.003 - Potato',
+  // Ms. Uyên Vi
+  'S1.002 - Almond', 'C2.001 - Strawberry',
+  // Ms. Nhung
+  'S2.006 - Avocado'
+];
+
+// Lớp của Đức Anh → ưu tiên xếp ca Đức Anh
+var LOP_DUC_ANH = ['S1.006 - Lychee', 'S2.004 - Cherry', 'C2.004 - Kiwi', 'T1.001 - Apple', 'W2.001 - Cookie'];
+
+// 4 ca cố định mỗi tuần
+function layDanhSachCa() {
+  var hongAnhCon = hongAnhConLam();
+  var gvVan = hongAnhCon ? 'Ms. Vân / Ms. Hồng Anh' : 'Ms. Vân';
+  return [
+    { ma: 'T5-1', thu: 'Thứ 5', gio: '17h00 - 18h30', gv: gvVan },
+    { ma: 'T6-1', thu: 'Thứ 6', gio: '15h00 - 16h30', gv: gvVan },
+    { ma: 'T6-2', thu: 'Thứ 6', gio: '17h00 - 18h30', gv: gvVan },
+    { ma: 'T6-3', thu: 'Thứ 6', gio: '18h00 - 19h30', gv: 'Mr. Đức Anh' },
+  ];
+}
+
+function hongAnhConLam() {
+  var homNay = new Date();
+  var han = new Date(CFG.HONG_ANH_DEN_HT + 'T23:59:59');
+  return homNay <= han;
+}
+
+// ===== MENU =====
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('📚 Dạy Bù')
+    .addItem('1️⃣ Tạo sheet (chạy 1 lần)', 'setupDayBu')
+    .addItem('2️⃣ Gom nhóm (bấm chiều T2)', 'gomNhom')
+    .addItem('3️⃣ Gửi tin cho GV (ca đã chốt ✅)', 'guiTinChoGV')
+    .addItem('4️⃣ Đẩy quá hạn sang tuần sau', 'dayQuaHanSangTuanSau')
+    .addToUi();
+}
+
+// ===== TẠO SHEET =====
+function setupDayBu() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  // Tab 1: BÁO BÙ (Form tự đổ về đây)
+  var sh1 = layHoacTaoSheet(ss, 'BAO_BU');
+  sh1.clear();
+  sh1.appendRow(['Ngày báo', 'GV báo', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'Trạng thái', 'Ca xếp', 'Ghi chú']);
+  sh1.getRange(1, 1, 1, 9).setFontWeight('bold').setBackground('#F6F3EE');
+
+  // Tab 2: LỊCH BÙ (sau khi gom nhóm)
+  var sh2 = layHoacTaoSheet(ss, 'LICH_BU');
+  sh2.clear();
+  sh2.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV']);
+  sh2.getRange(1, 1, 1, 11).setFontWeight('bold').setBackground('#F6F3EE');
+
+  // Tab 3: DANH SÁCH LỚP (để coi)
+  var sh3 = layHoacTaoSheet(ss, 'LOP');
+  sh3.clear();
+  sh3.appendRow(['Lớp', 'GV chính']);
+  var gvMap = {
+    'S1.006 - Lychee': 'Mr. Đức Anh', 'S2.004 - Cherry': 'Mr. Đức Anh', 'C2.004 - Kiwi': 'Mr. Đức Anh',
+    'T1.001 - Apple': 'Mr. Đức Anh', 'W2.001 - Cookie': 'Mr. Đức Anh',
+    'S1.005 - Peach': 'Ms. Vân', 'S2.003 - Peanut': 'Ms. Vân', 'C2.002 - Chestnut': 'Ms. Vân',
+    'W1.002 - Ice-cream': 'Ms. Vân', 'T2.004 - Pea': 'Ms. Vân',
+    'S1.004 - Watermelon': 'Ms. Hồng Anh (hết T10)', 'S2.002 - Blueberry': 'Ms. Hồng Anh (hết T10)',
+    'C2.003 - Tomato': 'Ms. Hồng Anh (hết T10)', 'T2.002 - Carrot': 'Ms. Hồng Anh (hết T10)',
+    'S1.001 - Cashew': 'Mr. Ngọc', 'S2.001 - Pumpkin Seed': 'Mr. Ngọc',
+    'C2.005 - Pineapple': 'Mr. Ngọc', 'W1.003 - Tiramisu': 'Mr. Ngọc',
+    'S1.003 - Hazelnut': 'Ms. Trâm', 'S2.005 - Acorn': 'Ms. Trâm',
+    'C2.006 - Broccoli': 'Ms. Trâm', 'T2.003 - Potato': 'Ms. Trâm',
+    'S1.002 - Almond': 'Ms. Uyên Vi', 'C2.001 - Strawberry': 'Ms. Uyên Vi',
+    'S2.006 - Avocado': 'Ms. Nhung'
+  };
+  LOP_LIST.forEach(function (lop) {
+    sh3.appendRow([lop, gvMap[lop] || '']);
+  });
+
+  SpreadsheetApp.getUi().alert('Xong! Đã tạo 3 tab: BAO_BU, LICH_BU, LOP.');
+}
+
+function layHoacTaoSheet(ss, ten) {
+  var sh = ss.getSheetByName(ten);
+  if (!sh) sh = ss.insertSheet(ten);
+  return sh;
+}
+
+// ===== GOM NHÓM (bấm chiều T2) =====
+function gomNhom() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var bao = ss.getSheetByName('BAO_BU');
+  var lich = ss.getSheetByName('LICH_BU');
+  if (!bao || !lich) {
+    SpreadsheetApp.getUi().alert('Chưa có sheet. Bấm menu "Tạo sheet" trước.');
+    return;
+  }
+
+  var data = bao.getDataRange().getValues();
+  if (data.length < 2) {
+    SpreadsheetApp.getUi().alert('Chưa có bé nào báo bù.');
+    return;
+  }
+
+  // Lấy các bé chưa xếp (cột Trạng thái trống hoặc = Chờ)
+  var chuaXep = [];
+  for (var i = 1; i < data.length; i++) {
+    var r = data[i];
+    var trangThai = (r[6] || '').toString().trim();
+    if (trangThai === '' || trangThai === 'Chờ') {
+      chuaXep.push({ dong: i + 1, gvBao: r[1], tenBe: r[2], lop: r[3], trinhDo: r[4], link: r[5] });
+    }
+  }
+  if (chuaXep.length === 0) {
+    SpreadsheetApp.getUi().alert('Không còn bé nào chờ xếp.');
+    return;
+  }
+
+  // Sắp xếp: bé lớp Đức Anh lên trước → ca Đức Anh ưu tiên; còn lại gom theo trình độ
+  chuaXep.sort(function (a, b) {
+    var au = LOP_DUC_ANH.indexOf(a.lop) >= 0 ? 0 : 1;
+    var bu = LOP_DUC_ANH.indexOf(b.lop) >= 0 ? 0 : 1;
+    if (au !== bu) return au - bu;
+    if (a.trinhDo < b.trinhDo) return -1;
+    if (a.trinhDo > b.trinhDo) return 1;
+    return 0;
+  });
+
+  var caList = layDanhSachCa();
+  var sucChua = caList.length * CFG.TOI_DA_CA; // 16
+
+  // Xoá lịch cũ chưa chốt để xếp lại cho gọn (giữ lại dòng đã ✅)
+  giuLaiDongDaChot(lich);
+
+  // Xếp từng bé
+  var beDu = [];
+  var stt = 0;
+  chuaXep.forEach(function (be) {
+    if (stt < sucChua) {
+      var ca = chonCaChoBe(be, caList, lich);
+      themBeVaoLich(lich, bao, be, ca);
+      stt++;
+    } else {
+      beDu.push(be);
+    }
+  });
+
+  // Đánh dấu bé dư → tuần sau
+  beDu.forEach(function (be) {
+    bao.getRange(be.dong, 7).setValue('Tuần sau');
+    bao.getRange(be.dong, 9).setValue('Quá 16 bé, tự đẩy sang tuần sau');
+  });
+
+  // Tô đỏ ca nào ghép 3 trình độ
+  toDoCa3TrinhDo(lich);
+
+  var msg = 'Đã xếp ' + stt + ' bé vào ' + caList.length + ' ca.'
+    + (beDu.length ? '\nDư ' + beDu.length + ' bé → đẩy sang tuần sau.' : '')
+    + '\n\nBước tiếp theo: mở tab LICH_BU, copy cột "Tin nhắn PH" gửi Zalo cho PH.';
+  SpreadsheetApp.getUi().alert(msg);
+}
+
+// Chọn ca cho 1 bé: ưu tiên (1) ca Đức Anh nếu bé lớp Đức Anh, (2) ca cùng trình độ còn chỗ, (3) ca trống
+function chonCaChoBe(be, caList, lich) {
+  var rows = lich.getDataRange().getValues();
+
+  function beTrongCa(maCa) {
+    var list = [];
+    for (var i = 1; i < rows.length; i++) {
+      if (rows[i][0] === maCa) list.push({ trinhDo: rows[i][6], tenBe: rows[i][4] });
+    }
+    return list;
+  }
+
+  // 1. Bé lớp Đức Anh → ca Đức Anh trước
+  if (LOP_DUC_ANH.indexOf(be.lop) >= 0) {
+    var caDA = caList[caList.length - 1]; // ca cuối = Đức Anh
+    if (beTrongCa(caDA.ma).length < CFG.TOI_DA_CA) return caDA;
+  }
+
+  // 2. Tìm ca cùng trình độ còn chỗ (để gom gọn, tối đa 2 trình độ/ca)
+  for (var k = 0; k < caList.length; k++) {
+    var trong = beTrongCa(caList[k].ma);
+    if (trong.length >= CFG.TOI_DA_CA) continue;
+    var trinhDos = {};
+    trong.forEach(function (x) { trinhDos[x.trinhDo] = 1; });
+    var ds = Object.keys(trinhDos);
+    if (ds.length === 0) continue; // ca trống để dành bước 3
+    if (ds.indexOf(be.trinhDo) >= 0) return caList[k]; // cùng trình độ
+    if (ds.length < CFG.TOI_DA_TRINH_DO) return caList[k]; // còn slot trình độ
+  }
+
+  // 3. Ca trống đầu tiên
+  for (var j = 0; j < caList.length; j++) {
+    if (beTrongCa(caList[j].ma).length === 0) return caList[j];
+  }
+
+  // 4. Ca nào còn chỗ thì nhét (trường hợp lẻ)
+  for (var m = 0; m < caList.length; m++) {
+    if (beTrongCa(caList[m].ma).length < CFG.TOI_DA_CA) return caList[m];
+  }
+  return caList[0];
+}
+
+function themBeVaoLich(lich, bao, be, ca) {
+  var tinPH = 'Chào PH bé ' + be.tenBe + ' ạ! Trung tâm xếp lịch học bù cho bé: '
+    + ca.thu + ' lúc ' + ca.gio + ', GV: ' + ca.gv + ', lớp ' + be.lop + '. '
+    + 'PH xác nhận giúp em trước ' + CFG.HAN_TRA_LOI + ' nha!';
+  var tinGV = '📚 [' + ca.thu + ' ' + ca.gio + '] ' + ca.gv + ' dạy bù: bé ' + be.tenBe
+    + ' (' + be.lop + ' - ' + be.trinhDo + '). Slide: ' + (be.link || '(chưa có link)');
+  lich.appendRow([ca.ma, ca.thu, ca.gio, ca.gv, be.tenBe, be.lop, be.trinhDo, be.link, 'Chờ Vân Anh', tinPH, tinGV]);
+  bao.getRange(be.dong, 7).setValue('Đã xếp');
+  bao.getRange(be.dong, 8).setValue(ca.ma + ' ' + ca.thu + ' ' + ca.gio);
+}
+
+// Giữ lại dòng đã ✅, xoá dòng chưa chốt để xếp lại
+function giuLaiDongDaChot(lich) {
+  var data = lich.getDataRange().getValues();
+  var giu = [data[0]];
+  for (var i = 1; i < data.length; i++) {
+    var st = (data[i][8] || '').toString();
+    if (st.indexOf('✅') >= 0 || st.indexOf('Đi được') >= 0) giu.push(data[i]);
+  }
+  lich.clear();
+  giu.forEach(function (r) { lich.appendRow(r); });
+  lich.getRange(1, 1, 1, 11).setFontWeight('bold').setBackground('#F6F3EE');
+}
+
+// Tô đỏ ca ghép 3 trình độ để bạn quyết
+function toDoCa3TrinhDo(lich) {
+  var data = lich.getDataRange().getValues();
+  var theoCa = {};
+  for (var i = 1; i < data.length; i++) {
+    var ma = data[i][0];
+    if (!theoCa[ma]) theoCa[ma] = {};
+    theoCa[ma][data[i][6]] = 1;
+  }
+  for (var j = 1; j < data.length; j++) {
+    var ma2 = data[j][0];
+    if (theoCa[ma2] && Object.keys(theoCa[ma2]).length > CFG.TOI_DA_TRINH_DO) {
+      lich.getRange(j + 1, 1, 1, 11).setBackground('#FCE4E4');
+    }
+  }
+}
+
+// ===== ĐẨY QUÁ HẠN SANG TUẦN SAU =====
+function dayQuaHanSangTuanSau() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var lich = ss.getSheetByName('LICH_BU');
+  var data = lich.getDataRange().getValues();
+  var dem = 0;
+  for (var i = 1; i < data.length; i++) {
+    var st = (data[i][8] || '').toString();
+    if (st === 'Chờ Vân Anh' || st === 'Chờ' || st === '') {
+      lich.getRange(i + 1, 9).setValue('Tuần sau (quá hạn)');
+      dem++;
+    }
+  }
+  SpreadsheetApp.getUi().alert('Đã đẩy ' + dem + ' bé chưa xác nhận sang tuần sau.');
+}
+
+// ===== GỬI TIN CHO GV (chỉ ca đã ✅) =====
+function guiTinChoGV() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var lich = ss.getSheetByName('LICH_BU');
+  var data = lich.getDataRange().getValues();
+
+  // Gom theo ca đã chốt
+  var theoCa = {};
+  for (var i = 1; i < data.length; i++) {
+    var st = (data[i][8] || '').toString();
+    if (st.indexOf('✅') < 0 && st.indexOf('Đi được') < 0) continue;
+    var ma = data[i][0];
+    if (!theoCa[ma]) theoCa[ma] = { thu: data[i][1], gio: data[i][2], gv: data[i][3], bes: [] };
+    theoCa[ma].bes.push({ ten: data[i][4], lop: data[i][5], td: data[i][6], link: data[i][7] });
+  }
+
+  var keys = Object.keys(theoCa);
+  if (!keys.length) {
+    SpreadsheetApp.getUi().alert('Chưa có ca nào được chốt ✅.');
+    return;
+  }
+
+  keys.forEach(function (ma) {
+    var c = theoCa[ma];
+    var tin = '📚 [HỌC BÙ ' + c.thu + ' ' + c.gio + '] ' + c.gv + ' dạy:\n';
+    c.bes.forEach(function (b, idx) {
+      tin += (idx + 1) + '. ' + b.ten + ' (' + b.lop + ' - ' + b.td + ')\n   Slide: ' + (b.link || '(chưa có)') + '\n';
+    });
+    guiTelegram(tin);
+  });
+  SpreadsheetApp.getUi().alert('Đã gửi ' + keys.length + ' tin vào nhóm Học Bù.');
+}
+
+// ===== GỬI TELEGRAM =====
+function guiTelegram(text) {
+  var token = PropertiesService.getScriptProperties().getProperty('TELEGRAM_BOT_TOKEN');
+  if (!token) {
+    SpreadsheetApp.getUi().alert('Chưa có token bot. Vào Cài đặt dự án → Thuộc tính tập lệnh → thêm TELEGRAM_BOT_TOKEN.');
+    return;
+  }
+  var url = 'https://api.telegram.org/bot' + token + '/sendMessage';
+  UrlFetchApp.fetch(url, {
+    method: 'post',
+    payload: { chat_id: CFG.GROUP_ID, message_thread_id: CFG.TOPIC_ID, text: text }
+  });
+}
+
+// Test gửi 1 tin (chạy để kiểm tra bot đã vào nhóm chưa)
+function testGuiTelegram() {
+  guiTelegram('✅ Bot Dạy Bù đã vào nhóm thành công!');
+}
