@@ -81,9 +81,9 @@ function setupDayBu() {
   sh1.appendRow(['Ngày báo', 'GV báo', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'Trạng thái', 'Ca xếp', 'Ghi chú']);
   sh1.getRange(1, 1, 1, 9).setFontWeight('bold').setBackground('#F6F3EE');
   // Chọn sẵn: GV báo (cột B), Lớp (cột D), Trình độ (cột E) — bấm chọn, khỏi gõ chữ
-  datDropdown(sh1, 2, 500, GV_LIST);
-  datDropdown(sh1, 4, 500, LOP_LIST);
-  datDropdown(sh1, 5, 500, TRINH_DO);
+  datDropdown(sh1, 2, 100, GV_LIST);
+  datDropdown(sh1, 4, 100, LOP_LIST);
+  datDropdown(sh1, 5, 100, TRINH_DO);
 
   // Tab 2: LỊCH BÙ (sau khi gom nhóm)
   var sh2 = layHoacTaoSheet(ss, 'LICH_BU');
@@ -114,6 +114,23 @@ function setupDayBu() {
   });
 
   SpreadsheetApp.getUi().alert('Xong! Đã tạo 3 tab: BAO_BU, LICH_BU, LOP.');
+}
+
+// Bản nhẹ — chạy khi Sheet đã có dữ liệu, KHÔNG xoá gì, chỉ gắn ô chọn + thiếu tab nào tạo tab đó
+function setupNhe() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sh1 = layHoacTaoSheet(ss, 'BAO_BU');
+  // Chỉ ghi hàng tiêu đề nếu dòng 1 còn trống
+  if (!sh1.getRange(1, 1).getValue()) {
+    sh1.getRange(1, 1, 1, 9).setValues([['Ngày báo', 'GV báo', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'Trạng thái', 'Ca xếp', 'Ghi chú']]);
+    sh1.getRange(1, 1, 1, 9).setFontWeight('bold').setBackground('#F6F3EE');
+  }
+  datDropdown(sh1, 2, 100, GV_LIST);
+  datDropdown(sh1, 4, 100, LOP_LIST);
+  datDropdown(sh1, 5, 100, TRINH_DO);
+  layHoacTaoSheet(ss, 'LICH_BU');
+  layHoacTaoSheet(ss, 'LOP');
+  SpreadsheetApp.getUi().alert('Xong bản nhẹ! Không mất dữ liệu cũ.');
 }
 
 function layHoacTaoSheet(ss, ten) {
