@@ -113,10 +113,25 @@ function layHoacTaoSheet(ss, ten) {
   return sh;
 }
 
+// Tìm tab Form trả lời (Google Form tự tạo) — nếu có thì dùng, không thì dùng BAO_BU
+function laySheetBaoBu(ss) {
+  var formTab = null;
+  var all = ss.getSheets();
+  for (var i = 0; i < all.length; i++) {
+    var n = all[i].getName();
+    if (n.indexOf('Câu trả lời') >= 0 || n.indexOf('Form Responses') >= 0 || n.indexOf('Form responses') >= 0) {
+      formTab = all[i];
+      break;
+    }
+  }
+  if (formTab) return formTab;
+  return ss.getSheetByName('BAO_BU');
+}
+
 // ===== GOM NHÓM (bấm chiều T2) =====
 function gomNhom() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var bao = ss.getSheetByName('BAO_BU');
+  var bao = laySheetBaoBu(ss);
   var lich = ss.getSheetByName('LICH_BU');
   if (!bao || !lich) {
     SpreadsheetApp.getUi().alert('Chưa có sheet. Bấm menu "Tạo sheet" trước.');
