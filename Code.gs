@@ -16,13 +16,18 @@ var CFG = {
 
 var TRINH_DO = ['Kids', 'SP0', 'SP1', 'SP2', 'SP3', 'SP4'];
 
+var GV_LIST = ['Mr. Đức Anh', 'Mr. Ngọc', 'Ms. Hồng Anh', 'Ms. Nhung', 'Ms. Trâm', 'Ms. Uyên Vi', 'Ms. Vân'];
+
+// Ai được sửa 3 cột cuối (Trạng thái, Ca xếp, Ghi chú)
+var EMAIL_QUAN_LY = ['tuanngoctruong2710@gmail.com', 'nguyenthiuyenvi@gmail.com', 'vananhhthuy@gmail.com'];
+
 // 25 lớp thật (đã bỏ 7 dòng Kem/Ketoan/G1.001)
 var LOP_LIST = [
   // Mr. Đức Anh — bé nhỏ
   'S1.006 - Lychee', 'S2.004 - Cherry', 'C2.004 - Kiwi', 'T1.001 - Apple', 'W2.001 - Cookie',
   // Ms. Vân
   'S1.005 - Peach', 'S2.003 - Peanut', 'C2.002 - Chestnut', 'W1.002 - Ice-cream', 'T2.004 - Pea',
-  // Ms. Hồng Anh (tới hết T10/2026)
+  // Ms. Hồng Anh
   'S1.004 - Watermelon', 'S2.002 - Blueberry', 'C2.003 - Tomato', 'T2.002 - Carrot',
   // Mr. Ngọc
   'S1.001 - Cashew', 'S2.001 - Pumpkin Seed', 'C2.005 - Pineapple', 'W1.003 - Tiramisu',
@@ -70,11 +75,15 @@ function onOpen() {
 function setupDayBu() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
 
-  // Tab 1: BÁO BÙ (Form tự đổ về đây)
+  // Tab 1: BÁO BÙ (GV gõ thẳng vào đây, mỗi bé 1 dòng)
   var sh1 = layHoacTaoSheet(ss, 'BAO_BU');
   sh1.clear();
-  sh1.appendRow(['Dấu thời gian', 'GV báo', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'Trạng thái', 'Ca xếp', 'Ghi chú']);
+  sh1.appendRow(['Ngày báo', 'GV báo', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'Trạng thái', 'Ca xếp', 'Ghi chú']);
   sh1.getRange(1, 1, 1, 9).setFontWeight('bold').setBackground('#F6F3EE');
+  // Chọn sẵn: GV báo (cột B), Lớp (cột D), Trình độ (cột E) — bấm chọn, khỏi gõ chữ
+  datDropdown(sh1, 2, 500, GV_LIST);
+  datDropdown(sh1, 4, 500, LOP_LIST);
+  datDropdown(sh1, 5, 500, TRINH_DO);
 
   // Tab 2: LỊCH BÙ (sau khi gom nhóm)
   var sh2 = layHoacTaoSheet(ss, 'LICH_BU');
@@ -91,8 +100,8 @@ function setupDayBu() {
     'T1.001 - Apple': 'Mr. Đức Anh', 'W2.001 - Cookie': 'Mr. Đức Anh',
     'S1.005 - Peach': 'Ms. Vân', 'S2.003 - Peanut': 'Ms. Vân', 'C2.002 - Chestnut': 'Ms. Vân',
     'W1.002 - Ice-cream': 'Ms. Vân', 'T2.004 - Pea': 'Ms. Vân',
-    'S1.004 - Watermelon': 'Ms. Hồng Anh (hết T10)', 'S2.002 - Blueberry': 'Ms. Hồng Anh (hết T10)',
-    'C2.003 - Tomato': 'Ms. Hồng Anh (hết T10)', 'T2.002 - Carrot': 'Ms. Hồng Anh (hết T10)',
+    'S1.004 - Watermelon': 'Ms. Hồng Anh', 'S2.002 - Blueberry': 'Ms. Hồng Anh',
+    'C2.003 - Tomato': 'Ms. Hồng Anh', 'T2.002 - Carrot': 'Ms. Hồng Anh',
     'S1.001 - Cashew': 'Mr. Ngọc', 'S2.001 - Pumpkin Seed': 'Mr. Ngọc',
     'C2.005 - Pineapple': 'Mr. Ngọc', 'W1.003 - Tiramisu': 'Mr. Ngọc',
     'S1.003 - Hazelnut': 'Ms. Trâm', 'S2.005 - Acorn': 'Ms. Trâm',
@@ -113,18 +122,41 @@ function layHoacTaoSheet(ss, ten) {
   return sh;
 }
 
-// Tìm tab Form trả lời (Google Form tự tạo) — nếu có thì dùng, không thì dùng BAO_BU
+// Tạo ô chọn sẵn (dropdown) cho 1 cột — GV bấm chọn, khỏi gõ chữ
+function datDropdown(sh, cot, toiDong, danhSach) {
+  var rule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(danhSach, true)
+    .setAllowInvalid(false)
+    .build();
+  sh.getRange(2, cot, toiDong - 1, 1).setDataValidation(rule);
+}
+
+// Khóa 3 cột cuối (Trạng thái, Ca xếp, Ghi chú) — chỉ bạn + Vân Anh + Uyên Vi sửa được
+function khoaCotQuanLy(ss) {
+  var sh = ss.getSheetByName('BAO_BU');
+  if (!sh) return;
+  var range = sh.getRange(1, 7, 500, 3);
+  var prot = range.protect().setDescription('Chỉ quản lý sửa');
+  prot.addEditors(EMAIL_QUAN_LY);
+  if (prot.canDomainEdit()) prot.setDomainEdit(false);
+}
+
+// Tự chạy khi GV gõ dòng mới: điền ngày giờ hôm nay vào cột A
+function onEdit(e) {
+  try {
+    var sh = e.range.getSheet();
+    if (sh.getName() !== 'BAO_BU') return;
+    var dong = e.range.getRow();
+    if (dong < 2) return;
+    var cot = e.range.getColumn();
+    if (cot < 2 || cot > 6) return; // chỉ khi gõ 5 cột GV được gõ
+    var oNgay = sh.getRange(dong, 1);
+    if (!oNgay.getValue()) oNgay.setValue(new Date());
+  } catch (err) { }
+}
+
+// Đọc báo bù: ưu tiên tab BAO_BU (GV gõ thẳng), có tab Form thì đọc thêm
 function laySheetBaoBu(ss) {
-  var formTab = null;
-  var all = ss.getSheets();
-  for (var i = 0; i < all.length; i++) {
-    var n = all[i].getName();
-    if (n.indexOf('Câu trả lời') >= 0 || n.indexOf('Form Responses') >= 0 || n.indexOf('Form responses') >= 0) {
-      formTab = all[i];
-      break;
-    }
-  }
-  if (formTab) return formTab;
   return ss.getSheetByName('BAO_BU');
 }
 
