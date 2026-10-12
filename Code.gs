@@ -73,7 +73,7 @@ function setupDayBu() {
   // Tab 1: BÁO BÙ (Form tự đổ về đây)
   var sh1 = layHoacTaoSheet(ss, 'BAO_BU');
   sh1.clear();
-  sh1.appendRow(['Ngày báo', 'GV báo', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'Trạng thái', 'Ca xếp', 'Ghi chú']);
+  sh1.appendRow(['Dấu thời gian', 'GV báo', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'Trạng thái', 'Ca xếp', 'Ghi chú']);
   sh1.getRange(1, 1, 1, 9).setFontWeight('bold').setBackground('#F6F3EE');
 
   // Tab 2: LỊCH BÙ (sau khi gom nhóm)
