@@ -149,7 +149,8 @@ function datDropdown(sh, cot, toiDong, danhSach) {
 }
 
 // Khóa 3 cột cuối (Trạng thái, Ca xếp, Ghi chú) — chỉ bạn + Vân Anh + Uyên Vi sửa được
-function khoaCotQuanLy(ss) {
+function khoaCotQuanLy() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sh = ss.getSheetByName('BAO_BU');
   if (!sh) return;
   var range = sh.getRange(1, 7, 500, 3);
