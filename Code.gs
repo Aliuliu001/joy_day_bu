@@ -98,9 +98,8 @@ function onOpen() {
     .addItem('2️⃣ Gom nhóm (bấm chiều T2)', 'gomNhom')
     .addItem('3️⃣ Gửi tin cho GV (ca đã chốt ✅)', 'guiTinChoGV')
     .addItem('4️⃣ Đẩy quá hạn sang tuần sau', 'dayQuaHanSangTuanSau')
-    .addItem('5️⃣ GV báo lớp đi đủ', 'baoLopDu')
-    .addItem('6️⃣ Nhắc GV báo bù (sáng T2)', 'nhacGVBaoBu')
-    .addItem('7️⃣ Backup T7 + Refresh tuần mới', 'backupVaRefreshTuanMoi')
+    .addItem('5️⃣ Nhắc GV báo bù (sáng T2)', 'nhacGVBaoBu')
+    .addItem('6️⃣ Backup T7 + Refresh tuần mới', 'backupVaRefreshTuanMoi')
     .addToUi();
   } catch (e) {} 
 }
@@ -114,8 +113,8 @@ function setupDayBu() {
   sh1.clear();
   sh1.appendRow(['Ngày báo', 'GV báo', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'Trạng thái', 'Ca xếp', 'Ghi chú']);
   sh1.getRange(1, 1, 1, 9).setFontWeight('bold').setBackground('#F6F3EE');
-  // Dòng mẫu ghi chú cho GV: lớp đi đủ thì gõ vầy
-  sh1.appendRow(['', '', '(ghi chú mẫu: GV gõ "(cả lớp đi đủ)" ở đây nếu lớp không ai nghỉ)', '', '', '', '', '', '']);
+  // Dòng mẫu ghi chú cho GV: lớp đi đủ thì gõ "Không bù"
+  sh1.appendRow(['', '', '(ghi chú mẫu: nếu lớp không ai nghỉ, GV gõ "Không bù" ở đây)', '', '', '', '', '', '']);
   sh1.getRange(2, 3).setFontStyle('italic').setFontColor('#888888');
   // Chọn sẵn: GV báo (cột B), Lớp (cột D), Trình độ (cột E) — bấm chọn, khỏi gõ chữ
   datDropdown(sh1, 2, 100, GV_LIST);
@@ -447,19 +446,6 @@ function guiTinChoGV() {
   baoXong('Đã gửi ' + keys.length + ' tin vào nhóm Học Bù.');
 }
 
-// ===== GV BÁO LỚP ĐI ĐỦ (không ai nghỉ) =====
-function baoLopDu() {
-  var ui = SpreadsheetApp.getUi();
-  var ten = ui.prompt('Tên GV báo:', 'VD: Ms. Vân', ui.ButtonSet.OK_CANCEL);
-  if (ten.getSelectedButton() !== ui.Button.OK) return;
-  var lop = ui.prompt('Lớp nào đi đủ?', 'VD: S1.005 - Peach', ui.ButtonSet.OK_CANCEL);
-  if (lop.getSelectedButton() !== ui.Button.OK) return;
-  var ss = laySS();
-  var bao = ss.getSheetByName('BAO_BU');
-  bao.appendRow([new Date(), ten.getResponseText(), '(cả lớp đi đủ)', lop.getResponseText(), '', '', 'Đủ — không cần bù', '', 'GV báo lớp đi đủ']);
-  ui.alert('Đã ghi nhận: ' + lop.getResponseText() + ' đi đủ ✅');
-}
-
 // ===== NHẮC GV BÁO BÙ SÁNG T2 =====
 function nhacGVBaoBu() {
   var ss = laySS();
@@ -467,14 +453,17 @@ function nhacGVBaoBu() {
   var data = bao.getDataRange().getValues();
   var daBao = {};
   for (var i = 1; i < data.length; i++) {
-    if (data[i][1]) daBao[data[i][1].toString().trim()] = 1;
+    var gv = (data[i][1] || '').toString().trim();
+    var tenBe = (data[i][2] || '').toString().trim().toLowerCase();
+    // GV đã điền gì cũng tính là đã báo (kể cả "không bù")
+    if (gv && tenBe) daBao[gv] = 1;
   }
   var chuaBao = GV_LIST.filter(function (g) { return !daBao[g]; });
   var tin = '📢 [SÁNG T2] Nhắc báo bù:\n';
   if (!chuaBao.length) {
     tin += 'Cả 7 GV đều đã báo ✅ Cảm ơn thầy cô!';
   } else {
-    tin += 'GV chưa báo: ' + chuaBao.join(', ') + '\nThầy cô vào tab BAO_BU ghi tên bé cần bù giúp em nha! Lớp đi đủ thì bấm menu Dạy Bù → GV báo lớp đi đủ.';
+    tin += 'GV chưa báo: ' + chuaBao.join(', ') + '\nThầy cô vào tab BAO_BU:\n• Nếu có bé nghỉ: ghi tên bé + lớp + trình độ + link Canva\n• Nếu lớp đi đủ: gõ "Không bù" vào cột Tên bé';
   }
   guiTelegram(tin);
   baoXong('Đã gửi tin nhắc vào nhóm Học Bù.');
@@ -494,16 +483,20 @@ function backupVaRefreshTuanMoi() {
   backup = lich.copyTo(ss);
   backup.setName(tenBackup);
   
-  // 2. Xoá dòng chưa chốt trong LICH_BU, giữ lại dòng đã ✅
-  giuLaiDongDaChot(lich);
+  // 2. Clear LICH_BU (giữ tiêu đề) để tuần mới bắt đầu sạch
+  lich.clear();
+  lich.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy']);
+  lich.getRange(1, 1, 1, 12).setFontWeight('bold').setBackground('#F6F3EE');
+  datDropdown(lich, 9, 200, PH_TRANG_THAI);
+  datDropdown(lich, 12, 200, DA_DAY);
   
-  // 3. Xoá dữ liệu BAO_BU (giữ tiêu đề + dòng ghi chú mẫu), để GV báo tuần mới
+  // 3. Clear BAO_BU (giữ tiêu đề + dòng mẫu) để GV báo tuần mới
   var dataBao = bao.getDataRange().getValues();
   if (dataBao.length > 2) {
     bao.deleteRows(3, dataBao.length - 2);
   }
   
-  baoXong('Đã backup ' + tenBackup + ' và làm mới BAO_BU cho tuần mới ✅\nDòng đã dạy xong còn trong LICH_BU để báo cáo.');
+  baoXong('Đã backup ' + tenBackup + ' và làm mới BAO_BU + LICH_BU cho tuần mới ✅');
 }
 
 // ===== GỬI TELEGRAM =====
