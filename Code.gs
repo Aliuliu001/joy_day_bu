@@ -31,7 +31,7 @@ function baoXong(msg) {
 var TRINH_DO = ['Kids', 'SP0', 'SP1', 'SP2', 'SP3', 'SP4'];
 
 var GV_LIST = ['Mr. Đức Anh', 'Mr. Ngọc', 'Ms. Hồng Anh', 'Ms. Nhung', 'Ms. Trâm', 'Ms. Uyên Vi', 'Ms. Vân'];
-var PH_TRANG_THAI = ['Chờ Vân Anh', '✅ Đi được', '🔄 Xin đổi', '❌ Nghỉ', 'Tuần sau (quá hạn)'];
+var PH_TRANG_THAI = ['Chờ Ms. Vân Anh', '✅ Đi được', '🔄 Xin đổi', '❌ Nghỉ', 'Tuần sau (quá hạn)'];
 var DA_DAY = ['✅ Đã học', '❌ Vắng (không tới)'];
 
 // Ai được sửa 3 cột cuối (Trạng thái, Ca xếp, Ghi chú)
@@ -239,11 +239,14 @@ function gomNhom() {
     return;
   }
 
-  // Lấy các bé chưa xếp (cột Trạng thái trống hoặc = Chờ)
+  // Lấy các bé chưa xếp (cột Trạng thái trống hoặc = Chờ) + bỏ qua dòng "Không bù"
   var chuaXep = [];
   for (var i = 1; i < data.length; i++) {
     var r = data[i];
     var trangThai = (r[6] || '').toString().trim();
+    var tenBe = (r[2] || '').toString().trim().toLowerCase();
+    // Bỏ qua dòng mẫu và dòng "Không bù"
+    if (tenBe.indexOf('ghi chú mẫu') >= 0 || tenBe === 'không bù') continue;
     if (trangThai === '' || trangThai === 'Chờ') {
       chuaXep.push({ dong: i + 1, gvBao: r[1], tenBe: r[2], lop: r[3], trinhDo: r[4], link: r[5] });
     }
@@ -349,7 +352,7 @@ function themBeVaoLich(lich, bao, be, ca) {
     + 'Nhờ chị xác nhận giúp em trước 11h trưa Thứ 3 nhé!\nEm cám ơn chị ạ.';
   var tinGV = '📚 [' + ca.thu + ' ' + ca.gio + '] ' + ca.gv + ' dạy bù: bé ' + be.tenBe
     + ' (' + be.lop + ' - ' + be.trinhDo + '). Slide: ' + (be.link || '(chưa có link)');
-  lich.appendRow([ca.ma, ca.thu, ca.gio, ca.gv, be.tenBe, be.lop, be.trinhDo, be.link, 'Chờ Vân Anh', tinPH, tinGV, '']);
+  lich.appendRow([ca.ma, ca.thu, ca.gio, ca.gv, be.tenBe, be.lop, be.trinhDo, be.link, 'Chờ Ms. Vân Anh', tinPH, tinGV, '']);
   // Tô vàng bé thiếu link slide để bạn nhắc GV báo
   if (!be.link || !be.link.toString().trim()) {
     var dongMoi = lich.getLastRow();
