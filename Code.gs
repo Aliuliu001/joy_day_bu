@@ -17,6 +17,8 @@ var CFG = {
 var TRINH_DO = ['Kids', 'SP0', 'SP1', 'SP2', 'SP3', 'SP4'];
 
 var GV_LIST = ['Mr. Đức Anh', 'Mr. Ngọc', 'Ms. Hồng Anh', 'Ms. Nhung', 'Ms. Trâm', 'Ms. Uyên Vi', 'Ms. Vân'];
+var PH_TRANG_THAI = ['Chờ Vân Anh', '✅ Đi được', '🔄 Xin đổi', '❌ Nghỉ', 'Tuần sau (quá hạn)'];
+var DA_DAY = ['✅ Đã học', '❌ Vắng (không tới)'];
 
 // Ai được sửa 3 cột cuối (Trạng thái, Ca xếp, Ghi chú)
 var EMAIL_QUAN_LY = ['tuanngoctruong2710@gmail.com', 'nguyenthiuyenvi@gmail.com', 'vananhhthuy@gmail.com'];
@@ -68,6 +70,8 @@ function onOpen() {
     .addItem('2️⃣ Gom nhóm (bấm chiều T2)', 'gomNhom')
     .addItem('3️⃣ Gửi tin cho GV (ca đã chốt ✅)', 'guiTinChoGV')
     .addItem('4️⃣ Đẩy quá hạn sang tuần sau', 'dayQuaHanSangTuanSau')
+    .addItem('5️⃣ GV báo lớp đi đủ', 'baoLopDu')
+    .addItem('6️⃣ Nhắc GV báo bù (sáng T2)', 'nhacGVBaoBu')
     .addToUi();
 }
 
@@ -88,8 +92,11 @@ function setupDayBu() {
   // Tab 2: LỊCH BÙ (sau khi gom nhóm)
   var sh2 = layHoacTaoSheet(ss, 'LICH_BU');
   sh2.clear();
-  sh2.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV']);
-  sh2.getRange(1, 1, 1, 11).setFontWeight('bold').setBackground('#F6F3EE');
+  sh2.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy']);
+  sh2.getRange(1, 1, 1, 12).setFontWeight('bold').setBackground('#F6F3EE');
+  // Ô tick chọn sẵn: PH xác nhận (cột I), Đã dạy (cột L)
+  datDropdown(sh2, 9, 200, PH_TRANG_THAI);
+  datDropdown(sh2, 12, 200, DA_DAY);
 
   // Tab 3: DANH SÁCH LỚP (để coi)
   var sh3 = layHoacTaoSheet(ss, 'LOP');
@@ -128,7 +135,13 @@ function setupNhe() {
   datDropdown(sh1, 2, 100, GV_LIST);
   datDropdown(sh1, 4, 100, LOP_LIST);
   datDropdown(sh1, 5, 100, TRINH_DO);
-  layHoacTaoSheet(ss, 'LICH_BU');
+  var sh2n = layHoacTaoSheet(ss, 'LICH_BU');
+  if (!sh2n.getRange(1, 1).getValue()) {
+    sh2n.getRange(1, 1, 1, 12).setValues([['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy']]);
+    sh2n.getRange(1, 1, 1, 12).setFontWeight('bold').setBackground('#F6F3EE');
+  }
+  datDropdown(sh2n, 9, 200, PH_TRANG_THAI);
+  datDropdown(sh2n, 12, 200, DA_DAY);
   layHoacTaoSheet(ss, 'LOP');
   SpreadsheetApp.getUi().alert('Xong bản nhẹ! Không mất dữ liệu cũ.');
 }
@@ -300,7 +313,12 @@ function themBeVaoLich(lich, bao, be, ca) {
     + 'PH xác nhận giúp em trước ' + CFG.HAN_TRA_LOI + ' nha!';
   var tinGV = '📚 [' + ca.thu + ' ' + ca.gio + '] ' + ca.gv + ' dạy bù: bé ' + be.tenBe
     + ' (' + be.lop + ' - ' + be.trinhDo + '). Slide: ' + (be.link || '(chưa có link)');
-  lich.appendRow([ca.ma, ca.thu, ca.gio, ca.gv, be.tenBe, be.lop, be.trinhDo, be.link, 'Chờ Vân Anh', tinPH, tinGV]);
+  lich.appendRow([ca.ma, ca.thu, ca.gio, ca.gv, be.tenBe, be.lop, be.trinhDo, be.link, 'Chờ Vân Anh', tinPH, tinGV, '']);
+  // Tô vàng bé thiếu link slide để bạn nhắc GV báo
+  if (!be.link || !be.link.toString().trim()) {
+    var dongMoi = lich.getLastRow();
+    lich.getRange(dongMoi, 8).setBackground('#FFF3CD');
+  }
   bao.getRange(be.dong, 7).setValue('Đã xếp');
   bao.getRange(be.dong, 8).setValue(ca.ma + ' ' + ca.thu + ' ' + ca.gio);
 }
@@ -309,13 +327,21 @@ function themBeVaoLich(lich, bao, be, ca) {
 function giuLaiDongDaChot(lich) {
   var data = lich.getDataRange().getValues();
   var giu = [data[0]];
+  // Đảm bảo hàng tiêu đề đủ 12 cột (bản cũ 11 cột thì thêm "Đã dạy")
+  if (giu[0].length < 12) {
+    giu[0].push('Đã dạy');
+    lich.getRange(1, 12).setValue('Đã dạy');
+    datDropdown(lich, 12, 200, DA_DAY);
+  }
   for (var i = 1; i < data.length; i++) {
     var st = (data[i][8] || '').toString();
     if (st.indexOf('✅') >= 0 || st.indexOf('Đi được') >= 0) giu.push(data[i]);
   }
   lich.clear();
   giu.forEach(function (r) { lich.appendRow(r); });
-  lich.getRange(1, 1, 1, 11).setFontWeight('bold').setBackground('#F6F3EE');
+  lich.getRange(1, 1, 1, 12).setFontWeight('bold').setBackground('#F6F3EE');
+  datDropdown(lich, 9, 200, PH_TRANG_THAI);
+  datDropdown(lich, 12, 200, DA_DAY);
 }
 
 // Tô đỏ ca ghép 3 trình độ để bạn quyết
@@ -330,7 +356,7 @@ function toDoCa3TrinhDo(lich) {
   for (var j = 1; j < data.length; j++) {
     var ma2 = data[j][0];
     if (theoCa[ma2] && Object.keys(theoCa[ma2]).length > CFG.TOI_DA_TRINH_DO) {
-      lich.getRange(j + 1, 1, 1, 11).setBackground('#FCE4E4');
+      lich.getRange(j + 1, 1, 1, 12).setBackground('#FCE4E4');
     }
   }
 }
@@ -382,6 +408,39 @@ function guiTinChoGV() {
     guiTelegram(tin);
   });
   SpreadsheetApp.getUi().alert('Đã gửi ' + keys.length + ' tin vào nhóm Học Bù.');
+}
+
+// ===== GV BÁO LỚP ĐI ĐỦ (không ai nghỉ) =====
+function baoLopDu() {
+  var ui = SpreadsheetApp.getUi();
+  var ten = ui.prompt('Tên GV báo:', 'VD: Ms. Vân', ui.ButtonSet.OK_CANCEL);
+  if (ten.getSelectedButton() !== ui.Button.OK) return;
+  var lop = ui.prompt('Lớp nào đi đủ?', 'VD: S1.005 - Peach', ui.ButtonSet.OK_CANCEL);
+  if (lop.getSelectedButton() !== ui.Button.OK) return;
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var bao = ss.getSheetByName('BAO_BU');
+  bao.appendRow([new Date(), ten.getResponseText(), '(cả lớp đi đủ)', lop.getResponseText(), '', '', 'Đủ — không cần bù', '', 'GV báo lớp đi đủ']);
+  ui.alert('Đã ghi nhận: ' + lop.getResponseText() + ' đi đủ ✅');
+}
+
+// ===== NHẮC GV BÁO BÙ SÁNG T2 =====
+function nhacGVBaoBu() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var bao = ss.getSheetByName('BAO_BU');
+  var data = bao.getDataRange().getValues();
+  var daBao = {};
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][1]) daBao[data[i][1].toString().trim()] = 1;
+  }
+  var chuaBao = GV_LIST.filter(function (g) { return !daBao[g]; });
+  var tin = '📢 [SÁNG T2] Nhắc báo bù:\n';
+  if (!chuaBao.length) {
+    tin += 'Cả 7 GV đều đã báo ✅ Cảm ơn thầy cô!';
+  } else {
+    tin += 'GV chưa báo: ' + chuaBao.join(', ') + '\nThầy cô vào tab BAO_BU ghi tên bé cần bù giúp em nha! Lớp đi đủ thì bấm menu Dạy Bù → GV báo lớp đi đủ.';
+  }
+  guiTelegram(tin);
+  SpreadsheetApp.getUi().alert('Đã gửi tin nhắc vào nhóm Học Bù.');
 }
 
 // ===== GỬI TELEGRAM =====
