@@ -14,6 +14,20 @@ var CFG = {
   HONG_ANH_DEN_HT: '2026-10-31', // Ms. Hồng Anh làm hết tháng 10
 };
 
+// ID file Sheet DẠY BÙ (để chạy được cả khi script đứng riêng)
+var SHEET_ID = '1O_RUUL9P4YggLI2Vp1AcFraZuUHcF8CXULtZ9jPZGsg';
+
+function laySS() {
+  var ss = null;
+  try { ss = laySS(); } catch (e) {}
+  if (!ss) ss = SpreadsheetApp.openById(SHEET_ID);
+  return ss;
+}
+
+function baoXong(msg) {
+  try { baoXong(msg); } catch (e) { Logger.log(msg); }
+}
+
 var TRINH_DO = ['Kids', 'SP0', 'SP1', 'SP2', 'SP3', 'SP4'];
 
 var GV_LIST = ['Mr. Đức Anh', 'Mr. Ngọc', 'Ms. Hồng Anh', 'Ms. Nhung', 'Ms. Trâm', 'Ms. Uyên Vi', 'Ms. Vân'];
@@ -64,6 +78,7 @@ function hongAnhConLam() {
 
 // ===== MENU =====
 function onOpen() {
+  try {
   SpreadsheetApp.getUi()
     .createMenu('📚 Dạy Bù')
     .addItem('1️⃣ Tạo sheet (chạy 1 lần)', 'setupDayBu')
@@ -73,11 +88,12 @@ function onOpen() {
     .addItem('5️⃣ GV báo lớp đi đủ', 'baoLopDu')
     .addItem('6️⃣ Nhắc GV báo bù (sáng T2)', 'nhacGVBaoBu')
     .addToUi();
+  } catch (e) {} 
 }
 
 // ===== TẠO SHEET =====
 function setupDayBu() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = laySS();
 
   // Tab 1: BÁO BÙ (GV gõ thẳng vào đây, mỗi bé 1 dòng)
   var sh1 = layHoacTaoSheet(ss, 'BAO_BU');
@@ -120,12 +136,12 @@ function setupDayBu() {
     sh3.appendRow([lop, gvMap[lop] || '']);
   });
 
-  SpreadsheetApp.getUi().alert('Xong! Đã tạo 3 tab: BAO_BU, LICH_BU, LOP.');
+  baoXong('Xong! Đã tạo 3 tab: BAO_BU, LICH_BU, LOP.');
 }
 
 // Bản nhẹ — chạy khi Sheet đã có dữ liệu, KHÔNG xoá gì, chỉ gắn ô chọn + thiếu tab nào tạo tab đó
 function setupNhe() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = laySS();
   var sh1 = layHoacTaoSheet(ss, 'BAO_BU');
   // Chỉ ghi hàng tiêu đề nếu dòng 1 còn trống
   if (!sh1.getRange(1, 1).getValue()) {
@@ -143,7 +159,7 @@ function setupNhe() {
   datDropdown(sh2n, 9, 200, PH_TRANG_THAI);
   datDropdown(sh2n, 12, 200, DA_DAY);
   layHoacTaoSheet(ss, 'LOP');
-  SpreadsheetApp.getUi().alert('Xong bản nhẹ! Không mất dữ liệu cũ.');
+  baoXong('Xong bản nhẹ! Không mất dữ liệu cũ.');
 }
 
 function layHoacTaoSheet(ss, ten) {
@@ -163,7 +179,7 @@ function datDropdown(sh, cot, toiDong, danhSach) {
 
 // Khóa 3 cột cuối (Trạng thái, Ca xếp, Ghi chú) — chỉ bạn + Vân Anh + Uyên Vi sửa được
 function khoaCotQuanLy() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = laySS();
   var sh = ss.getSheetByName('BAO_BU');
   if (!sh) return;
   var range = sh.getRange(1, 7, 500, 3);
@@ -193,17 +209,17 @@ function laySheetBaoBu(ss) {
 
 // ===== GOM NHÓM (bấm chiều T2) =====
 function gomNhom() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = laySS();
   var bao = laySheetBaoBu(ss);
   var lich = ss.getSheetByName('LICH_BU');
   if (!bao || !lich) {
-    SpreadsheetApp.getUi().alert('Chưa có sheet. Bấm menu "Tạo sheet" trước.');
+    baoXong('Chưa có sheet. Bấm menu "Tạo sheet" trước.');
     return;
   }
 
   var data = bao.getDataRange().getValues();
   if (data.length < 2) {
-    SpreadsheetApp.getUi().alert('Chưa có bé nào báo bù.');
+    baoXong('Chưa có bé nào báo bù.');
     return;
   }
 
@@ -217,7 +233,7 @@ function gomNhom() {
     }
   }
   if (chuaXep.length === 0) {
-    SpreadsheetApp.getUi().alert('Không còn bé nào chờ xếp.');
+    baoXong('Không còn bé nào chờ xếp.');
     return;
   }
 
@@ -262,7 +278,7 @@ function gomNhom() {
   var msg = 'Đã xếp ' + stt + ' bé vào ' + caList.length + ' ca.'
     + (beDu.length ? '\nDư ' + beDu.length + ' bé → đẩy sang tuần sau.' : '')
     + '\n\nBước tiếp theo: mở tab LICH_BU, copy cột "Tin nhắn PH" gửi Zalo cho PH.';
-  SpreadsheetApp.getUi().alert(msg);
+  baoXong(msg);
 }
 
 // Chọn ca cho 1 bé: ưu tiên (1) ca Đức Anh nếu bé lớp Đức Anh, (2) ca cùng trình độ còn chỗ, (3) ca trống
@@ -363,7 +379,7 @@ function toDoCa3TrinhDo(lich) {
 
 // ===== ĐẨY QUÁ HẠN SANG TUẦN SAU =====
 function dayQuaHanSangTuanSau() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = laySS();
   var lich = ss.getSheetByName('LICH_BU');
   var data = lich.getDataRange().getValues();
   var dem = 0;
@@ -374,12 +390,12 @@ function dayQuaHanSangTuanSau() {
       dem++;
     }
   }
-  SpreadsheetApp.getUi().alert('Đã đẩy ' + dem + ' bé chưa xác nhận sang tuần sau.');
+  baoXong('Đã đẩy ' + dem + ' bé chưa xác nhận sang tuần sau.');
 }
 
 // ===== GỬI TIN CHO GV (chỉ ca đã ✅) =====
 function guiTinChoGV() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = laySS();
   var lich = ss.getSheetByName('LICH_BU');
   var data = lich.getDataRange().getValues();
 
@@ -395,7 +411,7 @@ function guiTinChoGV() {
 
   var keys = Object.keys(theoCa);
   if (!keys.length) {
-    SpreadsheetApp.getUi().alert('Chưa có ca nào được chốt ✅.');
+    baoXong('Chưa có ca nào được chốt ✅.');
     return;
   }
 
@@ -407,7 +423,7 @@ function guiTinChoGV() {
     });
     guiTelegram(tin);
   });
-  SpreadsheetApp.getUi().alert('Đã gửi ' + keys.length + ' tin vào nhóm Học Bù.');
+  baoXong('Đã gửi ' + keys.length + ' tin vào nhóm Học Bù.');
 }
 
 // ===== GV BÁO LỚP ĐI ĐỦ (không ai nghỉ) =====
@@ -417,7 +433,7 @@ function baoLopDu() {
   if (ten.getSelectedButton() !== ui.Button.OK) return;
   var lop = ui.prompt('Lớp nào đi đủ?', 'VD: S1.005 - Peach', ui.ButtonSet.OK_CANCEL);
   if (lop.getSelectedButton() !== ui.Button.OK) return;
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = laySS();
   var bao = ss.getSheetByName('BAO_BU');
   bao.appendRow([new Date(), ten.getResponseText(), '(cả lớp đi đủ)', lop.getResponseText(), '', '', 'Đủ — không cần bù', '', 'GV báo lớp đi đủ']);
   ui.alert('Đã ghi nhận: ' + lop.getResponseText() + ' đi đủ ✅');
@@ -425,7 +441,7 @@ function baoLopDu() {
 
 // ===== NHẮC GV BÁO BÙ SÁNG T2 =====
 function nhacGVBaoBu() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = laySS();
   var bao = ss.getSheetByName('BAO_BU');
   var data = bao.getDataRange().getValues();
   var daBao = {};
@@ -440,14 +456,14 @@ function nhacGVBaoBu() {
     tin += 'GV chưa báo: ' + chuaBao.join(', ') + '\nThầy cô vào tab BAO_BU ghi tên bé cần bù giúp em nha! Lớp đi đủ thì bấm menu Dạy Bù → GV báo lớp đi đủ.';
   }
   guiTelegram(tin);
-  SpreadsheetApp.getUi().alert('Đã gửi tin nhắc vào nhóm Học Bù.');
+  baoXong('Đã gửi tin nhắc vào nhóm Học Bù.');
 }
 
 // ===== GỬI TELEGRAM =====
 function guiTelegram(text) {
   var token = PropertiesService.getScriptProperties().getProperty('TELEGRAM_BOT_TOKEN');
   if (!token) {
-    SpreadsheetApp.getUi().alert('Chưa có token bot. Vào Cài đặt dự án → Thuộc tính tập lệnh → thêm TELEGRAM_BOT_TOKEN.');
+    baoXong('Chưa có token bot. Vào Cài đặt dự án → Thuộc tính tập lệnh → thêm TELEGRAM_BOT_TOKEN.');
     return;
   }
   var url = 'https://api.telegram.org/bot' + token + '/sendMessage';
