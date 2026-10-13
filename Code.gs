@@ -61,13 +61,26 @@ var LOP_DUC_ANH = ['S1.006 - Lychee', 'S2.004 - Cherry', 'C2.004 - Kiwi', 'T1.00
 // 4 ca cố định mỗi tuần
 function layDanhSachCa() {
   var hongAnhCon = hongAnhConLam();
-  var gvVan = hongAnhCon ? 'Ms. Vân / Ms. Hồng Anh' : 'Ms. Vân';
+  var gvVan = 'Ms. Vân'; // Ưu tiên Vân, Hồng Anh dự phòng
+  var gvHongAnh = 'Ms. Hồng Anh';
   return [
-    { ma: 'T5-1', thu: 'Thứ 5', gio: '17h00 - 18h30', gv: gvVan },
-    { ma: 'T6-1', thu: 'Thứ 6', gio: '15h00 - 16h30', gv: gvVan },
-    { ma: 'T6-2', thu: 'Thứ 6', gio: '17h00 - 18h30', gv: gvVan },
+    { ma: 'T5-1', thu: 'Thứ 5', gio: '17h00 - 18h30', gv: hongAnhCon ? gvVan : gvVan },
+    { ma: 'T6-1', thu: 'Thứ 6', gio: '15h00 - 16h30', gv: hongAnhCon ? gvVan : gvVan },
+    { ma: 'T6-2', thu: 'Thứ 6', gio: '17h00 - 18h30', gv: hongAnhCon ? gvVan : gvVan },
     { ma: 'T6-3', thu: 'Thứ 6', gio: '18h00 - 19h30', gv: 'Mr. Đức Anh' },
   ];
+}
+
+// Tính ngày gần nhất cho Thứ X (Thứ 5 = 4, Thứ 6 = 5)
+function layNgayThu(thu) {
+  var homNay = new Date();
+  var thuHienTai = homNay.getDay(); // 0=CN, 1=T2...6=T7
+  var thuMuon = thu === 'Thứ 5' ? 4 : (thu === 'Thứ 6' ? 5 : 4);
+  var ngayCach = thuMuon - thuHienTai;
+  if (ngayCach <= 0) ngayCach += 7; // tuần sau
+  var ngayHoc = new Date(homNay);
+  ngayHoc.setDate(homNay.getDate() + ngayCach);
+  return Utilities.formatDate(ngayHoc, 'GMT+7', 'dd/MM/yyyy');
 }
 
 function hongAnhConLam() {
@@ -87,6 +100,7 @@ function onOpen() {
     .addItem('4️⃣ Đẩy quá hạn sang tuần sau', 'dayQuaHanSangTuanSau')
     .addItem('5️⃣ GV báo lớp đi đủ', 'baoLopDu')
     .addItem('6️⃣ Nhắc GV báo bù (sáng T2)', 'nhacGVBaoBu')
+    .addItem('7️⃣ Backup T7 + Refresh tuần mới', 'backupVaRefreshTuanMoi')
     .addToUi();
   } catch (e) {} 
 }
@@ -100,6 +114,9 @@ function setupDayBu() {
   sh1.clear();
   sh1.appendRow(['Ngày báo', 'GV báo', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'Trạng thái', 'Ca xếp', 'Ghi chú']);
   sh1.getRange(1, 1, 1, 9).setFontWeight('bold').setBackground('#F6F3EE');
+  // Dòng mẫu ghi chú cho GV: lớp đi đủ thì gõ vầy
+  sh1.appendRow(['', '', '(ghi chú mẫu: GV gõ "(cả lớp đi đủ)" ở đây nếu lớp không ai nghỉ)', '', '', '', '', '', '']);
+  sh1.getRange(2, 3).setFontStyle('italic').setFontColor('#888888');
   // Chọn sẵn: GV báo (cột B), Lớp (cột D), Trình độ (cột E) — bấm chọn, khỏi gõ chữ
   datDropdown(sh1, 2, 100, GV_LIST);
   datDropdown(sh1, 4, 100, LOP_LIST);
@@ -324,9 +341,13 @@ function chonCaChoBe(be, caList, lich) {
 }
 
 function themBeVaoLich(lich, bao, be, ca) {
-  var tinPH = 'Chào PH bé ' + be.tenBe + ' ạ! Trung tâm xếp lịch học bù cho bé: '
-    + ca.thu + ' lúc ' + ca.gio + ', GV: ' + ca.gv + ', lớp ' + be.lop + '. '
-    + 'PH xác nhận giúp em trước ' + CFG.HAN_TRA_LOI + ' nha!';
+  var ngayHoc = layNgayThu(ca.thu);
+  var tinPH = 'Dạ em chào chị, em xin thông báo lịch học bù cho bé ' + be.tenBe + ':\n'
+    + '• Thời gian: ' + ca.thu + ' ngày ' + ngayHoc + ' lúc ' + ca.gio + '\n'
+    + '• GV: ' + ca.gv + '\n'
+    + '• Lớp: ' + be.lop + '\n'
+    + 'Dạ thời gian này chị có sắp xếp đưa bé đến Trung tâm học bù được không ạ?\n'
+    + 'Nhờ chị xác nhận giúp em trước 11h trưa Thứ 3 nhé!\nEm cám ơn chị ạ.';
   var tinGV = '📚 [' + ca.thu + ' ' + ca.gio + '] ' + ca.gv + ' dạy bù: bé ' + be.tenBe
     + ' (' + be.lop + ' - ' + be.trinhDo + '). Slide: ' + (be.link || '(chưa có link)');
   lich.appendRow([ca.ma, ca.thu, ca.gio, ca.gv, be.tenBe, be.lop, be.trinhDo, be.link, 'Chờ Vân Anh', tinPH, tinGV, '']);
@@ -457,6 +478,32 @@ function nhacGVBaoBu() {
   }
   guiTelegram(tin);
   baoXong('Đã gửi tin nhắc vào nhóm Học Bù.');
+}
+
+// ===== BACKUP T7 + REFRESH TUẦN MỚI =====
+function backupVaRefreshTuanMoi() {
+  var ss = laySS();
+  var lich = ss.getSheetByName('LICH_BU');
+  var bao = ss.getSheetByName('BAO_BU');
+  
+  // 1. Copy LICH_BU sang sheet backup tên "Backup_YYYY-MM-DD"
+  var homNay = new Date();
+  var tenBackup = 'Backup_' + Utilities.formatDate(homNay, 'GMT+7', 'yyyy-MM-dd');
+  var backup = ss.getSheetByName(tenBackup);
+  if (backup) ss.deleteSheet(backup); // xoá backup cũ cùng ngày nếu có
+  backup = lich.copyTo(ss);
+  backup.setName(tenBackup);
+  
+  // 2. Xoá dòng chưa chốt trong LICH_BU, giữ lại dòng đã ✅
+  giuLaiDongDaChot(lich);
+  
+  // 3. Xoá dữ liệu BAO_BU (giữ tiêu đề + dòng ghi chú mẫu), để GV báo tuần mới
+  var dataBao = bao.getDataRange().getValues();
+  if (dataBao.length > 2) {
+    bao.deleteRows(3, dataBao.length - 2);
+  }
+  
+  baoXong('Đã backup ' + tenBackup + ' và làm mới BAO_BU cho tuần mới ✅\nDòng đã dạy xong còn trong LICH_BU để báo cáo.');
 }
 
 // ===== GỬI TELEGRAM =====
