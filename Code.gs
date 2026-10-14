@@ -99,7 +99,8 @@ function onOpen() {
     .addItem('3️⃣ Gửi tin cho GV (ca đã chốt ✅)', 'guiTinChoGV')
     .addItem('4️⃣ Đẩy quá hạn sang tuần sau', 'dayQuaHanSangTuanSau')
     .addItem('5️⃣ Nhắc GV báo bù (sáng T2)', 'nhacGVBaoBu')
-    .addItem('6️⃣ Backup T7 + Refresh tuần mới', 'backupVaRefreshTuanMoi')
+    .addItem('6️⃣ Backup thủ công', 'backupThuCong')
+    .addItem('7️⃣ Làm mới thống kê', 'lamMoiThongKe')
     .addToUi();
   } catch (e) {} 
 }
@@ -472,19 +473,37 @@ function nhacGVBaoBu() {
   baoXong('Đã gửi tin nhắc vào nhóm Học Bù.');
 }
 
-// ===== BACKUP T7 + REFRESH TUẦN MỚI =====
+// ===== BACKUP THỦ CÔNG (giữa tuần khi cần) =====
+function backupThuCong() {
+  backupVaRefreshTuanMoi();
+}
+
+// ===== BACKUP T7 TỰ ĐỘNG + REFRESH TUẦN MỚI =====
 function backupVaRefreshTuanMoi() {
   var ss = laySS();
   var lich = ss.getSheetByName('LICH_BU');
   var bao = ss.getSheetByName('BAO_BU');
   
-  // 1. Copy LICH_BU sang sheet backup tên "Backup_YYYY-MM-DD"
+  // 1. Append LICH_BU vào sheet "Backup tháng MM-YYYY" (tạo nếu chưa có)
   var homNay = new Date();
-  var tenBackup = 'Backup_' + Utilities.formatDate(homNay, 'GMT+7', 'yyyy-MM-dd');
+  var thang = Utilities.formatDate(homNay, 'GMT+7', 'MM-yyyy');
+  var tenBackup = 'Backup tháng ' + thang;
   var backup = ss.getSheetByName(tenBackup);
-  if (backup) ss.deleteSheet(backup); // xoá backup cũ cùng ngày nếu có
-  backup = lich.copyTo(ss);
-  backup.setName(tenBackup);
+  if (!backup) {
+    backup = ss.insertSheet(tenBackup);
+    backup.appendRow(['Ngày', 'Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Đã dạy']);
+    backup.getRange(1, 1, 1, 8).setFontWeight('bold').setBackground('#F6F3EE');
+  }
+  
+  // Chỉ append dòng đã ✅ Đi được
+  var dataLich = lich.getDataRange().getValues();
+  for (var i = 1; i < dataLich.length; i++) {
+    var st = (dataLich[i][8] || '').toString();
+    if (st.indexOf('✅') >= 0 || st.indexOf('Đi được') >= 0) {
+      var ngay = Utilities.formatDate(homNay, 'GMT+7', 'dd/MM/yyyy');
+      backup.appendRow([ngay, dataLich[i][0], dataLich[i][1], dataLich[i][2], dataLich[i][3], dataLich[i][4], dataLich[i][5], dataLich[i][11]]);
+    }
+  }
   
   // 2. Clear LICH_BU (giữ tiêu đề) để tuần mới bắt đầu sạch
   lich.clear();
@@ -499,7 +518,68 @@ function backupVaRefreshTuanMoi() {
     bao.deleteRows(3, dataBao.length - 2);
   }
   
-  baoXong('Đã backup ' + tenBackup + ' và làm mới BAO_BU + LICH_BU cho tuần mới ✅');
+  baoXong('Đã append vào ' + tenBackup + ' và làm mới BAO_BU + LICH_BU cho tuần mới ✅');
+}
+
+// ===== SETUP TRIGGER T7 TỰ ĐỘNG =====
+function setupTriggerTuanBu() {
+  // Xoá trigger cũ (nếu có) để tránh chạy trùng
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === 'backupVaRefreshTuanMoi') {
+      ScriptApp.deleteTrigger(triggers[i]);
+    }
+  }
+  // Tạo trigger mới: chạy tối T7 hàng tuần lúc 22h
+  ScriptApp.newTrigger('backupVaRefreshTuanMoi')
+    .timeBased()
+    .onWeekDay(ScriptApp.WeekDay.SATURDAY)
+    .atHour(22)
+    .create();
+  baoXong('Đã cài trigger tự động: mỗi tối T7 22h tự backup + refresh ✅');
+}
+
+// ===== LÀM MỚI THỐNG KÊ =====
+function lamMoiThongKe() {
+  var ss = laySS();
+  var homNay = new Date();
+  var thang = Utilities.formatDate(homNay, 'GMT+7', 'MM-yyyy');
+  var tenBackup = 'Backup tháng ' + thang;
+  
+  // Tạo tab THỐNG KÊ nếu chưa có
+  var tk = ss.getSheetByName('THỐNG KÊ');
+  if (!tk) tk = ss.insertSheet('THỐNG KÊ');
+  tk.clear();
+  
+  // Tiêu đề
+  tk.appendRow(['THỐNG KÊ DẠY BÙ THÁNG ' + thang]);
+  tk.getRange(1, 1).setFontSize(14).setFontWeight('bold');
+  tk.appendRow([]);
+  
+  // Bảng 1: Thống kê theo GV
+  tk.appendRow(['GV dạy', 'Số ca dạy', 'Tổng giờ']);
+  tk.getRange(3, 1, 1, 3).setFontWeight('bold').setBackground('#F6F3EE');
+  
+  var dongBatDau = 4;
+  GV_LIST.forEach(function (gv, idx) {
+    var dong = dongBatDau + idx;
+    tk.getRange(dong, 1).setValue(gv);
+    // Công thức đếm ca: COUNTIF(Backup!E:E, GV)
+    tk.getRange(dong, 2).setFormula('=COUNTIF(\'' + tenBackup + '\'!E:E, A' + dong + ')');
+    // Công thức tổng giờ: Số ca * 1.5
+    tk.getRange(dong, 3).setFormula('=B' + dong + ' * 1.5');
+  });
+  
+  // Bảng 2: Tổng chung
+  var dongTong = dongBatDau + GV_LIST.length + 1;
+  tk.appendRow([]);
+  tk.appendRow(['Tổng cả tháng']);
+  tk.getRange(dongTong + 1, 1).setFontWeight('bold');
+  tk.appendRow(['Tổng số bé học bù', '=COUNTA(\'' + tenBackup + '\'!F2:F)']);
+  tk.appendRow(['Tổng số ca dạy', '=SUM(B' + dongBatDau + ':B' + (dongBatDau + GV_LIST.length - 1) + ')']);
+  tk.appendRow(['Tổng số giờ', '=SUM(C' + dongBatDau + ':C' + (dongBatDau + GV_LIST.length - 1) + ')']);
+  
+  baoXong('Đã làm mới tab THỐNG KÊ với công thức tự động ✅\nNếu sửa lỗi công thức, bấm lại nút này để ghi đè.');
 }
 
 // ===== GỬI TELEGRAM =====
