@@ -1,0 +1,525 @@
+#!/usr/bin/env node
+// Test tự động cho Code.gs (Dạy Bù + SOTW) — mock Google Apps Script API
+const fs = require('fs');
+const vm = require('vm');
+
+// ================= MOCK =================
+let FAIL = 0, PASS = 0;
+function ok(cond, name) {
+  if (cond) { PASS++; console.log('  ✅ ' + name); }
+  else { FAIL++; console.log('  ❌ FAIL: ' + name); }
+}
+function eq(a, b, name) { ok(JSON.stringify(a) === JSON.stringify(b), name + (a === b ? '' : ` [got ${JSON.stringify(a)}, want ${JSON.stringify(b)}]`)); }
+
+let SHEET_SEQ = 1;
+
+class MockRange {
+  constructor(sheet, r, c, h, w) { this.sheet = sheet; this.r = r; this.c = c; this.h = h; this.w = w; }
+  _get(r, c) {
+    const row = this.sheet.rows[r - 1];
+    if (!row) return '';
+    const v = row[c - 1];
+    return v === undefined ? '' : v;
+  }
+  _set(r, c, v) {
+    while (this.sheet.rows.length < r) this.sheet.rows.push([]);
+    const row = this.sheet.rows[r - 1];
+    while (row.length < c) row.push('');
+    row[c - 1] = v;
+  }
+  getValues() {
+    const out = [];
+    for (let i = 0; i < this.h; i++) {
+      const row = [];
+      for (let j = 0; j < this.w; j++) row.push(this._get(this.r + i, this.c + j));
+      out.push(row);
+    }
+    return out;
+  }
+  setValues(vals) {
+    for (let i = 0; i < vals.length; i++)
+      for (let j = 0; j < vals[i].length; j++)
+        this._set(this.r + i, this.c + j, vals[i][j]);
+    return this;
+  }
+  getValue() { return this._get(this.r, this.c); }
+  setValue(v) { this._set(this.r, this.c, v); return this; }
+  setFormula(f) { this._set(this.r, this.c, f); return this; }
+  clear() {
+    if (this.h === 1 && this.w === 1) { this._set(this.r, this.c, ''); return this; }
+    for (let i = 0; i < this.h; i++)
+      for (let j = 0; j < this.w; j++) this._set(this.r + i, this.c + j, '');
+    return this;
+  }
+  clearContent() { return this.clear(); }
+  setFontWeight() { return this; } setFontStyle() { return this; } setFontColor() { return this; }
+  setBackground(v) { this.sheet.bgRules.push({ r: this.r, c: this.c, h: this.h, w: this.w, bg: v }); return this; }
+  setFontSize() { return this; }
+  setDataValidation(rule) { this.sheet.validations.push({ r: this.r, c: this.c, h: this.h, w: this.w, rule }); return this; }
+  protect() {
+    const p = {
+      desc: '', editors: [],
+      setDescription(d) { this.desc = d; return this; },
+      getDescription() { return this.desc; },
+      addEditors(e) { this.editors = this.editors.concat(e); return this; },
+      canDomainEdit() { return false; },
+      setDomainEdit() { return this; },
+    };
+    this.sheet.protectedRanges.push(p);
+    return p;
+  }
+  getSheet() { return this.sheet; }
+}
+
+class MockSheet {
+  constructor(name) {
+    this.name = name; this.id = SHEET_SEQ++; this.rows = [];
+    this.validations = []; this.protectedRanges = []; this.bgRules = []; this.cfRules = [];
+  }
+  getName() { return this.name; }
+  getSheetId() { return this.id; }
+  getLastRow() {
+    let last = 0;
+    this.rows.forEach((r, i) => { if (r && r.some(v => v !== '' && v !== undefined)) last = i + 1; });
+    return last;
+  }
+  getRange(a, b, c, d) {
+    if (typeof a === 'string') return new MockRange(this, 1, 1, 1, 1); // A1-string (chỉ dùng CF)
+    if (c === undefined) return new MockRange(this, a, b, 1, 1);
+    return new MockRange(this, a, b, c, d);
+  }
+  getDataRange() { const n = Math.max(this.getLastRow(), 1); return new MockRange(this, 1, 1, n, Math.max(this._maxCols(), 1)); }
+  _maxCols() { let m = 1; this.rows.forEach(r => { if (r) m = Math.max(m, r.length); }); return m; }
+  appendRow(row) {
+    // tìm dòng trống cuối (giống Sheets appendRow thật — append sau dòng có data)
+    let idx = this.getLastRow(); // 0-based vị trí append
+    while (this.rows.length < idx + 1) this.rows.push([]);
+    this.rows[idx] = row.slice();
+    return this;
+  }
+  insertRows(rowIndex, amount) {
+    const at = Math.max(rowIndex - 1, 0);
+    for (let i = 0; i < amount; i++) this.rows.splice(at, 0, []);
+    return this;
+  }
+  deleteRow(rowIndex) { this.rows.splice(rowIndex - 1, 1); return this; }
+  clear() { this.rows = []; return this; }
+  getProtections() { return this.protectedRanges.slice(); }
+  setConditionalFormatRules(rules) { this.cfRules = rules; return this; }
+}
+
+class MockSS {
+  constructor() { this.sheets = {}; }
+  getSheetByName(n) { return this.sheets[n] || null; }
+  insertSheet(n) { const s = new MockSheet(n); this.sheets[n] = s; return s; }
+  getSheets() { return Object.values(this.sheets); }
+}
+
+// State toàn cục test
+const STATE = {
+  ss: new MockSS(),
+  alerts: [],
+  fetches: [],
+  confirms: [], // queue: true=YES, false=NO
+};
+
+function makeUi() {
+  return {
+    ButtonSet: { YES_NO: 'YES_NO' },
+    Button: { YES: 'YES' },
+    alert(a, b) {
+      if (typeof a === 'string' && b === undefined) { STATE.alerts.push(a); return 'OK'; }
+      const ans = STATE.confirms.length ? STATE.confirms.shift() : true;
+      STATE.alerts.push('[confirm] ' + a + ' → ' + ans);
+      return ans ? 'YES' : 'NO';
+    },
+    createMenu() {
+      const m = { addItem() { return m; }, addSeparator() { return m; }, addToUi() { return m; } };
+      return m;
+    },
+  };
+}
+
+const ui = makeUi();
+
+const dvBuilder = {
+  requireValueInList(list, show) { this.list = list; return this; },
+  requireCheckbox() { this.checkbox = true; return this; },
+  setAllowInvalid(v) { this.allowInvalid = v; return this; },
+  build() { return { list: this.list, checkbox: this.checkbox, allowInvalid: this.allowInvalid }; },
+};
+
+const Utilities = {
+  formatDate(date, tz, fmt) {
+    const d = new Date(date.getTime() + 7 * 3600 * 1000);
+    const p = n => String(n).padStart(2, '0');
+    const map = {
+      'dd/MM/yyyy': `${p(d.getUTCDate())}/${p(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}`,
+      'dd/MM': `${p(d.getUTCDate())}/${p(d.getUTCMonth() + 1)}`,
+      'MM-yyyy': `${p(d.getUTCMonth() + 1)}-${d.getUTCFullYear()}`,
+      'dd/MM HH:mm': `${p(d.getUTCDate())}/${p(d.getUTCMonth() + 1)} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`,
+      'u': String(((d.getUTCDay() + 6) % 7) + 1),
+    };
+    if (!map[fmt]) throw new Error('Unsupported format: ' + fmt);
+    return map[fmt];
+  },
+};
+
+const SpreadsheetApp = {
+  getActiveSpreadsheet: () => STATE.ss,
+  openById: () => STATE.ss,
+  getUi: () => ui,
+  newDataValidation: () => Object.create(dvBuilder),
+  newConditionalFormatRule: () => ({
+    setFormulaRelativeFormula(f) { this.f = f; return this; },
+    setRanges(r) { this.ranges = r; return this; },
+    setBackground(b) { this.bg = b; return this; },
+    setFontColor(c) { this.fc = c; return this; },
+    build() { return { f: this.f, ranges: this.ranges, bg: this.bg }; },
+  }),
+  ProtectionType: { RANGE: 'RANGE' },
+};
+
+const sandbox = {
+  SpreadsheetApp, Utilities,
+  Logger: { log: () => {} },
+  PropertiesService: { getScriptProperties: () => ({ getProperty: () => 'TEST_TOKEN' }) },
+  UrlFetchApp: {
+    fetch(url, opts) {
+      STATE.fetches.push({ url, text: opts.payload.text });
+      return { getResponseCode: () => 200, getContentText: () => 'ok' };
+    },
+  },
+  ScriptApp: {
+    getProjectTriggers: () => [],
+    newTrigger: () => ({ timeBased() { return this; }, onWeekDay() { return this; }, atHour() { return this; }, create() { return this; } }),
+    WeekDay: { SATURDAY: 'SATURDAY' },
+  },
+  console, Date, JSON, Math, Object, Array, String, Number, parseInt, isNaN,
+};
+vm.createContext(sandbox);
+vm.runInContext(fs.readFileSync(__dirname + '/Code.gs', 'utf8'), sandbox, { filename: 'Code.gs' });
+
+// Helpers test
+function sheet(n) { return STATE.ss.getSheetByName(n); }
+function rows(n) { return typeof n === 'string' ? sheet(n).rows : n.rows; }
+function findRow(n, colIdx, val) {
+  const rs = rows(n);
+  for (let i = 1; i < rs.length; i++) if ((rs[i][colIdx] || '') === val) return i + 1;
+  return -1;
+}
+function lastAlert() { return STATE.alerts[STATE.alerts.length - 1]; }
+
+// ================= TESTS =================
+console.log('\n=== T1: Nâng cấp sheet SOTW ===');
+{
+  // Tạo BAO_BU có sẵn data (mô phỏng sheet cũ của chị)
+  const bao = STATE.ss.insertSheet('BAO_BU');
+  bao.appendRow(['Ngày báo', 'GV báo', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'Trạng thái', 'Ca xếp', 'Ghi chú']);
+  // dòng mẫu CŨ (bản trước)
+  bao.appendRow(['', '', '(ghi chú mẫu: nếu lớp không ai nghỉ, GV gõ "Không bù" ở đây)', '', '', '', '', '', '']);
+  // data thật
+  bao.appendRow([new Date(), 'Ms. Vân', 'Bé Một', 'S1.005 - Peach', 'SP1', '', '', '', '']);
+  bao.appendRow([new Date(), 'Ms. Vân', 'Bé Hai', 'S1.005 - Peach', 'SP1', '', '', '', '']);
+  bao.appendRow([new Date(), 'Mr. Ngọc', 'Bé Ba', 'S1.001 - Cashew', 'Kids', '', '', '', '']);
+
+  sandbox.nangCapSheetSotw();
+
+  const sotw = sheet('DS HỌC SINH');
+  ok(!!sotw, 'Tạo tab DS HỌC SINH');
+  eq(sotw.getRange(2, 1).getValue(), 'Tên bé', 'Header DS HỌC SINH');
+  eq(sotw.getRange(1, 1).getValue(), 'GV đang chọn:', 'Ô GV đang chọn');
+  ok(sotw.cfRules.length === 1, 'Conditional formatting đã gắn');
+  ok(sotw.validations.some(v => v.rule && v.rule.checkbox), 'Validation checkbox cột tick');
+
+  eq(bao.getRange(1, 10).getValue(), 'SOTW', 'Cột J BAO_BU = SOTW');
+  ok(String(bao.getRange(4, 10).getValue()).includes('HYPERLINK'), 'Hyperlink ở dòng data');
+  // 2 dòng mẫu mới, data giữ nguyên
+  const r2 = bao.getRange(2, 9).getValue(), r3 = bao.getRange(3, 9).getValue();
+  ok(String(r2).includes('(DÒNG MẪU)'), 'Dòng mẫu 1 tại row2');
+  ok(String(r3).includes('(DÒNG MẪU)'), 'Dòng mẫu 2 tại row3');
+  eq(findRow(bao, 2, 'Bé Một'), 4, 'Data cũ trượt xuống row4 (không mất)');
+  eq(bao.protectedRanges.length, 1, 'Bảo vệ 2 dòng mẫu');
+  eq(bao.protectedRanges[0].editors.length, 3, '3 quản lý được sửa dòng mẫu');
+
+  // chạy lại lần 2 → không thêm dòng mẫu trùng
+  sandbox.nangCapSheetSotw();
+  const cnt = bao.rows.filter(r => String((r[8] || '')).includes('(DÒNG MẪU)')).length;
+  eq(cnt, 2, 'Chạy lại không tạo dòng mẫu trùng');
+}
+
+console.log('\n=== T2: onEdit bỏ qua dòng mẫu ===');
+{
+  const bao = sheet('BAO_BU');
+  sandbox.onEdit({ range: bao.getRange(2, 3) }); // dòng mẫu
+  ok(!bao.getRange(2, 1).getValue(), 'Dòng mẫu: không tự gõ ngày');
+  sandbox.onEdit({ range: bao.getRange(4, 3) }); // dòng data
+  ok(!!bao.getRange(4, 1).getValue(), 'Dòng data: tự gõ ngày');
+}
+
+console.log('\n=== T3: Nhập DS HS + tick + Gom nhóm (gộp SOTW) ===');
+{
+  // Sheet LICH_BU đã có sẵn (mô phỏng sheet thật)
+  if (!sheet('LICH_BU')) {
+    const lich = STATE.ss.insertSheet('LICH_BU');
+    lich.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy']);
+  }
+  const sotw = sheet('DS HỌC SINH');
+  sotw.appendRow(['Ngô Bảo Hân', 'S1.001 - Cashew', '', 'Nam', 'https://img/1.jpg', true]);
+  sotw.appendRow(['Lê Quốc Thiên Bảo', 'S1.001 - Cashew', '', 'Nam', '', true]);
+  sotw.appendRow(['Trần Kiên', 'S2.001 - Pumpkin Seed', '', 'Nam', 'https://img/3.jpg', false]);
+  sotw.appendRow(['Bé Vân', 'S1.005 - Peach', '', 'Nữ', '', false]);
+  // chạy lại nangCap để backfill GV chính
+  sandbox.nangCapSheetSotw();
+  eq(sotw.getRange(3, 3).getValue(), 'Mr. Ngọc', 'Backfill GV chính = Mr. Ngọc');
+  // thêm bé nữa cho đủ test
+  const bao = sheet('BAO_BU');
+  bao.appendRow([new Date(), 'Ms. Vân', 'Bé Bốn', 'S2.003 - Peanut', 'SP1', '', '', '', '']);
+  bao.appendRow([new Date(), 'Mr. Đức Anh', 'Bé Năm', 'S1.006 - Lychee', 'Kids', '', '', '', '']);
+
+  sandbox.gomNhom();
+
+  const lich = rows('LICH_BU');
+  ok(lich.length >= 6, 'LICH có header + bé được xếp (rows=' + lich.length + ')');
+  // dòng mẫu không vào lịch
+  ok(!lich.some(r => String(r[4] || '').includes('Iphone') || String(r[4] || '').includes('Không bù')), 'Dòng mẫu không bị xếp lịch');
+  // trạng thái đã xếp
+  eq(bao.getRange(4, 7).getValue(), 'Đã xếp', 'Bé Một = Đã xếp');
+
+  // SOTW đã gửi
+  eq(STATE.fetches.length, 1, 'Gửi đúng 1 tin SOTW');
+  const tin = STATE.fetches[0].text;
+  ok(tin.includes('Ngô Bảo Hân') && tin.includes('https://img/1.jpg'), 'Tin SOTW có tên + link ảnh');
+  ok(tin.includes('(Nam)'), 'Tin SOTW có giới tính');
+  ok(tin.includes('Chưa nộp SOTW'), 'Tin liệt kê GV chưa nộp');
+  ok(String(sotw.getRange(1, 6).getValue()).includes('đã gửi'), 'Mốc đã gửi được ghi');
+
+  // KHÔNG xoá tick (bổ sung mới)
+  eq(sotw.getRange(3, 6).getValue(), true, 'Tick GIỮ NGUYÊN sau khi gửi (check lại được)');
+
+  // Tin nhắn PH: không có GV/Lớp
+  const phRows = lich.filter(r => String(r[9] || '').includes('thông báo lịch học bù'));
+  ok(phRows.length > 0, 'Có tin nhắn PH');
+  ok(phRows.every(r => !String(r[9]).includes('• GV:') && !String(r[9]).includes('• Lớp:')), 'Tin PH bỏ dòng GV và Lớp');
+}
+
+console.log('\n=== T4: Gom nhóm lần 2 — không gửi trùng SOTW, không mất bé ===');
+{
+  const before = STATE.fetches.length;
+  const bao = sheet('BAO_BU');
+  bao.appendRow([new Date(), 'Ms. Vân', 'Bé Sáu', 'C2.002 - Chestnut', 'SP0', '', '', '', '']);
+  sandbox.gomNhom();
+  eq(STATE.fetches.length, before, 'Gom lại: KHÔNG gửi trùng SOTW (có mốc)');
+  ok(lastAlert().includes('ĐÃ GỬI rồi'), 'Báo đã gửi rồi khi gom lại');
+  // bé đã xếp trước đó VẪN còn trong LICH
+  const lich = rows('LICH_BU');
+  ok(lich.some(r => r[4] === 'Bé Một'), 'Bé đã xếp không mất khi gom lại (fix bug cũ)');
+  ok(lich.some(r => r[4] === 'Bé Sáu'), 'Bé mới được xếp');
+  // trạng thái vẫn 'Đã xếp'
+  eq(bao.getRange(4, 7).getValue(), 'Đã xếp', 'Trạng thái giữ Đã xếp');
+}
+
+console.log('\n=== T5: Gửi lại SOTW (nút menu) — hỏi trước ===');
+{
+  const before = STATE.fetches.length;
+  STATE.confirms.push(false); // trả lời KHÔNG
+  sandbox.guiSOTWMenu();
+  eq(STATE.fetches.length, before, 'Trả lời KHÔNG → không gửi');
+  STATE.confirms.push(true); // trả lời CÓ
+  sandbox.guiSOTWMenu();
+  eq(STATE.fetches.length, before + 1, 'Trả lời CÓ → gửi lại');
+}
+
+console.log('\n=== T6: Xử lý case đặc biệt (Xin đổi + Quá hạn) ===');
+{
+  const lich = sheet('LICH_BU');
+  const bao = sheet('BAO_BU');
+  // thêm case Xin đổi (bé đã xếp sẵn)
+  const dongBeHai = findRow(bao, 2, 'Bé Hai');
+  lich.appendRow(['T6-1', 'Thứ 6', '15h00 - 16h30', 'Ms. Vân', 'Bé Hai', 'S1.005 - Peach', 'SP1', '', '🔄 Xin đổi', '', '', '']);
+  STATE.confirms.push(true);
+  const fBefore = STATE.fetches.length;
+  sandbox.xuLyCaseDacBiet();
+  eq(STATE.fetches.length, fBefore + 1, 'Gửi Telegram case đặc biệt');
+  ok(lastAlert().includes('Xin đổi'), 'Thông báo có case Xin đổi');
+  // Bé Hai: quay về BAO_BU, KHÔNG trùng dòng, status trống
+  const found = [];
+  const rs = bao.rows;
+  for (let i = 1; i < rs.length; i++) if (rs[i][2] === 'Bé Hai') found.push(i + 1);
+  eq(found.length, 1, 'KHÔNG tạo dòng trùng cho Bé Hai');
+  eq(bao.getRange(found[0], 7).getValue(), '', 'Bé Hai: status trống để xếp lại');
+  eq(bao.getRange(found[0], 8).getValue(), '', 'Bé Hai: Ca xếp trống');
+  ok(String(bao.getRange(found[0], 9).getValue()).includes('Xin đổi'), 'Ghi chú case Xin đổi');
+  // LICH không còn row Xin đổi
+  ok(!rows('LICH_BU').some(r => r[4] === 'Bé Hai' && String(r[8]).includes('Xin đổi')), 'Đã xoá khỏi LICH');
+  // Gom lại sau xử lý case: sắp xếp lại hết, SOTW không gửi trùng
+  const fAfterCase = STATE.fetches.length;
+  sandbox.gomNhom();
+  eq(STATE.fetches.length, fAfterCase, 'Gom lại sau case: SOTW không gửi trùng (còn mốc)');
+  ok(rows('LICH_BU').some(r => r[4] === 'Bé Một'), 'Bé được xếp lại sau khi chuyển về BAO_BU');
+}
+
+console.log('\n=== T7: Capacity — bé Nghỉ không chiếm chỗ ===');
+{
+  // Tạo LICH mới sạch để test chonCaChoBe
+  const lichTest = new MockSheet('LICH_TEST');
+  lichTest.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy']);
+  // ca T5-1: 3 bé sống (SP1) + 1 bé Nghỉ (SP1)
+  lichTest.appendRow(['T5-1', 'Thứ 5', '17h00 - 18h30', 'Ms. Vân', 'L1', 'L1', 'SP1', '', '✅ Đi được', '', '', '']);
+  lichTest.appendRow(['T5-1', 'Thứ 5', '17h00 - 18h30', 'Ms. Vân', 'L2', 'L2', 'SP1', '', '✅ Đi được', '', '', '']);
+  lichTest.appendRow(['T5-1', 'Thứ 5', '17h00 - 18h30', 'Ms. Vân', 'L3', 'L3', 'SP1', '', '✅ Đi được', '', '', '']);
+  lichTest.appendRow(['T5-1', 'Thứ 5', '17h00 - 18h30', 'Ms. Vân', 'Nghỉ1', 'N1', 'SP1', '', '❌ Nghỉ', '', '', '']);
+  const ca = sandbox.chonCaChoBe({ lop: 'S1.005 - Peach', trinhDo: 'SP1' }, sandbox.layDanhSachCa(), lichTest);
+  ok(ca && ca.ma === 'T5-1', 'Bé SP1 vào ca T5-1 (Nghỉ không chiếm chỗ)');
+}
+
+console.log('\n=== T8: Backup chống trùng ===');
+{
+  const lich = sheet('LICH_BU');
+  // đánh dấu 1 bé đã học
+  const rs = lich.rows;
+  let foundMot = false;
+  for (let i = 1; i < rs.length; i++) {
+    if (rs[i][4] === 'Bé Một') { rs[i][8] = '✅ Đi được'; rs[i][11] = '✅ Đã học'; foundMot = true; break; }
+  }
+  ok(foundMot, 'Tìm thấy Bé Một trong LICH để backup');
+  STATE.alerts.length = 0;
+  sandbox.backupThuCong();
+  const bk = rows('Backup tháng ' + new Date().toLocaleString('en', { month: '2-digit', year: 'numeric', timeZone: 'Asia/Bangkok' }).replace('/', '-'));
+  // backup sheet có data
+  const bkName = STATE.ss.getSheetByName('Backup tháng ' + Utilities.formatDate(new Date(), 'GMT+7', 'MM-yyyy'));
+  ok(!!bkName, 'Tạo sheet backup tháng');
+  const rowsBk = bkName.rows.length;
+  ok(rowsBk >= 2, 'Backup có dữ liệu (rows=' + rowsBk + ')');
+  sandbox.backupThuCong();
+  eq(bkName.rows.length, rowsBk, 'Chạy backup lần 2 cùng ngày: KHÔNG duplicate');
+  ok(lastAlert().includes('đã backup rồi'), 'Báo đã backup rồi');
+}
+
+console.log('\n=== T9: LamMoiThongKe không lỗi appendRow([]) ===');
+{
+  try {
+    sandbox.lamMoiThongKe();
+    ok(!!sheet('THỐNG KÊ'), 'Tạo tab THỐNG KÊ không exception');
+    ok(sheet('THỐNG KÊ').getRange(4, 1).getValue() === 'Mr. Đức Anh', 'Dòng GV đầu tiên');
+  } catch (e) {
+    ok(false, 'lamMoiThongKe exception: ' + e.message);
+  }
+}
+
+console.log('\n=== T10: Làm mới tuần mới — xoá tick + giữ mẫu + giữ bé chưa xếp ===');
+{
+  const sotw = sheet('DS HỌC SINH');
+  const bao = sheet('BAO_BU');
+  const lich = sheet('LICH_BU');
+  // trạng thái trước
+  ok(sotw.getRange(3, 6).getValue() === true, 'Trước: còn tick');
+  ok(!!sotw.getRange(1, 6).getValue(), 'Trước: còn mốc');
+  // thêm 1 bé CHƯA xếp (GV báo mới, chưa gom) → phải được giữ lại
+  bao.appendRow([new Date(), 'Ms. Vân', 'Bé Mới', 'C2.002 - Chestnut', 'SP0', '', '', '', '']);
+  const dongMoi = findRow(bao, 2, 'Bé Mới');
+  ok(dongMoi > 0, 'Có Bé Mới (chưa xếp) trong BAO_BU');
+  eq(bao.getRange(dongMoi, 8).getValue(), '', 'Bé Mới chưa xếp (Ca xếp trống)');
+  // bé đã xếp có Ca xếp đầy → sẽ bị clear
+  const dongBaTruoc = findRow(bao, 2, 'Bé Ba');
+  ok(dongBaTruoc > 0, 'Có Bé Ba (đã xếp) trong BAO_BU');
+  ok(!!bao.getRange(dongBaTruoc, 8).getValue(), 'Bé Ba đã có Ca xếp');
+  STATE.confirms.push(true);
+  sandbox.lamMoiTuanMoi();
+
+  // tick + mốc xoá
+  ok(!sotw.getRange(3, 6).getValue(), 'Sau: tick đã xoá');
+  ok(!sotw.getRange(1, 6).getValue(), 'Sau: mốc đã xoá');
+  // danh sách HS giữ nguyên
+  eq(sotw.getRange(3, 1).getValue(), 'Ngô Bảo Hân', 'Danh sách HS GIỮ NGUYÊN');
+  eq(sotw.getRange(3, 5).getValue(), 'https://img/1.jpg', 'Link ảnh GIỮ NGUYÊN');
+  // 2 dòng mẫu giữ
+  ok(String(bao.getRange(2, 9).getValue()).includes('(DÒNG MẪU)'), 'Dòng mẫu 1 giữ');
+  ok(String(bao.getRange(3, 9).getValue()).includes('(DÒNG MẪU)'), 'Dòng mẫu 2 giữ');
+  // bé chưa xếp giữ, bé đã xếp clear
+  const dongMoi2 = findRow(bao, 2, 'Bé Mới');
+  ok(dongMoi2 > 0, 'Bé chưa xếp (Bé Mới) ĐƯỢC GIỮ');
+  ok(findRow(bao, 2, 'Bé Ba') < 0, 'Bé đã xếp (Bé Ba) KHÔNG giữ lại');
+  // LICH clean
+  eq(lich.rows.length, 1, 'LICH_BU chỉ còn header');
+  // cột J link vẫn còn
+  ok(String(bao.getRange(4, 10).getValue()).includes('HYPERLINK'), 'Cột J link vẫn còn sau clear');
+}
+
+console.log('\n=== T11: Gom nhóm sau Làm mới tuần mới — SOTW gửi được lại ===');
+{
+  // GV tick lại cho tuần mới
+  sheet('DS HỌC SINH').getRange(3, 6).setValue(true);
+  const before = STATE.fetches.length;
+  sandbox.gomNhom();
+  eq(STATE.fetches.length, before + 1, 'Tuần mới → gửi SOTW mới (mốc đã xoá)');
+}
+
+console.log('\n=== T12: menu onOpen không lỗi ===');
+{
+  try { sandbox.onOpen(); ok(true, 'onOpen OK'); }
+  catch (e) { ok(false, 'onOpen lỗi: ' + e.message); }
+}
+
+console.log('\n=== T13: setupDayBu trên sheet TRỐNG (sheet mới) ===');
+{
+  STATE.ss = new MockSS(); // sheet mới hoàn toàn
+  STATE.confirms.push(true);
+  sandbox.setupDayBu();
+  ok(!!sheet('BAO_BU') && !!sheet('LICH_BU') && !!sheet('LOP') && !!sheet('DS HỌC SINH'), 'Tạo đủ 4 tab');
+  eq(rows('LOP').length, 26, 'Tab LOP đủ 25 lớp + header');
+  eq(sheet('BAO_BU').getRange(1, 10).getValue(), 'SOTW', 'BAO_BU có cột SOTW');
+  ok(String(sheet('BAO_BU').getRange(2, 9).getValue()).includes('(DÒNG MẪU)'), 'Có dòng mẫu 1');
+  ok(String(sheet('BAO_BU').getRange(3, 9).getValue()).includes('(DÒNG MẪU)'), 'Có dòng mẫu 2');
+  eq(sheet('DS HỌC SINH').getRange(2, 6).getValue(), '☑ SOTW tuần này', 'DS HỌC SINH header tick');
+  // setupDayBu lần 2 → hủy (confirm NO)
+  STATE.confirms.push(false);
+  const rowsBefore = rows('BAO_BU').length;
+  sandbox.setupDayBu();
+  eq(rows('BAO_BU').length, rowsBefore, 'Trả lời KHÔNG → không xoá data');
+}
+
+console.log('\n=== T14: Nhắc GV báo bù + gửi tin GV + trigger ===');
+{
+  STATE.alerts.length = 0;
+  const f0 = STATE.fetches.length;
+  sandbox.nhacGVBaoBu();
+  eq(STATE.fetches.length, f0 + 1, 'Nhắc GV gửi 1 tin');
+  ok(STATE.fetches[STATE.fetches.length - 1].text.includes('DS HỌC SINH'), 'Tin nhắc có hướng dẫn SOTW');
+
+  // LICH có ca ✅
+  const lich = sheet('LICH_BU');
+  lich.appendRow(['T5-1', 'Thứ 5', '17h00 - 18h30', 'Ms. Vân', 'Bé A', 'S1.005 - Peach', 'SP1', 'https://slide', '✅ Đi được', '', '', '✅ Đã học']);
+  const f1 = STATE.fetches.length;
+  sandbox.guiTinChoGV();
+  eq(STATE.fetches.length, f1 + 1, 'Gửi tin cho GV: 1 tin');
+  ok(STATE.fetches[STATE.fetches.length - 1].text.includes('HỌC BÙ'), 'Nội dung tin GV đúng');
+
+  sandbox.setupTriggerTuanBu();
+  ok(lastAlert().includes('trigger'), 'Cài trigger thành công');
+
+  // guiSOTW khi chưa tick gì (sheet mới chưa có data tick)
+  const rs = sandbox.guiSOTW(false);
+  ok(rs.msg.includes('Chưa bé nào') || rs.msg.includes('Chưa có tab'), 'SOTW chưa tick → báo đúng');
+}
+
+console.log('\n=== T15: Tràn sức chứa → bé dư "Tuần sau" ===');
+{
+  // 20 bé chưa xếp, sức chứa = 4 ca × 4 = 16
+  const bao = sheet('BAO_BU');
+  for (let i = 1; i <= 20; i++) {
+    bao.appendRow([new Date(), 'Ms. Vân', 'Tràn Bé ' + i, 'S1.005 - Peach', 'SP1', '', '', '', '']);
+  }
+  sandbox.gomNhom();
+  const lich = rows('LICH_BU');
+  const xep = lich.filter(r => r[4] && String(r[4]).startsWith('Tràn Bé')).length;
+  const du = bao.rows.filter(r => String(r[6] || '') === 'Tuần sau').length;
+  eq(xep, 15, 'Xếp tối đa 15 (16 trừ bé A đã có)'); // bé A đã chiếm 1 chỗ
+  eq(du, 5, 'Bé dư = Tuần sau (20+1 - 16)');
+  // SOTW chưa tick (sheet mới) → không gửi, không lỗi
+  ok(lastAlert().includes('SOTW'), 'Gom nhóm vẫn báo phần SOTW');
+}
+
+console.log('\n============================');
+console.log(`PASS: ${PASS}  FAIL: ${FAIL}`);
+process.exit(FAIL > 0 ? 1 : 0);
