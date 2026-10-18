@@ -148,10 +148,10 @@ function anTabLop() {
   var lop = ss.getSheetByName('LOP');
   if (!lop) { baoXong('Chưa có tab LOP.'); return; }
   if (lop.isSheetHidden()) {
-    lop.setHidden(false);
+    lop.showSheet();
     baoXong('Đã HIỆN lại tab LOP.');
   } else {
-    lop.setHidden(true);
+    lop.hideSheet();
     baoXong('Đã ẨN tab LOP (dữ liệu không mất — hiện lại bằng nút 🗜️ trong Cài đặt).');
   }
 }
@@ -316,7 +316,7 @@ function nangCapSheetSotw() {
   try {
     var lop = ss.getSheetByName('LOP');
     if (lop && !lop.isSheetHidden()) {
-      lop.setHidden(true);
+      lop.hideSheet();
       msg += '\n• Đã ẨN tab LOP (hiện lại: 🗜️ trong menu Cài đặt)';
     }
   } catch (e) { loi.push('Ẩn tab LOP: ' + e); }
@@ -376,7 +376,7 @@ function setupDayBu() {
   var sotw = taoBangSotw(ss);
   themLinkSotw(sh1, sotw.getSheetId());
   chongCheDongMau(sh1);
-  try { sh3.setHidden(true); } catch (e) {}
+  try { sh3.hideSheet(); } catch (e) {}
   baoXong('Xong! Đã tạo: BAO_BU (kèm 2 dòng mẫu + cột SOTW), LICH_BU, DS HỌC SINH (tab LOP đã ẩn).');
 }
 

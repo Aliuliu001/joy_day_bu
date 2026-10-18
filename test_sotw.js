@@ -107,7 +107,8 @@ class MockSheet {
   getProtections() { return this.protectedRanges.slice(); }
   setConditionalFormatRules(rules) { this.cfRules = rules; return this; }
   getConditionalFormatRules() { return this.cfRules || []; }
-  setHidden(v) { this.hidden = !!v; return this; }
+  hideSheet() { this.hidden = true; return this; }
+  showSheet() { this.hidden = false; return this; }
   isSheetHidden() { return !!this.hidden; }
 }
 
