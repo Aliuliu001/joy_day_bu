@@ -114,26 +114,45 @@ function hongAnhConLam() {
   return homNay <= han;
 }
 
-// ===== MENU =====
+// ===== MENU (4 nút workflow + 3 menu con) =====
 function onOpen() {
   try {
-    SpreadsheetApp.getUi()
-      .createMenu('📚 Dạy Bù')
-      .addItem('1️⃣ Gom nhóm (T2 chiều)', 'gomNhom')
-      .addItem('2️⃣ Xử lý case đặc biệt (T4)', 'xuLyCaseDacBiet')
+    var ui = SpreadsheetApp.getUi();
+    ui.createMenu('📚 Dạy Bù')
+      .addItem('1️⃣ Gom nhóm + gửi SOTW (T2 chiều)', 'gomNhom')
+      .addItem('2️⃣ Xử lý Xin đổi / Quá hạn (T4)', 'xuLyCaseDacBiet')
       .addItem('3️⃣ Gửi tin cho GV (T5-T6)', 'guiTinChoGV')
-      .addItem('4️⃣ 🏆 Gửi SOTW (gửi lại)', 'guiSOTWMenu')
-      .addItem('5️⃣ Làm mới tuần mới', 'lamMoiTuanMoi')
+      .addItem('4️⃣ Làm mới tuần mới (cuối tuần)', 'lamMoiTuanMoi')
       .addSeparator()
-      .addItem('📊 Làm mới thống kê', 'lamMoiThongKe')
-      .addItem('🔔 Nhắc GV báo bù (sáng T2)', 'nhacGVBaoBu')
-      .addItem('💾 Backup thủ công', 'backupThuCong')
-      .addSeparator()
-      .addItem('⚙️ Cài trigger tự động', 'setupTriggerTuanBu')
-      .addItem('🔧 Nâng cấp sheet SOTW', 'nangCapSheetSotw')
-      .addItem('🔨 Tạo sheet (chỉ chạy 1 lần)', 'setupDayBu')
+      .addSubMenu(ui.createMenu('🔁 Gửi / Nhắc lẻ')
+        .addItem('🏆 Gửi lại SOTW', 'guiSOTWMenu')
+        .addItem('🔔 Nhắc GV báo bù (T2 sáng)', 'nhacGVBaoBu')
+        .addItem('💾 Backup thủ công', 'backupThuCong')
+        .addToUi())
+      .addSubMenu(ui.createMenu('📊 Báo cáo')
+        .addItem('📊 Làm mới thống kê', 'lamMoiThongKe')
+        .addToUi())
+      .addSubMenu(ui.createMenu('⚙️ Cài đặt (chạy 1 lần)')
+        .addItem('🔧 Nâng cấp sheet SOTW', 'nangCapSheetSotw')
+        .addItem('🔨 Tạo sheet mới (xoá data!)', 'setupDayBu')
+        .addItem('🗜️ Ẩn / hiện tab LOP', 'anTabLop')
+        .addToUi())
       .addToUi();
   } catch (e) {}
+}
+
+// Ẩn/ hiện tab LOP (bảng tham khảo — ẩn cho gọn, hiện lại khi cần)
+function anTabLop() {
+  var ss = laySS();
+  var lop = ss.getSheetByName('LOP');
+  if (!lop) { baoXong('Chưa có tab LOP.'); return; }
+  if (lop.isSheetHidden()) {
+    lop.setHidden(false);
+    baoXong('Đã HIỆN lại tab LOP.');
+  } else {
+    lop.setHidden(true);
+    baoXong('Đã ẨN tab LOP (dữ liệu không mất — hiện lại bằng nút 🗜️ trong Cài đặt).');
+  }
 }
 
 // ===== TẠO / NÂNG CẤP SHEET =====
@@ -269,8 +288,28 @@ function nangCapSheetSotw() {
   } else {
     msg += '\n⚠️ Chưa có tab BAO_BU.';
   }
+  // Ẩn tab LOP cho gọn (dữ liệu không mất)
+  var lop = ss.getSheetByName('LOP');
+  if (lop && !lop.isSheetHidden()) {
+    lop.setHidden(true);
+    msg += '\n• Đã ẨN tab LOP (hiện lại: 🗜️ trong menu Cài đặt)';
+  }
+  // Cài backup tự động T7 — chỉ hỏi 1 lần khi chưa có trigger
+  var daCoTrigger = false;
+  try {
+    var triggers = ScriptApp.getProjectTriggers();
+    for (var i = 0; i < triggers.length; i++) {
+      if (triggers[i].getHandlerFunction() === 'backupTuanBu') daCoTrigger = true;
+    }
+  } catch (e) {}
+  if (!daCoTrigger) {
+    if (xacNhan('Cài luôn backup tự động mỗi tối Thứ 7 lúc 22h?\n(Chỉ LƯU dữ liệu, không xoá gì — an toàn)')) {
+      setupTriggerTuanBu(false);
+      msg += '\n• Đã cài backup tự động tối T7 22h';
+    }
+  }
   msg += '\n\nBước tiếp: dán danh sách HS vào tab "' + SOTW_SHEET + '" từ ô A3'
-    + '\n(Excel: Tên | Lớp | Giới tính | Link ảnh — copy rồi paste là vào đủ cột).';
+    + '\n(Excel: Tên | Lớp | GV — copy rồi paste là vào đủ cột).';
   baoXong(msg);
 }
 
@@ -305,7 +344,8 @@ function setupDayBu() {
   var sotw = taoBangSotw(ss);
   themLinkSotw(sh1, sotw.getSheetId());
   chongCheDongMau(sh1);
-  baoXong('Xong! Đã tạo: BAO_BU (kèm 2 dòng mẫu + cột SOTW), LICH_BU, LOP, DS HỌC SINH.');
+  try { sh3.setHidden(true); } catch (e) {}
+  baoXong('Xong! Đã tạo: BAO_BU (kèm 2 dòng mẫu + cột SOTW), LICH_BU, DS HỌC SINH (tab LOP đã ẩn).');
 }
 
 function setupNhe() {
@@ -842,16 +882,17 @@ function nhacGVBaoBu() {
 
 // ===== BACKUP =====
 function backupThuCong() {
-  backupTuanBu();
+  backupTuanBu(false);
 }
 
-function backupTuanBu() {
+// imLang=true: trả về thông điệp thay vì popup (dùng khi chạy gộp trong "Làm mới tuần mới")
+// Chống trùng theo TỪNG DÒNG (Ca+Thứ+Giờ+GV+Tên bé) → chạy bao nhiêu lần cũng không trùng
+function backupTuanBu(imLang) {
+  function ketQua(m) { if (imLang === true) return m; baoXong(m); return m; }
+
   var ss = laySS();
   var lich = ss.getSheetByName('LICH_BU');
-  if (!lich) {
-    baoXong('Chưa có sheet LICH_BU.');
-    return;
-  }
+  if (!lich) return ketQua('Chưa có sheet LICH_BU.');
 
   var homNay = new Date();
   var thang = Utilities.formatDate(homNay, 'GMT+7', 'MM-yyyy');
@@ -863,54 +904,48 @@ function backupTuanBu() {
     backup.getRange(1, 1, 1, 9).setFontWeight('bold').setBackground('#F6F3EE');
   }
 
-  // Chống duplicate: hôm nay đã backup → bỏ qua
-  var dataBackup = backup.getDataRange().getValues();
-  if (dataBackup.length > 1) {
-    var ngayCuoi = dataBackup[dataBackup.length - 1][0];
-    var ngayCuoiStr = '';
-    if (ngayCuoi instanceof Date) {
-      ngayCuoiStr = Utilities.formatDate(ngayCuoi, 'GMT+7', 'dd/MM/yyyy');
-    } else {
-      ngayCuoiStr = (ngayCuoi || '').toString().trim();
-    }
-    var homNayStr = Utilities.formatDate(homNay, 'GMT+7', 'dd/MM/yyyy');
-    if (ngayCuoiStr && ngayCuoiStr === homNayStr) {
-      baoXong('⚠️ Hôm nay đã backup rồi (' + ngayCuoiStr + '). Không backup nữa.');
-      return;
-    }
+  // Đánh dấu các dòng ĐÃ có trong backup (khóa: Ca|Thứ|Giờ|GV|Tên bé)
+  var daCo = {};
+  var dataCu = backup.getDataRange().getValues();
+  for (var c = 1; c < dataCu.length; c++) {
+    var k = [dataCu[c][1], dataCu[c][2], dataCu[c][3], dataCu[c][4], dataCu[c][5]].join('|');
+    if (k !== '||||') daCo[k] = 1;
   }
 
   var dataLich = lich.getDataRange().getValues();
   var ngay = Utilities.formatDate(homNay, 'GMT+7', 'dd/MM/yyyy');
-  var dem = 0;
+  var demTong = 0, demMoi = 0;
   for (var i = 1; i < dataLich.length; i++) {
     if (!dataLich[i][4]) continue;
     var st = (dataLich[i][8] || '').toString().trim();
-    if (st !== '' && st.indexOf('Chờ') !== 0) {
-      backup.appendRow([ngay, dataLich[i][0], dataLich[i][1], dataLich[i][2], dataLich[i][3],
-        dataLich[i][4], dataLich[i][5], st, dataLich[i][11]]);
-      dem++;
-    }
+    if (st === '' || st.indexOf('Chờ') === 0) continue; // chưa có phản hồi → không backup
+    demTong++;
+    var key = [dataLich[i][0], dataLich[i][1], dataLich[i][2], dataLich[i][3], dataLich[i][4]].join('|');
+    if (daCo[key]) continue; // dòng này đã backup rồi
+    backup.appendRow([ngay, dataLich[i][0], dataLich[i][1], dataLich[i][2], dataLich[i][3],
+      dataLich[i][4], dataLich[i][5], st, dataLich[i][11]]);
+    daCo[key] = 1;
+    demMoi++;
   }
 
-  if (dem === 0) {
-    baoXong('⚠️ Không có ca nào để backup (tất cả đang "Chờ Ms. Vân Anh").');
-    return;
+  if (demTong === 0) {
+    return ketQua('⚠️ Không có ca nào để backup (tất cả đang "Chờ Ms. Vân Anh").');
   }
-
-  baoXong('✅ Đã backup ' + dem + ' bé vào "' + tenBackup + '".\n\n'
-    + '📝 Bao gồm: Đi được, Nghỉ, Vắng (tất cả đã có phản hồi)\n'
-    + '⚠️ Backup CHỈ LƯU, không xoá gì.\n\n'
-    + 'Khi sẵn sàng tuần mới, bấm "5️⃣ Làm mới tuần mới".');
+  if (demMoi === 0) {
+    return ketQua('✅ Không có dòng mới — toàn bộ ' + demTong + ' ca đã có trong "' + tenBackup + '" rồi.');
+  }
+  return ketQua('✅ Đã backup thêm ' + demMoi + ' dòng vào "' + tenBackup + '"'
+    + ' (chạy lại sẽ không trùng).\n📝 Bao gồm: Đi được, Nghỉ, Vắng — chưa có phản hồi thì không backup.');
 }
 
-// ===== LÀM MỚI TUẦN MỚI (clear BAO_BU + LICH_BU + tick SOTW) =====
+// ===== LÀM MỚI TUẦN MỚI (backup → clear → xoá tick SOTW) =====
 function lamMoiTuanMoi() {
   if (!xacNhan('Việc này sẽ:\n'
-    + '• XOÁ TRẮNG BAO_BU (giữ 2 dòng mẫu + bé chưa xếp)\n'
-    + '• XOÁ LICH_BU (đã backup rồi)\n'
-    + '• XOÁ TICK SOTW + mốc "đã gửi" (danh sách HS, link ảnh: GIỮ)\n\n'
-    + '⚠️ Chỉ làm khi đã backup xong và sẵn sàng bắt đầu tuần mới.\n\nTiếp tục?')) return;
+    + '1. TỰ BACKUP trước (nếu tuần này chưa có — đã backup rồi sẽ tự bỏ qua, không trùng)\n'
+    + '2. Chuyển bé CHƯA CHỐT (Chờ / Xin đổi / chưa xác nhận) về BAO_BU để giữ lại\n'
+    + '3. XOÁ TRẮNG BAO_BU (giữ 2 dòng mẫu + bé chưa xếp) + XOÁ LICH_BU\n'
+    + '4. XOÁ TICK SOTW + mốc "đã gửi" (danh sách HS: GIỮ)\n\n'
+    + '⚠️ Chỉ làm khi đã sẵn sàng bắt đầu tuần mới.\n\nTiếp tục?')) return;
 
   var ss = laySS();
   var lich = ss.getSheetByName('LICH_BU');
@@ -921,7 +956,35 @@ function lamMoiTuanMoi() {
     return;
   }
 
-  // 1. Lấy bé CHƯA XẾP (Ca xếp trống), bỏ dòng mẫu
+  // 1. TỰ BACKUP trước khi xoá (im lặng — chèn vào thông báo cuối)
+  var msgBackup = backupTuanBu(true);
+
+  // 2. Chuyển bé CHƯA CHỐT trong LICH → về BAO_BU (trạng thái trống) → sẽ được GIỮ
+  var dataLich = lich.getDataRange().getValues();
+  var demChuyen = 0;
+  for (var p = 1; p < dataLich.length; p++) {
+    var tenP = (dataLich[p][4] || '').toString().trim();
+    if (!tenP) continue;
+    var stP = (dataLich[p][8] || '').toString();
+    var cuoiP = stP.indexOf('✅') >= 0 || stP.indexOf('Đi được') >= 0 || stP.indexOf('❌ Nghỉ') >= 0;
+    if (cuoiP) continue; // đã chốt xong (đã backup) → không giữ
+    var lopP = (dataLich[p][5] || '').toString().trim();
+    var ghiChuP = 'Giữ lại từ tuần trước (chưa chốt)';
+    var dongP = timDongBaoBu(bao, tenP, lopP);
+    if (dongP > 0) {
+      bao.getRange(dongP, 7).setValue('');
+      bao.getRange(dongP, 8).setValue('');
+      bao.getRange(dongP, 9).setValue(ghiChuP);
+    } else {
+      var dongMoiP = dongTrongDauTien(bao);
+      bao.getRange(dongMoiP, 1, 1, 9).setValues([[
+        new Date(), '', tenP, lopP, (dataLich[p][6] || ''), (dataLich[p][7] || ''), '', '', ghiChuP
+      ]]);
+    }
+    demChuyen++;
+  }
+
+  // 3. Lấy bé CHƯA XẾP (Ca xếp trống), bỏ dòng mẫu
   var dataBao = bao.getDataRange().getValues();
   var batDau = 2;
   while (batDau - 1 < dataBao.length) {
@@ -941,14 +1004,14 @@ function lamMoiTuanMoi() {
     }
   }
 
-  // 2. Clear LICH_BU (giữ tiêu đề)
+  // 4. Clear LICH_BU (giữ tiêu đề)
   lich.clear();
   lich.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy']);
   lich.getRange(1, 1, 1, 12).setFontWeight('bold').setBackground('#F6F3EE');
   datDropdown(lich, 9, 200, PH_TRANG_THAI);
   datDropdown(lich, 12, 200, DA_DAY);
 
-  // 3. Clear BAO_BU nội dung (giữ dòng mẫu + CỘT J LINK — chỉ clear A:I)
+  // 5. Clear BAO_BU nội dung (giữ dòng mẫu + CỘT J LINK — chỉ clear A:I)
   if (dataBao.length >= batDau) {
     bao.getRange(batDau, 1, dataBao.length - batDau + 1, 9).clearContent();
   }
@@ -957,7 +1020,7 @@ function lamMoiTuanMoi() {
     bao.getRange(batDau, 1, giuLai.length, 9).setValues(giuLai);
   }
 
-  // 4. XOÁ TICK SOTW + mốc (danh sách HS giữ nguyên)
+  // 6. XOÁ TICK SOTW + mốc (danh sách HS giữ nguyên)
   var xoatable = false;
   var sotw = ss.getSheetByName(SOTW_SHEET);
   if (sotw) {
@@ -970,14 +1033,17 @@ function lamMoiTuanMoi() {
   }
 
   baoXong('✅ Đã làm mới tuần mới:\n'
-    + (giuLai.length > 0 ? '• Giữ lại ' + giuLai.length + ' bé chưa xếp trong BAO_BU\n' : '• BAO_BU trống (không bé nào chưa xếp)\n')
+    + '• ' + msgBackup + '\n'
+    + (demChuyen > 0 ? '• Chuyển ' + demChuyen + ' bé chưa chốt về BAO_BU (giữ lại)\n' : '')
+    + (giuLai.length > 0 ? '• Giữ lại ' + giuLai.length + ' bé chưa xếp trong BAO_BU\n' : '• Không bé nào chưa xếp\n')
     + '• LICH_BU đã xoá\n'
     + (xoatable ? '• Đã xoá tick SOTW + mốc đã gửi\n' : '')
     + '• Danh sách HS / link ảnh: giữ nguyên');
 }
 
 // ===== TRIGGER T7 =====
-function setupTriggerTuanBu() {
+// hienThongBao=false: chạy từ hàm khác (không hiện popup riêng)
+function setupTriggerTuanBu(hienThongBao) {
   var triggers = ScriptApp.getProjectTriggers();
   for (var i = 0; i < triggers.length; i++) {
     if (triggers[i].getHandlerFunction() === 'backupTuanBu') {
@@ -989,7 +1055,7 @@ function setupTriggerTuanBu() {
     .onWeekDay(ScriptApp.WeekDay.SATURDAY)
     .atHour(22)
     .create();
-  baoXong('Đã cài trigger: mỗi tối T7 22h tự BACKUP (không xoá gì) ✅');
+  if (hienThongBao !== false) baoXong('Đã cài trigger: mỗi tối T7 22h tự BACKUP (không xoá gì) ✅');
 }
 
 // ===== THỐNG KÊ =====

@@ -106,6 +106,8 @@ class MockSheet {
   clear() { this.rows = []; return this; }
   getProtections() { return this.protectedRanges.slice(); }
   setConditionalFormatRules(rules) { this.cfRules = rules; return this; }
+  setHidden(v) { this.hidden = !!v; return this; }
+  isSheetHidden() { return !!this.hidden; }
 }
 
 class MockSS {
@@ -121,9 +123,21 @@ const STATE = {
   alerts: [],
   fetches: [],
   confirms: [], // queue: true=YES, false=NO
+  menuEntries: [],
+  triggers: [],
 };
 
 function makeUi() {
+  const menu = () => {
+    const m = {
+      addItem(name, fn) { STATE.menuEntries.push({ type: 'item', name, fn }); return m; },
+      addSeparator() { STATE.menuEntries.push({ type: 'sep' }); return m; },
+      addSubMenu(sub) { STATE.menuEntries.push({ type: 'sub', name: sub.name }); return m; },
+      addToUi() { return m; },
+      name: '',
+    };
+    return m;
+  };
   return {
     ButtonSet: { YES_NO: 'YES_NO' },
     Button: { YES: 'YES' },
@@ -133,10 +147,7 @@ function makeUi() {
       STATE.alerts.push('[confirm] ' + a + ' → ' + ans);
       return ans ? 'YES' : 'NO';
     },
-    createMenu() {
-      const m = { addItem() { return m; }, addSeparator() { return m; }, addToUi() { return m; } };
-      return m;
-    },
+    createMenu(name) { const m = menu(); m.name = name; return m; },
   };
 }
 
@@ -191,8 +202,15 @@ const sandbox = {
     },
   },
   ScriptApp: {
-    getProjectTriggers: () => [],
-    newTrigger: () => ({ timeBased() { return this; }, onWeekDay() { return this; }, atHour() { return this; }, create() { return this; } }),
+    getProjectTriggers: () => STATE.triggers.slice(),
+    newTrigger(fn) {
+      const t = {
+        timeBased() { return t; }, onWeekDay() { return t; }, atHour() { return t; },
+        create() { STATE.triggers.push({ fn, getHandlerFunction() { return fn; } }); return t; },
+      };
+      return t;
+    },
+    deleteTrigger(tr) { const i = STATE.triggers.indexOf(tr); if (i >= 0) STATE.triggers.splice(i, 1); },
     WeekDay: { SATURDAY: 'SATURDAY' },
   },
   console, Date, JSON, Math, Object, Array, String, Number, parseInt, isNaN,
@@ -391,9 +409,10 @@ console.log('\n=== T8: Backup chống trùng ===');
   ok(!!bkName, 'Tạo sheet backup tháng');
   const rowsBk = bkName.rows.length;
   ok(rowsBk >= 2, 'Backup có dữ liệu (rows=' + rowsBk + ')');
+  const cntBk = bkName.rows.length;
   sandbox.backupThuCong();
-  eq(bkName.rows.length, rowsBk, 'Chạy backup lần 2 cùng ngày: KHÔNG duplicate');
-  ok(lastAlert().includes('đã backup rồi'), 'Báo đã backup rồi');
+  eq(bkName.rows.length, cntBk, 'Chạy backup lần 2: KHÔNG duplicate dòng');
+  ok(lastAlert().includes('Không có dòng mới'), 'Báo không có dòng mới (không trùng)');
 }
 
 console.log('\n=== T9: LamMoiThongKe không lỗi appendRow([]) ===');
@@ -436,10 +455,11 @@ console.log('\n=== T10: Làm mới tuần mới — xoá tick + giữ mẫu + gi
   // 2 dòng mẫu giữ
   ok(String(bao.getRange(2, 9).getValue()).includes('(DÒNG MẪU)'), 'Dòng mẫu 1 giữ');
   ok(String(bao.getRange(3, 9).getValue()).includes('(DÒNG MẪU)'), 'Dòng mẫu 2 giữ');
-  // bé chưa xếp giữ, bé đã xếp clear
+  // bé chưa xếp giữ; bé 'Chờ' được giữ nhờ chuyển chưa chốt; bé ✅ không giữ
   const dongMoi2 = findRow(bao, 2, 'Bé Mới');
   ok(dongMoi2 > 0, 'Bé chưa xếp (Bé Mới) ĐƯỢC GIỮ');
-  ok(findRow(bao, 2, 'Bé Ba') < 0, 'Bé đã xếp (Bé Ba) KHÔNG giữ lại');
+  ok(findRow(bao, 2, 'Bé Ba') > 0, 'Bé "Chờ" (Bé Ba) ĐƯỢC GIỮ nhờ chuyển chưa chốt');
+  ok(findRow(bao, 2, 'Bé Một') < 0, 'Bé đã ✅ (Bé Một) KHÔNG giữ lại (đã backup)');
   // LICH clean
   eq(lich.rows.length, 1, 'LICH_BU chỉ còn header');
   // cột J link vẫn còn
@@ -455,10 +475,23 @@ console.log('\n=== T11: Gom nhóm sau Làm mới tuần mới — SOTW gửi đ�
   eq(STATE.fetches.length, before + 1, 'Tuần mới → gửi SOTW mới (mốc đã xoá)');
 }
 
-console.log('\n=== T12: menu onOpen không lỗi ===');
+console.log('\n=== T12: menu onOpen — 4 nút chính + 3 menu con ===');
 {
+  STATE.menuEntries.length = 0;
   try { sandbox.onOpen(); ok(true, 'onOpen OK'); }
   catch (e) { ok(false, 'onOpen lỗi: ' + e.message); }
+  const items = STATE.menuEntries.filter(e => e.type === 'item');
+  const subs = STATE.menuEntries.filter(e => e.type === 'sub');
+  ['gomNhom', 'xuLyCaseDacBiet', 'guiTinChoGV', 'lamMoiTuanMoi'].forEach(fn => {
+    ok(items.some(e => e.fn === fn), 'Nút chính có: ' + fn);
+  });
+  eq(subs.length, 3, 'Đúng 3 menu con');
+  ok(subs.some(s => s.name.includes('Gửi / Nhắc lẻ')), 'Menu con: Gửi / Nhắc lẻ');
+  ok(subs.some(s => s.name.includes('Báo cáo')), 'Menu con: Báo cáo');
+  ok(subs.some(s => s.name.includes('Cài đặt')), 'Menu con: Cài đặt');
+  // Mọi hàm menu trỏ tới phải tồn tại
+  const missing = items.filter(e => typeof sandbox[e.fn] !== 'function').map(e => e.fn);
+  eq(missing.length, 0, 'Đủ hàm cho mọi nút menu');
 }
 
 console.log('\n=== T13: setupDayBu trên sheet TRỐNG (sheet mới) ===');
@@ -472,6 +505,7 @@ console.log('\n=== T13: setupDayBu trên sheet TRỐNG (sheet mới) ===');
   ok(String(sheet('BAO_BU').getRange(2, 9).getValue()).includes('(DÒNG MẪU)'), 'Có dòng mẫu 1');
   ok(String(sheet('BAO_BU').getRange(3, 9).getValue()).includes('(DÒNG MẪU)'), 'Có dòng mẫu 2');
   eq(sheet('DS HỌC SINH').getRange(2, 6).getValue(), '☑ SOTW tuần này', 'DS HỌC SINH header tick');
+  ok(sheet('LOP').isSheetHidden(), 'Tab LOP bị ẩn sau khi tạo sheet');
   // setupDayBu lần 2 → hủy (confirm NO)
   STATE.confirms.push(false);
   const rowsBefore = rows('BAO_BU').length;
@@ -518,6 +552,58 @@ console.log('\n=== T15: Tràn sức chứa → bé dư "Tuần sau" ===');
   eq(du, 5, 'Bé dư = Tuần sau (20+1 - 16)');
   // SOTW chưa tick (sheet mới) → không gửi, không lỗi
   ok(lastAlert().includes('SOTW'), 'Gom nhóm vẫn báo phần SOTW');
+}
+
+console.log('\n=== T16: Làm mới tuần mới — TỰ BACKUP + GIỮ bé chưa chốt ===');
+{
+  const lich = sheet('LICH_BU');
+  const bao = sheet('BAO_BU');
+  const tenBk = 'Backup tháng ' + Utilities.formatDate(new Date(), 'GMT+7', 'MM-yyyy');
+  // Trước: LICH có Bé A (✅) + 15 bé 'Chờ'; CHƯA có backup lần nào trên sheet mới này
+  ok(rows('LICH_BU').length > 10, 'LICH có dữ liệu trước làm mới (rows=' + rows('LICH_BU').length + ')');
+  ok(!sheet(tenBk), 'Trước: chưa có sheet backup');
+  STATE.confirms.push(true);
+  sandbox.lamMoiTuanMoi();
+  const last = lastAlert();
+  ok(last.includes('Đã backup thêm'), 'TỰ backup trước khi xoá (không còn cảnh quên backup)');
+  ok(last.includes('Chuyển 15'), 'Thông báo chuyển 15 bé chưa chốt về BAO_BU');
+  // Backup có bé ✅
+  const bkName = sheet(tenBk);
+  ok(!!bkName && bkName.rows.some(r => r[5] === 'Bé A'), 'Backup chứa bé đã ✅ (Bé A)');
+  // Bé 'Chờ' được GIỮ — trước đây sẽ MẤT (bug core logic đã fix)
+  const d1 = findRow(bao, 2, 'Tràn Bé 1');
+  ok(d1 > 0, 'Bé "Chờ" được GIỮ lại trong BAO_BU (không mất)');
+  eq(bao.getRange(d1, 8).getValue(), '', 'Bé giữ lại: Ca xếp trống');
+  ok(String(bao.getRange(d1, 9).getValue()).includes('chưa chốt'), 'Có ghi chú "giữ lại từ tuần trước"');
+  // Bé đã ✅: đã backup → KHÔNG quay lại BAO_BU (không cần xếp lại)
+  ok(findRow(bao, 2, 'Bé A') < 0, 'Bé đã ✅ (Bé A) đã backup → không quay lại BAO_BU');
+  // LICH sạch + mẫu giữ + backup không trùng
+  eq(lich.rows.length, 1, 'LICH_BU chỉ còn header');
+  ok(String(bao.getRange(2, 9).getValue()).includes('(DÒNG MẪU)'), 'Dòng mẫu giữ nguyên');
+  const cntBk = bkName.rows.length;
+  sandbox.backupThuCong();
+  eq(bkName.rows.length, cntBk, 'Backup sau làm mới: không thêm dòng trùng');
+}
+
+console.log('\n=== T17: Nâng cấp — hỏi cài trigger 1 lần + ẩn/hiện LOP ===');
+{
+  STATE.triggers.length = 0; // xoá để test nhánh "chưa có trigger"
+  const lop = sheet('LOP');
+  ok(!!lop && lop.isSheetHidden(), 'T13 đã ẩn tab LOP');
+  sandbox.anTabLop();
+  ok(!lop.isSheetHidden(), '🗜️ anTabLop: hiện lại được');
+  STATE.confirms.push(true); // trả lời CÓ
+  STATE.alerts.length = 0;
+  sandbox.nangCapSheetSotw();
+  eq(STATE.triggers.length, 1, 'Hỏi 1 lần → cài trigger backup T7');
+  ok(lop.isSheetHidden(), 'Nâng cấp sheet: tự ẩn tab LOP');
+  // Chạy lại: trigger đã có → KHÔNG hỏi nữa (không tiêu confirm)
+  STATE.alerts.length = 0;
+  sandbox.nangCapSheetSotw();
+  ok(!STATE.alerts.some(a => a.indexOf('[confirm]') >= 0), 'Chạy lại KHÔNG hỏi cài trigger nữa');
+  eq(STATE.triggers.length, 1, 'Không cài trùng trigger');
+  sandbox.anTabLop();
+  ok(!lop.isSheetHidden(), '🗜️ anTabLop: ẩn/hiện đảo đúng lần 2');
 }
 
 console.log('\n============================');
