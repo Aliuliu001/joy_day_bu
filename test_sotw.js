@@ -106,6 +106,7 @@ class MockSheet {
   clear() { this.rows = []; return this; }
   getProtections() { return this.protectedRanges.slice(); }
   setConditionalFormatRules(rules) { this.cfRules = rules; return this; }
+  getConditionalFormatRules() { return this.cfRules || []; }
   setHidden(v) { this.hidden = !!v; return this; }
   isSheetHidden() { return !!this.hidden; }
 }
@@ -189,14 +190,18 @@ const SpreadsheetApp = {
   openById: () => STATE.ss,
   getUi: () => ui,
   newDataValidation: () => Object.create(dvBuilder),
-  newConditionalFormatRule: () => ({
-    setFormulaRelativeFormula(f) { this.f = f; return this; },
-    setRanges(r) { this.ranges = r; return this; },
-    setBackground(b) { this.bg = b; return this; },
-    setFontColor(c) { this.fc = c; return this; },
-    build() { return { f: this.f, ranges: this.ranges, bg: this.bg }; },
-  }),
+  // Builder mô phỏng đúng API THẬT của Google (ConditionalFormatRuleBuilder).
+  // KHÔNG được "bịa" method theo code — bug 17/10: code gọi setFormulaRelativeFormula
+  // (không tồn tại) mà mock y hệt → test PASS, Google thật TypeError.
+  newConditionalFormatRule: () => Object.create(cfrBuilder),
   ProtectionType: { RANGE: 'RANGE' },
+};
+const cfrBuilder = {
+  whenFormulaSatisfied(f) { this.f = f; return this; },
+  setRanges(r) { this.ranges = r; return this; },
+  setBackground(b) { this.bg = b; return this; },
+  setFontColor(c) { this.fc = c; return this; },
+  build() { return { f: this.f, ranges: this.ranges, bg: this.bg, fc: this.fc }; },
 };
 
 const sandbox = {
@@ -518,6 +523,9 @@ console.log('\n=== T13: setupDayBu trên sheet TRỐNG (sheet mới) ===');
   ok(String(sheet('BAO_BU').getRange(3, 9).getValue()).includes('(DÒNG MẪU)'), 'Có dòng mẫu 2');
   eq(sheet('DS HỌC SINH').getRange(2, 6).getValue(), '☑ SOTW tuần này', 'DS HỌC SINH header tick');
   ok(sheet('LOP').isSheetHidden(), 'Tab LOP bị ẩn sau khi tạo sheet');
+  const cfr = sheet('DS HỌC SINH').getConditionalFormatRules();
+  eq(cfr.length, 1, 'DS HỌC SINH có đúng 1 rule tô màu');
+  ok(String(cfr[0].f).indexOf('=AND($B$1') === 0, 'Rule dùng whenFormulaSatisfied (API thật) + đúng công thức');
   // setupDayBu lần 2 → hủy (confirm NO)
   STATE.confirms.push(false);
   const rowsBefore = rows('BAO_BU').length;
@@ -616,6 +624,29 @@ console.log('\n=== T17: Nâng cấp — hỏi cài trigger 1 lần + ẩn/hiện
   eq(STATE.triggers.length, 1, 'Không cài trùng trigger');
   sandbox.anTabLop();
   ok(!lop.isSheetHidden(), '🗜️ anTabLop: ẩn/hiện đảo đúng lần 2');
+}
+
+console.log('\n=== T18: Google thiếu API / 1 bước lỗi → nangCap KHÔNG chết giữa chừng ===');
+{
+  // A) Google không có method whenFormulaSatisfied (mô phỏng bug API thật)
+  const saved = cfrBuilder.whenFormulaSatisfied;
+  delete cfrBuilder.whenFormulaSatisfied;
+  STATE.alerts.length = 0; STATE.logs.length = 0;
+  try { sandbox.nangCapSheetSotw(); ok(true, 'A) nangCap chạy hết, không ném lỗi ra ngoài'); }
+  catch (e) { ok(false, 'A) nangCap vẫn ném lỗi: ' + e.message); }
+  cfrBuilder.whenFormulaSatisfied = saved;
+  ok(STATE.logs.some(l => String(l).indexOf('Bỏ qua rule tô màu') >= 0), 'A) Lý do rule được ghi nhật ký');
+  ok(String(sheet('BAO_BU').getRange(2, 10).getValue()).indexOf('HYPERLINK') >= 0, 'A) Cột J link vẫn hoạt động (các bước sau vẫn chạy)');
+  // B) Một bước cốt lõi lỗi → vẫn chạy nốt, BÁO RÕ chỗ lỗi cuối popup
+  const origDongMau = sandbox.taoDongMau;
+  sandbox.taoDongMau = function () { throw new Error('giả lập lỗi dòng mẫu'); };
+  STATE.alerts.length = 0;
+  try { sandbox.nangCapSheetSotw(); ok(true, 'B) nangCap chạy hết dù có bước lỗi'); }
+  catch (e) { ok(false, 'B) nangCap ném lỗi ra ngoài: ' + e.message); }
+  sandbox.taoDongMau = origDongMau;
+  ok(lastAlert().indexOf('gặp lỗi') >= 0, 'B) Popup báo rõ N chỗ gặp lỗi');
+  ok(lastAlert().indexOf('giả lập lỗi dòng mẫu') >= 0, 'B) Nêu đúng tên bước lỗi');
+  ok(lastAlert().indexOf('Bước tiếp') >= 0, 'Vẫn hiện hướng dẫn bước tiếp (không mất)');
 }
 
 console.log('\n============================');

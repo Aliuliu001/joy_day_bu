@@ -193,13 +193,19 @@ function taoBangSotw(ss) {
   sh.getRange(3, 6, 500, 1).setDataValidation(SpreadsheetApp.newDataValidation()
     .requireCheckbox().setAllowInvalid(true).build());
   // Conditional formatting: chọn GV → chỉ lớp GV đó sáng
-  var rule = SpreadsheetApp.newConditionalFormatRule()
-    .setFormulaRelativeFormula('=AND($B$1<>"",OR($C3<>$B$1,AND($D$1<>"",$B3<>$D$1)))')
-    .setRanges([sh.getRange(3, 1, 500, 6)])
-    .setBackground('#EDEDED')
-    .setFontColor('#AAAAAA')
-    .build();
-  sh.setConditionalFormatRules([rule]);
+  // API THẬT = whenFormulaSatisfied (setFormulaRelativeFormula KHÔNG tồn tại — bug 17/10)
+  // Bọc try/catch: tô màu chỉ là trang trí → lỗi không được chặn các bước còn lại
+  try {
+    var rule = SpreadsheetApp.newConditionalFormatRule()
+      .whenFormulaSatisfied('=AND($B$1<>"",OR($C3<>$B$1,AND($D$1<>"",$B3<>$D$1)))')
+      .setRanges([sh.getRange(3, 1, 500, 6)])
+      .setBackground('#EDEDED')
+      .setFontColor('#AAAAAA')
+      .build();
+    sh.setConditionalFormatRules([rule]);
+  } catch (eRule) {
+    Logger.log('Bỏ qua rule tô màu (không quan trọng): ' + eRule);
+  }
   // Điền GV chính cho các dòng đã có Lớp (chưa có GV)
   var last = sh.getLastRow();
   if (last >= 3) {
@@ -272,29 +278,39 @@ function chongCheDongMau(bao) {
 }
 
 // NÂNG CẤP SHEET (menu) — không xoá data cũ
+// Nâng cấp sheet: mỗi bước BỌC RIÊNG — 1 chỗ lỗi không được chặn các bước còn lại,
+// lỗi gom vào mảng `loi` báo cuối cùng (trước đây lỗi API → dừng giữa chừng, không biết đã chạy tới đâu)
 function nangCapSheetSotw() {
   var ss = laySS();
-  var sotw = taoBangSotw(ss);
-  var msg = '✅ Đã nâng cấp sheet SOTW:\n• Tab "' + SOTW_SHEET + '" sẵn sàng (dropdown GV / lớp, ô tick)';
+  var loi = [];
+  var sotw = null;
+  try { sotw = taoBangSotw(ss); } catch (e) { loi.push('Tạo tab ' + SOTW_SHEET + ': ' + e); }
+  var msg = '✅ Đã nâng cấp sheet SOTW:\n• Tab "' + SOTW_SHEET + '"';
+  if (sotw) msg = '✅ Đã nâng cấp sheet SOTW:\n• Tab "' + SOTW_SHEET + '" sẵn sàng (dropdown GV / lớp, ô tick)';
   var bao = ss.getSheetByName('BAO_BU');
   if (bao) {
-    themLinkSotw(bao, sotw.getSheetId());
-    var themMau = taoDongMau(bao);
-    chongCheDongMau(bao);
-    datDropdown(bao, 2, 100, GV_LIST);
-    datDropdown(bao, 4, 100, LOP_LIST);
-    datDropdown(bao, 5, 100, TRINH_DO);
-    msg += '\n• Cột J BAO_BU = link mở DS HỌC SINH';
-    msg += themMau ? '\n• Đã thêm 2 dòng mẫu (bảo vệ)' : '\n• 2 dòng mẫu đã có';
+    try {
+      if (sotw) themLinkSotw(bao, sotw.getSheetId());
+      var themMau = false;
+      themMau = taoDongMau(bao);
+      chongCheDongMau(bao);
+      datDropdown(bao, 2, 100, GV_LIST);
+      datDropdown(bao, 4, 100, LOP_LIST);
+      datDropdown(bao, 5, 100, TRINH_DO);
+      msg += '\n• Cột J BAO_BU = link mở DS HỌC SINH';
+      msg += themMau ? '\n• Đã thêm 2 dòng mẫu (bảo vệ)' : '\n• 2 dòng mẫu đã có';
+    } catch (e) { loi.push('BAO_BU (cột J / dòng mẫu / ô chọn): ' + e); }
   } else {
     msg += '\n⚠️ Chưa có tab BAO_BU.';
   }
   // Ẩn tab LOP cho gọn (dữ liệu không mất)
-  var lop = ss.getSheetByName('LOP');
-  if (lop && !lop.isSheetHidden()) {
-    lop.setHidden(true);
-    msg += '\n• Đã ẨN tab LOP (hiện lại: 🗜️ trong menu Cài đặt)';
-  }
+  try {
+    var lop = ss.getSheetByName('LOP');
+    if (lop && !lop.isSheetHidden()) {
+      lop.setHidden(true);
+      msg += '\n• Đã ẨN tab LOP (hiện lại: 🗜️ trong menu Cài đặt)';
+    }
+  } catch (e) { loi.push('Ẩn tab LOP: ' + e); }
   // Cài backup tự động T7 — chỉ hỏi 1 lần khi chưa có trigger
   var daCoTrigger = false;
   try {
@@ -304,10 +320,16 @@ function nangCapSheetSotw() {
     }
   } catch (e) {}
   if (!daCoTrigger) {
-    if (xacNhan('Cài luôn backup tự động mỗi tối Thứ 7 lúc 22h?\n(Chỉ LƯU dữ liệu, không xoá gì — an toàn)')) {
-      setupTriggerTuanBu(false);
-      msg += '\n• Đã cài backup tự động tối T7 22h';
-    }
+    try {
+      if (xacNhan('Cài luôn backup tự động mỗi tối Thứ 7 lúc 22h?\n(Chỉ LƯU dữ liệu, không xoá gì — an toàn)')) {
+        setupTriggerTuanBu(false);
+        msg += '\n• Đã cài backup tự động tối T7 22h';
+      }
+    } catch (e) { loi.push('Cài backup T7: ' + e); }
+  }
+  if (loi.length) {
+    msg += '\n\n⚠️ ' + loi.length + ' chỗ gặp lỗi (xem Nhật ký thực thi — code vẫn chạy các bước khác):';
+    loi.forEach(function (x) { msg += '\n• ' + x; });
   }
   msg += '\n\nBước tiếp: dán danh sách HS vào tab "' + SOTW_SHEET + '" từ ô A3'
     + '\n(Excel: Tên | Lớp | GV — copy rồi paste là vào đủ cột).';
