@@ -220,16 +220,25 @@ function taoBangSotw(ss) {
   return sh;
 }
 
+// Ngách phân tách tham số công thức theo NGÔN NGỮ CỦA FILE (File → Cài đặt → Ngôn ngữ).
+// vi_VN dùng ';' — gõ ',' → Google báo #ERROR! + "Khắc phục" (bug 17/10: cột J BAO_BU)
+function ngachCongThuc() {
+  var loc = '';
+  try { loc = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetLocale() || ''; } catch (e) {}
+  return loc && loc.indexOf('en_') !== 0 ? ';' : ',';
+}
+
 // Cột J BAO_BU = link mở DS HỌC SINH
 function themLinkSotw(bao, gid) {
   if (!bao.getRange(1, 10).getValue()) {
     bao.getRange(1, 10).setValue('SOTW');
     bao.getRange(1, 10).setFontWeight('bold').setBackground('#F6F3EE');
   }
+  var sep = ngachCongThuc();
   var toiDong = Math.max(bao.getLastRow(), 100);
   for (var r = 2; r <= toiDong; r++) {
-    var o = bao.getRange(r, 10);
-    if (!o.getValue()) o.setFormula('=HYPERLINK("#gid=' + gid + '","Mở DS SOTW ⬈")');
+    // Ghi ĐÈ mọi ô cột J (cột này chỉ chứa link của mình) → sửa luôn ô đang #ERROR!
+    bao.getRange(r, 10).setFormula('=HYPERLINK("#gid=' + gid + '"' + sep + '"Mở DS SOTW ⬈")');
   }
 }
 
@@ -1098,6 +1107,7 @@ function lamMoiThongKe() {
   tk.clear();
 
   var b = '\'' + tenBackup + '\'';
+  var sep = ngachCongThuc(); // ';' với file vi_VN — gõ ',' → #ERROR!
   tk.getRange(1, 1).setValue('THỐNG KÊ DẠY BÙ THÁNG ' + thang).setFontSize(14).setFontWeight('bold');
   tk.getRange(3, 1, 1, 3).setValues([['GV dạy', 'Số ca dạy', 'Tổng giờ']]).setFontWeight('bold').setBackground('#F6F3EE');
 
@@ -1107,7 +1117,7 @@ function lamMoiThongKe() {
     var dong = dongBatDau + idx;
     tk.getRange(dong, 1).setValue(gv);
     tk.getRange(dong, 2).setFormula(
-      '=IFERROR(COUNTA(UNIQUE(FILTER(ARRAYFORMULA(' + b + '!A2:A&' + b + '!B2:B),' + b + '!E2:E=A' + dong + '))),0)');
+      '=IFERROR(COUNTA(UNIQUE(FILTER(ARRAYFORMULA(' + b + '!A2:A&' + b + '!B2:B)' + sep + b + '!E2:E=A' + dong + ')))' + sep + '0)');
     tk.getRange(dong, 3).setFormula('=B' + dong + '*1.5');
   });
 

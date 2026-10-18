@@ -116,6 +116,7 @@ class MockSS {
   getSheetByName(n) { return this.sheets[n] || null; }
   insertSheet(n) { const s = new MockSheet(n); this.sheets[n] = s; return s; }
   getSheets() { return Object.values(this.sheets); }
+  getSpreadsheetLocale() { return STATE.sheetLocale; }
 }
 
 // State toàn cục test
@@ -127,6 +128,7 @@ const STATE = {
   menuEntries: [],
   triggers: [],
   logs: [],
+  sheetLocale: 'vi_VN', // file Google Sheet tiếng Việt → công thức phải dùng ';'
 };
 
 function makeUi() {
@@ -265,6 +267,7 @@ console.log('\n=== T1: Nâng cấp sheet SOTW ===');
 
   eq(bao.getRange(1, 10).getValue(), 'SOTW', 'Cột J BAO_BU = SOTW');
   ok(String(bao.getRange(4, 10).getValue()).includes('HYPERLINK'), 'Hyperlink ở dòng data');
+  ok(String(bao.getRange(4, 10).getValue()).includes(';"Mở'), 'J dùng ngách ";" theo locale vi_VN (không #ERROR!)');
   // 2 dòng mẫu mới, data giữ nguyên
   const r2 = bao.getRange(2, 9).getValue(), r3 = bao.getRange(3, 9).getValue();
   ok(String(r2).includes('(DÒNG MẪU)'), 'Dòng mẫu 1 tại row2');
@@ -434,6 +437,7 @@ console.log('\n=== T9: LamMoiThongKe không lỗi appendRow([]) ===');
     sandbox.lamMoiThongKe();
     ok(!!sheet('THỐNG KÊ'), 'Tạo tab THỐNG KÊ không exception');
     ok(sheet('THỐNG KÊ').getRange(4, 1).getValue() === 'Mr. Đức Anh', 'Dòng GV đầu tiên');
+    ok(String(sheet('THỐNG KÊ').getRange(4, 2).getValue()).includes(')));0'), 'Công thức stats dùng ";" theo locale vi_VN');
   } catch (e) {
     ok(false, 'lamMoiThongKe exception: ' + e.message);
   }
@@ -647,6 +651,24 @@ console.log('\n=== T18: Google thiếu API / 1 bước lỗi → nangCap KHÔNG 
   ok(lastAlert().indexOf('gặp lỗi') >= 0, 'B) Popup báo rõ N chỗ gặp lỗi');
   ok(lastAlert().indexOf('giả lập lỗi dòng mẫu') >= 0, 'B) Nêu đúng tên bước lỗi');
   ok(lastAlert().indexOf('Bước tiếp') >= 0, 'Vẫn hiện hướng dẫn bước tiếp (không mất)');
+}
+
+console.log('\n=== T19: Ngách công thức theo locale + ghi đè ô J đang #ERROR! ===');
+{
+  const bao = sheet('BAO_BU');
+  const ds = sheet('DS HỌC SINH');
+  // Mô phỏng đúng triệu chứng Google thật: ô J lỗi + công thức gõ sai kiểu en-US
+  bao.getRange(4, 10).setValue('#ERROR!');
+  bao.getRange(5, 10).setFormula('=BROKEN("x","y")');
+  STATE.sheetLocale = 'vi_VN';
+  sandbox.themLinkSotw(bao, ds.getSheetId());
+  ok(String(bao.getRange(4, 10).getValue()).indexOf('#ERROR!') < 0, 'Ô #ERROR! được ghi đè lại');
+  ok(String(bao.getRange(5, 10).getValue()).indexOf('BROKEN') < 0, 'Công thức hỏng bị thay');
+  ok(String(bao.getRange(4, 10).getValue()).includes(';"Mở'), 'vi_VN → dùng ";"');
+  STATE.sheetLocale = 'en_US';
+  sandbox.themLinkSotw(bao, ds.getSheetId());
+  ok(String(bao.getRange(4, 10).getValue()).includes(',"Mở'), 'en_US → dùng ","');
+  STATE.sheetLocale = 'vi_VN';
 }
 
 console.log('\n============================');
