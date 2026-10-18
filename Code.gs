@@ -115,6 +115,8 @@ function hongAnhConLam() {
 }
 
 // ===== MENU (4 nút workflow + 3 menu con) =====
+// LƯU Ý: menu con KHÔNG được gọi addToUi() — chỉ gọi 1 lần cuối cho menu chính,
+// nếu không Google sẽ ném lỗi → menu chính không hiện (bug đã fix 17/10)
 function onOpen() {
   try {
     var ui = SpreadsheetApp.getUi();
@@ -127,18 +129,17 @@ function onOpen() {
       .addSubMenu(ui.createMenu('🔁 Gửi / Nhắc lẻ')
         .addItem('🏆 Gửi lại SOTW', 'guiSOTWMenu')
         .addItem('🔔 Nhắc GV báo bù (T2 sáng)', 'nhacGVBaoBu')
-        .addItem('💾 Backup thủ công', 'backupThuCong')
-        .addToUi())
+        .addItem('💾 Backup thủ công', 'backupThuCong'))
       .addSubMenu(ui.createMenu('📊 Báo cáo')
-        .addItem('📊 Làm mới thống kê', 'lamMoiThongKe')
-        .addToUi())
+        .addItem('📊 Làm mới thống kê', 'lamMoiThongKe'))
       .addSubMenu(ui.createMenu('⚙️ Cài đặt (chạy 1 lần)')
         .addItem('🔧 Nâng cấp sheet SOTW', 'nangCapSheetSotw')
         .addItem('🔨 Tạo sheet mới (xoá data!)', 'setupDayBu')
-        .addItem('🗜️ Ẩn / hiện tab LOP', 'anTabLop')
-        .addToUi())
+        .addItem('🗜️ Ẩn / hiện tab LOP', 'anTabLop'))
       .addToUi();
-  } catch (e) {}
+  } catch (e) {
+    Logger.log('LỖI TẠO MENU: ' + e);
+  }
 }
 
 // Ẩn/ hiện tab LOP (bảng tham khảo — ẩn cho gọn, hiện lại khi cần)

@@ -125,18 +125,26 @@ const STATE = {
   confirms: [], // queue: true=YES, false=NO
   menuEntries: [],
   triggers: [],
+  logs: [],
 };
 
 function makeUi() {
   const menu = () => {
-    const m = {
-      addItem(name, fn) { STATE.menuEntries.push({ type: 'item', name, fn }); return m; },
-      addSeparator() { STATE.menuEntries.push({ type: 'sep' }); return m; },
-      addSubMenu(sub) { STATE.menuEntries.push({ type: 'sub', name: sub.name }); return m; },
-      addToUi() { return m; },
-      name: '',
-    };
-    return m;
+  const m = {
+    addItem(name, fn) { STATE.menuEntries.push({ type: 'item', name, fn }); return m; },
+    addSeparator() { STATE.menuEntries.push({ type: 'sep' }); return m; },
+    // MÔ PHỎNG ĐÚNG HÀNH VI GOOGLE: addSubMenu ném lỗi nếu menu con đã được addToUi()
+    // (bug thật 17/10: gọi addToUi() trong menu con → menu chính không hiện)
+    addSubMenu(sub) {
+      if (sub.added) throw new Error('Cannot add submenu "' + sub.name + '" — already added to UI');
+      STATE.menuEntries.push({ type: 'sub', name: sub.name });
+      return m;
+    },
+    addToUi() { m.added = true; return m; },
+    name: '',
+    added: false,
+  };
+  return m;
   };
   return {
     ButtonSet: { YES_NO: 'YES_NO' },
@@ -193,7 +201,7 @@ const SpreadsheetApp = {
 
 const sandbox = {
   SpreadsheetApp, Utilities,
-  Logger: { log: () => {} },
+  Logger: { log: (m) => STATE.logs.push(String(m)) },
   PropertiesService: { getScriptProperties: () => ({ getProperty: () => 'TEST_TOKEN' }) },
   UrlFetchApp: {
     fetch(url, opts) {
@@ -478,6 +486,7 @@ console.log('\n=== T11: Gom nhóm sau Làm mới tuần mới — SOTW gửi đ�
 console.log('\n=== T12: menu onOpen — 4 nút chính + 3 menu con ===');
 {
   STATE.menuEntries.length = 0;
+  STATE.logs.length = 0;
   try { sandbox.onOpen(); ok(true, 'onOpen OK'); }
   catch (e) { ok(false, 'onOpen lỗi: ' + e.message); }
   const items = STATE.menuEntries.filter(e => e.type === 'item');
@@ -492,6 +501,9 @@ console.log('\n=== T12: menu onOpen — 4 nút chính + 3 menu con ===');
   // Mọi hàm menu trỏ tới phải tồn tại
   const missing = items.filter(e => typeof sandbox[e.fn] !== 'function').map(e => e.fn);
   eq(missing.length, 0, 'Đủ hàm cho mọi nút menu');
+  // Bắt lỗi bị nuốt trong try/catch của onOpen (bug thật 17/10: menu con addToUi
+  // → addSubMenu ném lỗi → menu chính "📚 Dạy Bù" biến mất, chỉ còn menu con lèo ra ngoài)
+  ok(!STATE.logs.some(l => String(l).includes('LỖI TẠO MENU')), 'onOpen không có lỗi bị nuốt');
 }
 
 console.log('\n=== T13: setupDayBu trên sheet TRỐNG (sheet mới) ===');
