@@ -10,14 +10,14 @@ File này là hướng dẫn DUY NHẤT cần đọc — mọi bản plan/audit 
 **Các tab làm việc (4 tab):**
 | Tab | Ai dùng | Việc gì |
 |-----|---------|---------|
-| **BAO_BU** | GV + quản lý | GV báo bé nghỉ (mỗi bé 1 dòng); **cột C = Lớp ngay sau GV** → chọn GV → Lớp → Tên bé đều bằng dropdown (lấy từ DS HỌC SINH); cột G/H khóa (GV sửa ô **Ghi chú** được); cột J = link mở DS HỌC SINH |
+| **BAO_BU** | GV (báo bé nghỉ) + quản lý | GV báo bé nghỉ (mỗi bé 1 dòng); **cột C = Lớp ngay sau GV** → chọn GV → Lớp → Tên bé đều bằng dropdown (lấy từ DS HỌC SINH); cột G/H khóa (GV sửa ô **Ghi chú** được); cột J = link mở DS HỌC SINH |
 | **LICH_BU** | quản lý | Lịch sau khi gom nhóm: PH xác nhận, tin nhắn PH/GV, Đã dạy |
 | **DS HỌC SINH** | GV + quản lý | Danh sách HS + **tick SOTW** ☑; ô **"GV đang chọn" → ẨN hết lớp khác**, chọn thêm **"Lớp cần chọn" → lọc tới bé lớp đó**; xóa 2 ô → hiện lại toàn bộ (dropdown GV/Lớp lấy từ dữ liệu thật, tự chạy lại sau mỗi lần Đồng bộ) |
 | **Backup tháng MM-YYYY** | tự động | Lưu lịch sử (không ai sửa tay) |
 
 *Ẩn đi cho gọn:* tab **LOP** (tham khảo — hiện lại: 🗜️ trong Cài đặt). Tab **THỐNG KÊ** tự tạo khi bấm báo cáo.
 
-**Menu 📚 Dạy Bù:**
+**Menu ⚙️ Quản lý Dạy Bù: (chỉ dành quản lý — GV không cần vào)**
 ```
 ├─ 1️⃣ Gom nhóm + gửi SOTW (T2 chiều)     ← nút chính
 ├─ 2️⃣ Xử lý Xin đổi / Quá hạn (T4)

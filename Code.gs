@@ -64,6 +64,37 @@ var DA_DAY = ['✅ Đã học', '❌ Vắng (không tới)'];
 var GIOI_TINH = ['Nam', 'Nữ'];
 var EMAIL_QUAN_LY = ['tuanngoctruong2710@gmail.com', 'nguyenthiuyenvi@gmail.com', 'vananhhthuy@gmail.com'];
 
+// Khóa các sheet quan trọng — chỉ 3 email EMAIL_QUAN_LY được sửa
+// GV chỉ sửa được: BAO_BU (trừ cột G/H đã khóa riêng) + DS HỌC SINH (tick SOTW)
+function baoVeSheet() {
+  var ss = laySS();
+  var sheetsBaoVe = ['LICH_BU', 'THỐNG KÊ', 'LOP'];
+  sheetsBaoVe.forEach(function (ten) {
+    var sh = ss.getSheetByName(ten);
+    if (!sh) return;
+    try {
+      var prots = sh.getProtections(SpreadsheetApp.ProtectionType.SHEET);
+      prots.forEach(function (p) { p.remove(); }); // gỡ khóa cũ
+      var prot = sh.protect().setDescription('Chỉ quản lý');
+      prot.addEditors(EMAIL_QUAN_LY);
+      if (prot.canDomainEdit()) prot.setDomainEdit(false);
+    } catch (e) { Logger.log('Khóa sheet ' + ten + ' lỗi: ' + e); }
+  });
+  // Backup tabs theo pattern "Backup tháng …"
+  ss.getSheets().forEach(function (sh) {
+    var n = sh.getName();
+    if (n.indexOf('Backup tháng') === 0) {
+      try {
+        var prots = sh.getProtections(SpreadsheetApp.ProtectionType.SHEET);
+        prots.forEach(function (p) { p.remove(); });
+        var prot = sh.protect().setDescription('Chỉ quản lý');
+        prot.addEditors(EMAIL_QUAN_LY);
+        if (prot.canDomainEdit()) prot.setDomainEdit(false);
+      } catch (e) {}
+    }
+  });
+  Logger.log('Đã khóa các sheet quan trọng (GV chỉ sửa BAO_BU + DS HỌC SINH).');
+}
 var LOP_LIST = [
   'S1.006 - Lychee', 'S2.004 - Cherry', 'C2.004 - Kiwi', 'T1.001 - Apple', 'W2.001 - Cookie',
   'S1.005 - Peach', 'S2.003 - Peanut', 'C2.002 - Chestnut', 'W1.002 - Ice-cream', 'T2.004 - Pea',
@@ -124,7 +155,7 @@ function hongAnhConLam() {
 function onOpen() {
   try {
     var ui = SpreadsheetApp.getUi();
-    ui.createMenu('📚 Dạy Bù')
+    ui.createMenu('⚙️ Quản lý Dạy Bù')
       .addItem('1️⃣ Gom nhóm + gửi SOTW (T2 chiều)', 'gomNhom')
       .addItem('2️⃣ Xử lý Xin đổi / Quá hạn (T4)', 'xuLyCaseDacBiet')
       .addItem('3️⃣ Gửi tin cho GV (T5-T6)', 'guiTinChoGV')
@@ -366,6 +397,9 @@ function nangCapSheetSotw() {
   }
   msg += '\n\nBước tiếp: dán danh sách HS vào tab "' + SOTW_SHEET + '" từ ô A3'
     + '\n(Excel: Tên | Lớp | GV — copy rồi paste là vào đủ cột).';
+  kiemTraThuTuCot();
+  baoVeSheet();
+  msg += '\n• Tự kiểm tra/sửa cột BAO_BU\n• Khóa sheet quan trọng (GV chỉ sửa BAO_BU + DS HỌC SINH)';
   baoXong(msg);
 }
 
@@ -654,7 +688,7 @@ function huongDanCacLenh() {
     + '🔄 Đồng bộ DS HS: bấm khi có HS mới vào / nghỉ (hoặc trước khi Gom nhóm)\n'
     + '🖼️ Gắn link ảnh: bấm sau khi thêm ảnh vào folder (cần dán link folder vào ô H1 DS HỌC SINH)\n'
     + '🗜️ Ẩn / hiện tab LOP: xem bảng lớp cũ\n'
-    + '🔨 Tạo sheet mới: ⚠️ XOÁ HẾT — chỉ dùng khi sheet trống\n\n'
+    + '⚠️ LƯU Ý:\n• Menu này CHỈ DÀNH CHO QUẢN LÝ — GV không cần vào đây\n• 🔨 Tạo sheet mới = RESET TOÀN BỘ (xoá hết data) — chỉ dùng lần đầu setup\n\n'
     + '📊 THỐNG KÊ (menu Báo cáo): cần tab "Backup tháng …" đã có data\n'
     + '(tự tạo khi backup / Làm mới tuần mới). Xem số ca, số giờ của từng GV.';
   try { SpreadsheetApp.getUi().alert('JOY DẠY BÙ — hướng dẫn', txt, SpreadsheetApp.getUi().ButtonSet.OK); }
@@ -881,6 +915,7 @@ function menuDongBoDS() {
   }
   if (kq.gvLa.length) msg += '\n⚠️ Cột GV trong file chính có tên lạ: ' + kq.gvLa.join(', ');
   baoXong(msg);
+  kiemTraThuTuCot();
 }
 
 // ===== 🖼️ GẮN LINK ẢNH TỪ FOLDER DRIVE (khớp theo TÊN FILE) =====
