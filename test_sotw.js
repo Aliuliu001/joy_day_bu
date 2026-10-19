@@ -70,11 +70,14 @@ class MockRange {
     return p;
   }
   getSheet() { return this.sheet; }
+  // API THẬT của Google Range: getRow/getColumn (mock từng thiếu → onEdit test fail ảo)
+  getRow() { return this.r; }
+  getColumn() { return this.c; }
 }
 
 class MockSheet {
   constructor(name) {
-    this.name = name; this.id = SHEET_SEQ++; this.rows = [];
+    this.name = name; this.id = SHEET_SEQ++; this.rows = []; this.hiddenRows = {};
     this.validations = []; this.protectedRanges = []; this.bgRules = []; this.cfRules = [];
   }
   getName() { return this.name; }
@@ -110,6 +113,10 @@ class MockSheet {
   getConditionalFormatRules() { return this.cfRules || []; }
   hideSheet() { this.hidden = true; return this; }
   showSheet() { this.hidden = false; return this; }
+  hideRows(r, n) { n = n || 1; for (let i = r; i < r + n; i++) this.hiddenRows[i] = true; return this; }
+  showRows(r, n) { n = n || 1; for (let i = r; i < r + n; i++) delete this.hiddenRows[i]; return this; }
+  isRowHiddenByUser(r) { return !!this.hiddenRows[r]; }
+  getMaxRows() { return Math.max(this.rows.length, 1000); }
   isSheetHidden() { return !!this.hidden; }
 }
 
@@ -791,6 +798,64 @@ console.log('\n=== T21: Đọc file chính — "Full name"/"Lớp", fallback tab
   const kq3 = sandbox.dongBoAnToan(STATE.ss);
   ok(!!kq3.loi && String(kq3.loi).indexOf('thiếu cột chứa chữ "Lớp"') >= 0, 'Báo đúng thiếu cột Lớp');
   STATE.ssFileChinh = fc;
+}
+
+console.log('\n=== T22: Lọc DS theo GV + lớp — ẩn dòng THẬT, dropdown theo dữ liệu ===');
+{
+  const ds = sheet('DS HỌC SINH');
+  ds.showRows(3, 1000);
+  ds.getRange(3, 1, 60, 6).clearContent();
+  ds.getRange(3, 1, 6, 6).setValues([
+    ['Bé V1', 'C2.001 - Strawberry', 'Ms. Uyên Vi', '', '', ''],
+    ['Bé V2', 'C2.001 - Strawberry', 'Ms. Uyên Vi', '', '', ''],
+    ['Bé N1', 'S2.006 - Avocado', 'Ms. Nhung', '', '', ''],
+    ['Bé N2', 'S2.006 - Avocado', 'Ms. Nhung', '', '', ''],
+    ['Bé N3', 'S1.005 - Peach', 'Ms. Nhung', '', '', ''],
+    ['Bé K1', 'C2.002 - Chestnut', 'Ms. Vân', '', '', ''],
+  ]);
+  ds.getRange(1, 2).clearContent();
+  ds.getRange(1, 4).clearContent();
+
+  // 1) Chọn Ms. Nhung → hiện đúng 3 bé Nhung, ẩn 3 bé khác
+  ds.getRange(1, 2).setValue('Ms. Nhung');
+  sandbox.apLocDS(ds);
+  ok(ds.isRowHiddenByUser(3) && ds.isRowHiddenByUser(4), 'Ẩn 2 dòng Ms. Uyên Vi');
+  ok(!ds.isRowHiddenByUser(5) && !ds.isRowHiddenByUser(6) && !ds.isRowHiddenByUser(7), 'Hiện 3 dòng Ms. Nhung');
+  ok(ds.isRowHiddenByUser(8), 'Ẩn dòng Ms. Vân');
+  // Dropdown Lớp = CHỈ lớp của GV đang chọn
+  const dvLop = ds.validations.filter(v => v.r === 1 && v.c === 4).pop();
+  eq(dvLop.rule.list.join('|'), 'S2.006 - Avocado|S1.005 - Peach', 'Dropdown Lớp = lớp của Ms. Nhung');
+
+  // 2) Chọn thêm lớp Peach → chỉ bé N3 (hàng 7) hiện
+  ds.getRange(1, 4).setValue('S1.005 - Peach');
+  sandbox.apLocDS(ds);
+  ok(!ds.isRowHiddenByUser(7) && ds.isRowHiddenByUser(5) && ds.isRowHiddenByUser(6), 'Lọc tiếp theo lớp');
+
+  // 3) Lớp không thuộc GV → tự xoá ô lớp, về 3 bé Nhung
+  ds.getRange(1, 4).setValue('C2.001 - Strawberry');
+  sandbox.apLocDS(ds);
+  eq(String(ds.getRange(1, 4).getValue()), '', 'Lớp lạc GV → tự xoá ô chọn');
+  ok(!ds.isRowHiddenByUser(5), 'Về lại danh sách bé Ms. Nhung');
+
+  // 4) Người dùng đổi B1 → onEdit tự chạy lọc (không cần bấm nút nào)
+  ds.getRange(1, 2).setValue('Ms. Vân');
+  sandbox.onEdit({ range: ds.getRange(1, 2) });
+  ok(!ds.isRowHiddenByUser(8) && ds.isRowHiddenByUser(5), 'onEdit B1 → lọc theo Ms. Vân');
+
+  // 5) Xoá ô GV → hiện toàn bộ; dropdown GV lấy từ CHÍNH DỮ LIỆU
+  ds.getRange(1, 2).clearContent();
+  sandbox.onEdit({ range: ds.getRange(1, 2) });
+  ok(!ds.isRowHiddenByUser(3) && !ds.isRowHiddenByUser(8), 'Xoá lọc → hiện toàn bộ');
+  const dvGv = ds.validations.filter(v => v.r === 1 && v.c === 2).pop();
+  ok(dvGv.rule.list.indexOf('Ms. Nhung') >= 0 && dvGv.rule.list.indexOf('Ms. Uyên Vi') >= 0,
+    'Dropdown GV = tên GV có thật trong dữ liệu');
+
+  // 6) Đồng bộ → bộ lọc tự chạy lại, dòng mới không lẫn
+  ds.getRange(1, 2).setValue('Ms. Uyên Vi');
+  const kq = sandbox.dongBoAnToan(STATE.ss);
+  ok(!kq.loi, 'Đồng bộ OK' + (kq.loi ? ': ' + kq.loi : ''));
+  ok(ds.isRowHiddenByUser(3), 'Dòng mới từ file (GV khác) bị ẩn theo filter');
+  ok(!ds.isRowHiddenByUser(5) && !ds.isRowHiddenByUser(6), 'Bé Ms. Uyên Vi vẫn hiện sau đồng bộ');
 }
 
 console.log('\n============================');

@@ -12,7 +12,7 @@ File này là hướng dẫn DUY NHẤT cần đọc — mọi bản plan/audit 
 |-----|---------|---------|
 | **BAO_BU** | GV + quản lý | GV báo bé nghỉ (mỗi bé 1 dòng); 2 dòng mẫu hướng dẫn (bảo vệ); cột J = link mở DS HỌC SINH |
 | **LICH_BU** | quản lý | Lịch sau khi gom nhóm: PH xác nhận, tin nhắn PH/GV, Đã dạy |
-| **DS HỌC SINH** | GV + quản lý | Danh sách HS + **tick SOTW** ☑; ô "GV đang chọn" → chỉ lớp mình sáng |
+| **DS HỌC SINH** | GV + quản lý | Danh sách HS + **tick SOTW** ☑; ô **"GV đang chọn" → ẨN hết lớp khác**, chọn thêm **"Lớp cần chọn" → lọc tới bé lớp đó**; xóa 2 ô → hiện lại toàn bộ (dropdown GV/Lớp lấy từ dữ liệu thật, tự chạy lại sau mỗi lần Đồng bộ) |
 | **Backup tháng MM-YYYY** | tự động | Lưu lịch sử (không ai sửa tay) |
 
 *Ẩn đi cho gọn:* tab **LOP** (tham khảo — hiện lại: 🗜️ trong Cài đặt). Tab **THỐNG KÊ** tự tạo khi bấm báo cáo.

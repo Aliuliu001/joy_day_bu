@@ -222,6 +222,7 @@ function taoBangSotw(ss) {
       }
     }
   }
+  apLocDS(sh); // dropdown + bộ lọc ẩn/hiện theo dữ liệu thật
   return sh;
 }
 
@@ -426,20 +427,83 @@ function khoaCotQuanLy() {
   if (prot.canDomainEdit()) prot.setDomainEdit(false);
 }
 
+// LỌC DS HỌC SINH THEO GV + LỚP (ý tưởng anh Trương 17/10):
+//  • Chọn GV (ô B1) → ẨN dòng không phải GV đó + dropdown "Lớp" chỉ còn lớp của GV
+//  • Chọn thêm lớp (ô D1) → ẩn tiếp, chỉ còn bé lớp đó để tick
+//  • Xoá ô chọn → hiện lại toàn bộ
+//  • Dropdown GV/Lớp lấy TỪ CHÍNH DỮ LIỆU (tên trong file có thể khác list cứng)
+//  • Tự chạy lại sau mỗi lần Đồng bộ → dòng mới không bị lẫn
+function apLocDS(ds) {
+  if (!ds) return;
+  var oGv = ds.getRange(1, 2), oLop = ds.getRange(1, 4);
+  var vGv = oGv.getValue(), vLop = oLop.getValue();
+  var gv = String(vGv === null || vGv === undefined ? '' : vGv).trim();
+  var lop = String(vLop === null || vLop === undefined ? '' : vLop).trim();
+  var data = ds.getDataRange().getValues();
+  var gvSet = {}, gvDS = [], lopSet = {}, lopDS = [], recMap = {};
+  for (var r = 2; r < data.length; r++) {
+    var ten = String(data[r][0] === undefined || data[r][0] === null ? '' : data[r][0]).trim();
+    if (!ten) continue;
+    var gvR = String(data[r][2] === undefined || data[r][2] === null ? '' : data[r][2]).trim();
+    var lopR = String(data[r][1] === undefined || data[r][1] === null ? '' : data[r][1]).trim();
+    recMap[r] = { gv: gvR, lop: lopR };
+    if (gvR && !gvSet[gvR]) { gvSet[gvR] = 1; gvDS.push(gvR); }
+    if (lopR && !lopSet[lopR]) { lopSet[lopR] = 1; lopDS.push(lopR); }
+  }
+  // Lớp của GV đã chọn (chưa chọn GV → mọi lớp có trong DS)
+  var lopCuaGv = [];
+  for (var key in recMap) {
+    if (gv && recMap[key].gv === gv && recMap[key].lop && lopCuaGv.indexOf(recMap[key].lop) < 0) {
+      lopCuaGv.push(recMap[key].lop);
+    }
+  }
+  // Dropdown GV = tên GV CÓ THẬT trong dữ liệu (rỗng → list gốc)
+  var dsGv = gvDS.length ? gvDS : GV_LIST.slice();
+  oGv.setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(dsGv, true).setAllowInvalid(true).build());
+  var dsLop = gv ? (lopCuaGv.length ? lopCuaGv : lopDS) : (lopDS.length ? lopDS : LOP_LIST.slice());
+  oLop.setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(dsLop, true).setAllowInvalid(true).build());
+  // Lớp đang chọn không thuộc GV nữa → tự xoá khỏi khỏi lọc nhầm
+  if (lop && dsLop.indexOf(lop) < 0) { oLop.clearContent(); lop = ''; }
+  // Hiện hết (1 lệnh) rồi ẩn theo cụm liên tiếp — nhanh, không bao giờ sót dòng cũ
+  var maxDong = ds.getMaxRows();
+  var soDong = Math.min(1000, maxDong - 2);
+  if (soDong > 0) ds.showRows(3, soDong);
+  // GV được chọn nhưng file chưa có bé nào của GV đó → bỏ lọc (không để Sheet trống rỗng)
+  if (gv && lopCuaGv.length === 0) return;
+  var batDau = -1, dem = 0;
+  function dongCum(bd, n) { if (n > 0) ds.hideRows(bd, n); }
+  for (var i = 2; i < data.length; i++) {
+    if (!String(data[i][0] || '').trim()) continue;
+    var rec = recMap[i];
+    if (!rec) continue;
+    var hien = (!gv || rec.gv === gv) && (!lop || rec.lop === lop);
+    if (hien) { dongCum(batDau, dem); batDau = -1; dem = 0; continue; }
+    var rowSo = i + 1;
+    if (dem > 0 && rowSo === batDau + dem) dem++;
+    else { dongCum(batDau, dem); batDau = rowSo; dem = 1; }
+  }
+  dongCum(batDau, dem);
+}
+
 // Tự điền ngày khi GV gõ (bỏ qua dòng mẫu)
 function onEdit(e) {
   try {
     var sh = e.range.getSheet();
-    if (sh.getName() !== 'BAO_BU') return;
     var dong = e.range.getRow();
-    if (dong < 2) return;
     var cot = e.range.getColumn();
+    // DS HỌC SINH: đổi GV (B1) hoặc Lớp (D1) → chạy lại bộ lọc ẩn/hiện dòng
+    if (sh.getName() === SOTW_SHEET && dong === 1 && (cot === 2 || cot === 4)) {
+      apLocDS(sh);
+      return;
+    }
+    if (sh.getName() !== 'BAO_BU') return;
+    if (dong < 2) return;
     if (cot < 2 || cot > 6) return;
     var ghiChu = (sh.getRange(dong, 9).getValue() || '').toString();
     if (ghiChu.indexOf(DAU_MAU) >= 0) return;
     var oNgay = sh.getRange(dong, 1);
     if (!oNgay.getValue()) oNgay.setValue(new Date());
-  } catch (err) { }
+  } catch (err) { Logger.log('onEdit lỗi: ' + err); }
 }
 
 function laySheetBaoBu(ss) {
@@ -588,6 +652,7 @@ function dongBoDSHocSinh(ss) {
   var soDong = Math.max(cu.length - 2, ca.length, 1);
   ds.getRange(3, 1, soDong, 6).clearContent();
   if (ca.length) ds.getRange(3, 1, ca.length, 6).setValues(ca);
+  apLocDS(ds); // chạy lại bộ lọc → dòng mới không lẫn khi GV đang lọc
   return { them: them, tongNguon: nguon.length, giuTen: giuTen, gvLa: Object.keys(gvLa) };
 }
 
