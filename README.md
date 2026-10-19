@@ -25,7 +25,8 @@ File này là hướng dẫn DUY NHẤT cần đọc — mọi bản plan/audit 
 ├─ 4️⃣ Làm mới tuần mới (cuối tuần)       ← TỰ backup trước khi xoá
 ├─ 🔁 Gửi / Nhắc lẻ      ▸ Gửi lại SOTW · Nhắc GV · Backup thủ công
 ├─ 📊 Báo cáo            ▸ Làm mới thống kê
-└─ ⚙️ Cài đặt (1 lần)    ▸ Nâng cấp sheet · Tạo sheet mới · Ẩn/hiện LOP · 🔄 Đồng bộ DS · 🖼️ Gắn link ảnh
+└─ ⚙️ Cài đặt           ▸ 📖 Hướng dẫn · 🔧 Nâng cấp sheet · 🔍 Kiểm tra/sửa cột BAO_BU
+                        ▸ 🔄 Đồng bộ DS · 🖼️ Gắn link ảnh · 🗜️ Ẩn/hiện LOP · 🔨 Tạo sheet mới (⚠️ xoá data)
 ```
 
 **4 ca cố định mỗi tuần:**
@@ -47,7 +48,7 @@ File này là hướng dẫn DUY NHẤT cần đọc — mọi bản plan/audit 
 Menu 🔁 → **🔔 Nhắc GV báo bù** → tin vào nhóm Học Bù (kèm hướng dẫn tick SOTW).
 
 ### 2. CẢ TUẦN — GV nhập liệu (chỉ click & gõ theo mẫu)
-- **Báo bù:** vào BAO_BU → **chọn GV** (ô B) → **chọn Lớp** (ô C, chỉ hiện lớp của GV đó) → **chọn Tên bé** (ô D, chỉ hiện bé lớp đó) → gõ trình độ + link Canva. Lớp đi đủ → gõ `Không bù` ở cột Tên bé. GV cần dặn dò → ghi thêm ô **Ghi chú** (ô I). *Xem 2 dòng mẫu đầu sheet.*
+- **Báo bù:** vào BAO_BU → **chọn GV** (ô B) → **chọn Lớp** (ô C, chỉ hiện lớp của GV đó) → **chọn Tên bé** (ô D, chỉ hiện bé lớp đó) → gõ trình độ + link Canva. **Đảo chiều cũng được:** chọn TÊN BÉ trước → tự điền Lớp + GV báo, 2 ô còn lại tự lọc (tên bé chỉ ở 1 lớp; trùng tên 2 lớp → tự hiện 2 lớp cho anh chọn). Lớp đi đủ → gõ `Không bù` ở cột Tên bé. GV cần dặn dò → ghi thêm ô **Ghi chú** (ô I). *Xem 2 dòng mẫu đầu sheet.*
 - **SOTW:** vào **DS HỌC SINH** → chọn tên mình ở ô "GV đang chọn" → **tick ☑** bé SOTW (1-2 phút/tuần).
 
 ### 3. T2 CHIỀU — bấm **1️⃣ Gom nhóm + gửi SOTW** (1 nút làm 2 việc)
@@ -114,6 +115,16 @@ Danh sách HS trong **DS HỌC SINH** lấy tự động từ file chính của 
 
 ---
 
+## 🔍 KIỂM TRA THỨ TỰ CỘT BAO_BU (khi nghi dữ liệu bị ngược)
+
+Nếu anh thấy cột Lớp/Tên bé có dòng bị ngược (vd 2 dòng mẫu trước đây): **⚙️ Cài đặt → 🔍 Kiểm tra / sửa thứ tự cột BAO_BU** → nó dò TỪNG DÒNG (C chứa lớp? D chứa tên?), dòng nào ngược tự sửa, dòng nào mơ hồ (2 cột đều giống tên) báo để anh xem tay. Chạy bao nhiêu lần cũng an toàn.
+
+## 📊 THỐNG KÊ (menu 📊 → Làm mới thống kê)
+
+- **Cần data gì?** Tab `Backup tháng MM-YYYY` — tự tạo khi anh bấm Backup thủ công (🔁) hoặc **4️⃣ Làm mới tuần mới** (tự backup trước khi xoá). Tháng nào chưa backup lần nào → báo "Chưa có sheet Backup tháng …".
+- Nội dung: số ca dạy + tổng giờ (1.5h/ca) từng GV (**lấy GV từ data backup thật** — GV mới tự có dòng), tổng bé, tổng ca, tổng giờ cả tháng.
+- Bấm lại Làm mới thống kê bất cứ lúc nào — công thức tự cập nhật khi backup thêm dòng.
+
 ## ❗ LỖI THƯỜNG GẶP
 
 | Tình trạng | Cách xử lý |
@@ -124,8 +135,11 @@ Danh sách HS trong **DS HỌC SINH** lấy tự động từ file chính của 
 | Gửi Telegram lỗi | Kiểm tra `TELEGRAM_BOT_TOKEN` trong Thuộc tính tập lệnh |
 | Gửi lại SOTW | 🔁 → 🏆 Gửi lại SOTW (hỏi trước) |
 | Xem tab LOP | ⚙️ Cài đặt → 🗜️ Ẩn / hiện tab LOP |
+| Cột Lớp/Tên bé bị ngược | ⚙️ Cài đặt → 🔍 Kiểm tra / sửa thứ tự cột BAO_BU |
+| Không nhớ lệnh nào dùng lúc nào | ⚙️ Cài đặt → 📖 Hướng dẫn (đọc trước 1 lần) |
+| Thống kê báo "Chưa có sheet Backup" | 🔁 → 💾 Backup thủ công (hoặc Làm mới tuần mới sẽ tự backup) |
 
 ---
 
 ## 🧪 KIỂM THỬ CODE
-`node test_sotw.js` — **197 assertion** (gom nhóm, SOTW, cascade BAO_BU, ghi chú + gộp ghi chú, folder ảnh, backup chống trùng, làm mới tuần, menu...). Phải **PASS 197/197** trước khi push.
+`node test_sotw.js` — **209 assertion** (gom nhóm, SOTW, cascade BAO_BU, ghi chú + gộp ghi chú, folder ảnh, backup chống trùng, làm mới tuần, menu...). Phải **PASS 197/197** trước khi push.

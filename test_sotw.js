@@ -915,6 +915,57 @@ console.log('\n=== T24: BAO_BU chọn nhanh GV → Lớp → Tên bé (cascade t
   sandbox.onEdit({ range: bao.getRange(4, 2) });
   const dv3c = bao.validations.filter(v => v.r === 4 && v.c === 3).pop();
   ok(dv3c.rule.list.indexOf('S2.006 - Avocado') >= 0, 'onEdit cột GV → tự cập nhật dropdown Lớp');
+
+  // ĐẢO CHIỀU: chọn TÊN BÉ trước → tự điền Lớp + GV
+  const bao2 = sheet('BAO_BU');
+  bao2.appendRow([new Date(), '', '', 'Bé N1', 'SP1', '', '', '', '']); // row mới: chỉ gõ tên
+  const dMoi = findRow(bao2, 3, 'Bé N1');
+  ok(dMoi > 0, 'Thêm dòng chỉ có tên bé');
+  sandbox.apCascading(bao2, dMoi, undefined, 4);
+  eq(bao2.getRange(dMoi, 3).getValue(), 'S2.006 - Avocado', 'Chọn tên bé → tự điền Lớp');
+  eq(bao2.getRange(dMoi, 2).getValue(), 'Ms. Nhung', 'Chọn tên bé → tự điền GV báo (ô trống)');
+  // onEdit cột D cũng chạy
+  const bao3 = sheet('BAO_BU');
+  bao3.appendRow([new Date(), '', '', 'Bé K1', '', '', '', '', '']);
+  const dK1 = findRow(bao3, 3, 'Bé K1');
+  sandbox.onEdit({ range: bao3.getRange(dK1, 4) });
+  eq(bao3.getRange(dK1, 3).getValue(), 'C2.002 - Chestnut', 'onEdit cột Tên bé → tự điền Lớp');
+  eq(bao3.getRange(dK1, 2).getValue(), 'Ms. Vân', 'onEdit cột Tên bé → tự điền GV');
+  // Tên trùng 2 lớp → không tự điền, dropdown hiện 2 lớp đó
+  STATE.ss.getSheetByName('DS HỌC SINH').appendRow(['Bé Trùng', 'S1.001 - Cashew', 'Mr. Ngọc', '', '', '']);
+  STATE.ss.getSheetByName('DS HỌC SINH').appendRow(['Bé Trùng', 'S2.003 - Peanut', 'Ms. Vân', '', '', '']);
+  const bao4 = sheet('BAO_BU');
+  bao4.appendRow([new Date(), '', '', 'Bé Trùng', '', '', '', '', '']);
+  const dTrung = findRow(bao4, 3, 'Bé Trùng');
+  sandbox.apCascading(bao4, dTrung, undefined, 4);
+  eq(bao4.getRange(dTrung, 3).getValue(), '', 'Tên trùng 2 lớp → KHÔNG tự điền Lớp');
+  const dvTrung = bao4.validations.filter(v => v.r === dTrung && v.c === 3).pop();
+  eq(dvTrung.rule.list.length, 2, 'Dropdown Lớp hiện 2 lớp của bé trùng tên');
+}
+
+console.log('\n=== T27: 🔍 Kiểm tra / sửa thứ tự cột BAO_BU ===');
+{
+  const bao = sheet('BAO_BU');
+  // 1 dòng bị ngược (C = tên, D = lớp) trong sheet header đúng
+  bao.appendRow([new Date(), 'Ms. Vân', 'Bé Nguoc', 'S1.006 - Lychee', 'SP1', '', '', '', '']);
+  STATE.alerts.length = 0;
+  sandbox.kiemTraThuTuCot();
+  ok(findRow(bao, 2, 'Bé Nguoc') < 0, 'Dòng ngược đã bị hoán (không còn tên ở cột C)');
+  const dS106 = findRow(bao, 2, 'S1.006 - Lychee');
+  ok(dS106 > 0 && bao.getRange(dS106, 4).getValue() === 'Bé Nguoc', 'Lớp về C, tên về D');
+  ok(lastAlert().indexOf('ĐÃ TỰ SỬA') >= 0, 'Popup báo đã tự sửa');
+  // Chạy lại → không còn gì để sửa
+  STATE.alerts.length = 0;
+  sandbox.kiemTraThuTuCot();
+  ok(lastAlert().indexOf('Không dòng nào bị ngược') >= 0, 'Chạy lại → sạch');
+  // Dòng không chắc (2 cột đều giống tên) → báo để anh xem tay
+  bao.appendRow([new Date(), 'Ms. Vân', 'Bé La', 'Bé Lanh', 'SP1', '', '', '', '']);
+  STATE.alerts.length = 0;
+  sandbox.kiemTraThuTuCot();
+  ok(lastAlert().indexOf('không chắc') >= 0, 'Dòng mơ hồ → báo anh xem tay');
+  // Dọn lại
+  const dLa = findRow(bao, 3, 'Bé La');
+  bao.deleteRow(dLa);
 }
 
 console.log('\n=== T25: Ghi chú GV — vào LICH + tin nhắn, gộp 2 bé cùng lớp ===');
