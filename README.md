@@ -25,7 +25,7 @@ File này là hướng dẫn DUY NHẤT cần đọc — mọi bản plan/audit 
 ├─ 4️⃣ Làm mới tuần mới (cuối tuần)       ← TỰ backup trước khi xoá
 ├─ 🔁 Gửi / Nhắc lẻ      ▸ Gửi lại SOTW · Nhắc GV · Backup thủ công
 ├─ 📊 Báo cáo            ▸ Làm mới thống kê
-└─ ⚙️ Cài đặt (1 lần)    ▸ Nâng cấp sheet · Tạo sheet mới · Ẩn/hiện LOP
+└─ ⚙️ Cài đặt (1 lần)    ▸ Nâng cấp sheet · Tạo sheet mới · Ẩn/hiện LOP · 🔄 Đồng bộ DS
 ```
 
 **4 ca cố định mỗi tuần:**
@@ -97,8 +97,15 @@ Menu 🔁 → **🔔 Nhắc GV báo bù** → tin vào nhóm Học Bù (kèm hư
 
 ---
 
-## 🔁 DANH SÁCH ĐỘNG (đang lên plan)
-HS tăng/giảm hằng tuần → phương án: **đọc 1 chiều từ "file chính"** (anh gửi link) — tự đối chiếu theo **tên** mỗi khi mở sheet/bấm Gom nhóm: thêm bé mới, đánh dấu bé nghỉ, **không ghi ngược về file chính**. *Chờ link file chính + tên cột.*
+## 🔁 ĐỒNG BỘ TỪ FILE CHÍNH (chỉ đọc — KHÔNG bao giờ ghi vào file gốc)
+
+Danh sách HS trong **DS HỌC SINH** lấy tự động từ file chính của anh:
+- **Nút:** ⚙️ Cài đặt → **🔄 Đồng bộ DS học sinh (chỉ đọc file chính)**
+- **Tự chạy** khi bấm **1️⃣ Gom nhóm** và khi **🔧 Nâng cấp sheet**
+- **Lần đầu Google xin quyền đọc** → hiện trang cảnh báo → bấm *Advanced → Go to ... → Allow (Cho phép)* → chạy lại
+- Cách lấy: A:B:C (Tên/Lớp/GV) ← file chính; **D:E:F (Giới tính/Link ảnh/Tick SOTW) giữ nguyên theo tên bé**
+- Bé có trong DS nhưng **không có trong file chính** → giữ lại cuối bảng + báo anh quyết (không tự xoá)
+- File chính **chỉ bị ĐỌC** (test tự kiểm: 0 lượt ghi)
 
 ---
 
