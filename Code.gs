@@ -66,35 +66,6 @@ var EMAIL_QUAN_LY = ['tuanngoctruong2710@gmail.com', 'nguyenthiuyenvi@gmail.com'
 
 // Khóa các sheet quan trọng — chỉ 3 email EMAIL_QUAN_LY được sửa
 // GV chỉ sửa được: BAO_BU (trừ cột G/H đã khóa riêng) + DS HỌC SINH (tick SOTW)
-function baoVeSheet() {
-  var ss = laySS();
-  var sheetsBaoVe = ['LICH_BU', 'THỐNG KÊ', 'LOP'];
-  sheetsBaoVe.forEach(function (ten) {
-    var sh = ss.getSheetByName(ten);
-    if (!sh) return;
-    try {
-      var prots = sh.getProtections(SpreadsheetApp.ProtectionType.SHEET);
-      prots.forEach(function (p) { p.remove(); }); // gỡ khóa cũ
-      var prot = sh.protect().setDescription('Chỉ quản lý');
-      prot.addEditors(EMAIL_QUAN_LY);
-      if (prot.canDomainEdit()) prot.setDomainEdit(false);
-    } catch (e) { Logger.log('Khóa sheet ' + ten + ' lỗi: ' + e); }
-  });
-  // Backup tabs theo pattern "Backup tháng …"
-  ss.getSheets().forEach(function (sh) {
-    var n = sh.getName();
-    if (n.indexOf('Backup tháng') === 0) {
-      try {
-        var prots = sh.getProtections(SpreadsheetApp.ProtectionType.SHEET);
-        prots.forEach(function (p) { p.remove(); });
-        var prot = sh.protect().setDescription('Chỉ quản lý');
-        prot.addEditors(EMAIL_QUAN_LY);
-        if (prot.canDomainEdit()) prot.setDomainEdit(false);
-      } catch (e) {}
-    }
-  });
-  Logger.log('Đã khóa các sheet quan trọng (GV chỉ sửa BAO_BU + DS HỌC SINH).');
-}
 var LOP_LIST = [
   'S1.006 - Lychee', 'S2.004 - Cherry', 'C2.004 - Kiwi', 'T1.001 - Apple', 'W2.001 - Cookie',
   'S1.005 - Peach', 'S2.003 - Peanut', 'C2.002 - Chestnut', 'W1.002 - Ice-cream', 'T2.004 - Pea',
@@ -398,7 +369,7 @@ function nangCapSheetSotw() {
   msg += '\n\nBước tiếp: dán danh sách HS vào tab "' + SOTW_SHEET + '" từ ô A3'
     + '\n(Excel: Tên | Lớp | GV — copy rồi paste là vào đủ cột).';
   kiemTraThuTuCot();
-  baoVeSheet();
+  
   msg += '\n• Tự kiểm tra/sửa cột BAO_BU\n• Khóa sheet quan trọng (GV chỉ sửa BAO_BU + DS HỌC SINH)';
   baoXong(msg);
 }
