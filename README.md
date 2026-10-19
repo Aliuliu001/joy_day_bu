@@ -10,7 +10,7 @@ File này là hướng dẫn DUY NHẤT cần đọc — mọi bản plan/audit 
 **Các tab làm việc (4 tab):**
 | Tab | Ai dùng | Việc gì |
 |-----|---------|---------|
-| **BAO_BU** | GV + quản lý | GV báo bé nghỉ (mỗi bé 1 dòng); 2 dòng mẫu hướng dẫn (bảo vệ); cột J = link mở DS HỌC SINH |
+| **BAO_BU** | GV + quản lý | GV báo bé nghỉ (mỗi bé 1 dòng); **cột C = Lớp ngay sau GV** → chọn GV → Lớp → Tên bé đều bằng dropdown (lấy từ DS HỌC SINH); cột G/H khóa (GV sửa ô **Ghi chú** được); cột J = link mở DS HỌC SINH |
 | **LICH_BU** | quản lý | Lịch sau khi gom nhóm: PH xác nhận, tin nhắn PH/GV, Đã dạy |
 | **DS HỌC SINH** | GV + quản lý | Danh sách HS + **tick SOTW** ☑; ô **"GV đang chọn" → ẨN hết lớp khác**, chọn thêm **"Lớp cần chọn" → lọc tới bé lớp đó**; xóa 2 ô → hiện lại toàn bộ (dropdown GV/Lớp lấy từ dữ liệu thật, tự chạy lại sau mỗi lần Đồng bộ) |
 | **Backup tháng MM-YYYY** | tự động | Lưu lịch sử (không ai sửa tay) |
@@ -25,7 +25,7 @@ File này là hướng dẫn DUY NHẤT cần đọc — mọi bản plan/audit 
 ├─ 4️⃣ Làm mới tuần mới (cuối tuần)       ← TỰ backup trước khi xoá
 ├─ 🔁 Gửi / Nhắc lẻ      ▸ Gửi lại SOTW · Nhắc GV · Backup thủ công
 ├─ 📊 Báo cáo            ▸ Làm mới thống kê
-└─ ⚙️ Cài đặt (1 lần)    ▸ Nâng cấp sheet · Tạo sheet mới · Ẩn/hiện LOP · 🔄 Đồng bộ DS
+└─ ⚙️ Cài đặt (1 lần)    ▸ Nâng cấp sheet · Tạo sheet mới · Ẩn/hiện LOP · 🔄 Đồng bộ DS · 🖼️ Gắn link ảnh
 ```
 
 **4 ca cố định mỗi tuần:**
@@ -47,7 +47,7 @@ File này là hướng dẫn DUY NHẤT cần đọc — mọi bản plan/audit 
 Menu 🔁 → **🔔 Nhắc GV báo bù** → tin vào nhóm Học Bù (kèm hướng dẫn tick SOTW).
 
 ### 2. CẢ TUẦN — GV nhập liệu (chỉ click & gõ theo mẫu)
-- **Báo bù:** vào BAO_BU → gõ tên bé + lớp + trình độ (+link Canva). Lớp đi đủ → gõ `Không bù` ở cột Tên bé. *Xem 2 dòng mẫu đầu sheet.*
+- **Báo bù:** vào BAO_BU → **chọn GV** (ô B) → **chọn Lớp** (ô C, chỉ hiện lớp của GV đó) → **chọn Tên bé** (ô D, chỉ hiện bé lớp đó) → gõ trình độ + link Canva. Lớp đi đủ → gõ `Không bù` ở cột Tên bé. GV cần dặn dò → ghi thêm ô **Ghi chú** (ô I). *Xem 2 dòng mẫu đầu sheet.*
 - **SOTW:** vào **DS HỌC SINH** → chọn tên mình ở ô "GV đang chọn" → **tick ☑** bé SOTW (1-2 phút/tuần).
 
 ### 3. T2 CHIỀU — bấm **1️⃣ Gom nhóm + gửi SOTW** (1 nút làm 2 việc)
@@ -55,6 +55,8 @@ Menu 🔁 → **🔔 Nhắc GV báo bù** → tin vào nhóm Học Bù (kèm hư
 - Tạo sẵn **Tin nhắn PH** → copy cột J gửi Zalo cho PH
 - **Gửi SOTW cho Mr. Khôi** vào topic Học Bù (kèm link ảnh nếu có)
 - *Gom lại bao nhiêu lần trong tuần cũng được — không mất bé, không gửi trùng SOTW (có mốc theo tuần)*
+
+**Ghi chú đi đâu?** Ô Ghi chú GV viết ở BAO_BU được mang theo bé vào LICH_BU (cột Ghi chú) và **đính kèm tin nhắn cho GV** (dòng 📌). Nếu 2 bé cùng lớp cùng ghi chú → **tin nhắn gộp 1 dòng ghi chú chung** (không lặp). Ghi chú này cũng được backup + làm mới tuần mới giữ nguyên.
 
 ### 4. T3–T4 — tick "PH xác nhận" trong LICH_BU
 - ✅ Đi được → giữ nguyên
@@ -90,10 +92,13 @@ Menu 🔁 → **🔔 Nhắc GV báo bù** → tin vào nhóm Học Bù (kèm hư
 
 ## 📸 KHO ẢNH CHO SOTW (làm 1 lần — Mr. Khôi khỏi tìm ảnh)
 
-1. Tạo folder Drive **`ẢNH HỌC SINH SOTW`** → thả ảnh vô — **tên file ảnh = họ tên bé**
+1. Tạo folder Drive **`ẢNH HỌC SINH SOTW`** → thả ảnh vô — **tên file ảnh = họ tên bé** (VD: `Nguyen Van A.jpg` khớp bé `Nguyễn Văn A` — chương trình tự bỏ dấu khi so)
 2. Chuột phải folder → **Chia sẻ** → "Bất kỳ ai có đường liên kết" → Người xem → Xong *(share 1 lần)*
-3. Copy link từng file → dán cột **Link ảnh** trong DS HỌC SINH
-   → tin SOTW kèm sẵn link ảnh 🔗 cho Mr. Khôi
+3. Copy **link folder** (dạng `https://drive.google.com/drive/folders/xxxx`) → dán vào **ô H1 tab DS HỌC SINH**
+4. Bấm **⚙️ Cài đặt → 🖼️ Gắn link ảnh SOTW (theo tên file)** → cột Link ảnh tự điền hết (tin SOTW kèm sẵn link 🔗 cho Mr. Khôi)
+   - Bé chưa có file ảnh → báo tên bé thiếu, thêm ảnh vào folder rồi bấm lại
+   - Thêm/đổi ảnh sau này → bấm lại nút 🖼️ là cập nhật
+   - *Cách cũ (copy từng link dán tay) vẫn dùng được*
 
 ---
 
@@ -123,4 +128,4 @@ Danh sách HS trong **DS HỌC SINH** lấy tự động từ file chính của 
 ---
 
 ## 🧪 KIỂM THỬ CODE
-`node test_sotw.js` — **115 assertion** (gom nhóm, SOTW, backup chống trùng, làm mới tuần, menu...). Phải **PASS 115/115** trước khi push.
+`node test_sotw.js` — **197 assertion** (gom nhóm, SOTW, cascade BAO_BU, ghi chú + gộp ghi chú, folder ảnh, backup chống trùng, làm mới tuần, menu...). Phải **PASS 197/197** trước khi push.

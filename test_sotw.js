@@ -60,11 +60,13 @@ class MockRange {
   protect() {
     const p = {
       desc: '', editors: [],
+      r: this.r, c: this.c, h: this.h, w: this.w,
       setDescription(d) { this.desc = d; return this; },
       getDescription() { return this.desc; },
       addEditors(e) { this.editors = this.editors.concat(e); return this; },
       canDomainEdit() { return false; },
       setDomainEdit() { return this; },
+      remove: () => { this.sheet.protectedRanges = this.sheet.protectedRanges.filter(x => x !== p); },
     };
     this.sheet.protectedRanges.push(p);
     return p;
@@ -216,6 +218,16 @@ const SpreadsheetApp = {
   newConditionalFormatRule: () => Object.create(cfrBuilder),
   ProtectionType: { RANGE: 'RANGE' },
 };
+// DriveApp (API thật): iterator hasNext/next — STATE.driveFiles = [{getName, getUrl}]
+const DriveApp = {
+  getFolderById: () => ({
+    getFiles: () => {
+      const arr = STATE.driveFiles || [];
+      let i = 0;
+      return { hasNext: () => i < arr.length, next: () => arr[i++] };
+    },
+  }),
+};
 const cfrBuilder = {
   whenFormulaSatisfied(f) { this.f = f; return this; },
   setRanges(r) { this.ranges = r; return this; },
@@ -225,7 +237,7 @@ const cfrBuilder = {
 };
 
 const sandbox = {
-  SpreadsheetApp, Utilities,
+  SpreadsheetApp, Utilities, DriveApp,
   Logger: { log: (m) => STATE.logs.push(String(m)) },
   PropertiesService: { getScriptProperties: () => ({ getProperty: () => 'TEST_TOKEN' }) },
   UrlFetchApp: {
@@ -270,6 +282,7 @@ console.log('\n=== T1: Nâng cấp sheet SOTW ===');
   // dòng mẫu CŨ (bản trước)
   bao.appendRow(['', '', '(ghi chú mẫu: nếu lớp không ai nghỉ, GV gõ "Không bù" ở đây)', '', '', '', '', '', '']);
   // data thật
+  // Sheet CŨ thật: Tên bé ở cột C, Lớp ở cột D (migration sẽ hoán lại)
   bao.appendRow([new Date(), 'Ms. Vân', 'Bé Một', 'S1.005 - Peach', 'SP1', '', '', '', '']);
   bao.appendRow([new Date(), 'Ms. Vân', 'Bé Hai', 'S1.005 - Peach', 'SP1', '', '', '', '']);
   bao.appendRow([new Date(), 'Mr. Ngọc', 'Bé Ba', 'S1.001 - Cashew', 'Kids', '', '', '', '']);
@@ -290,9 +303,11 @@ console.log('\n=== T1: Nâng cấp sheet SOTW ===');
   const r2 = bao.getRange(2, 9).getValue(), r3 = bao.getRange(3, 9).getValue();
   ok(String(r2).includes('(DÒNG MẪU)'), 'Dòng mẫu 1 tại row2');
   ok(String(r3).includes('(DÒNG MẪU)'), 'Dòng mẫu 2 tại row3');
-  eq(findRow(bao, 2, 'Bé Một'), 4, 'Data cũ trượt xuống row4 (không mất)');
-  eq(bao.protectedRanges.length, 1, 'Bảo vệ 2 dòng mẫu');
-  eq(bao.protectedRanges[0].editors.length, 3, '3 quản lý được sửa dòng mẫu');
+  eq(findRow(bao, 3, 'Bé Một'), 4, 'Data cũ trượt xuống row4 (không mất)');
+  const pMau = bao.protectedRanges.find(pp => (pp.desc || '').indexOf('Dòng mẫu') >= 0);
+  const pQl = bao.protectedRanges.find(pp => (pp.desc || '').indexOf('Chỉ quản lý sửa') >= 0);
+  ok(!!pMau && pMau.editors.length === 3, 'Bảo vệ 2 dòng mẫu (3 quản lý sửa)');
+  ok(!!pQl && pQl.w === 2, 'Khóa đúng 2 cột Trạng thái/Ca xếp — Ghi chú GV được sửa');
 
   // chạy lại lần 2 → không thêm dòng mẫu trùng
   sandbox.nangCapSheetSotw();
@@ -326,8 +341,8 @@ console.log('\n=== T3: Nhập DS HS + tick + Gom nhóm (gộp SOTW) ===');
   eq(sotw.getRange(3, 3).getValue(), 'Mr. Ngọc', 'Backfill GV chính = Mr. Ngọc');
   // thêm bé nữa cho đủ test
   const bao = sheet('BAO_BU');
-  bao.appendRow([new Date(), 'Ms. Vân', 'Bé Bốn', 'S2.003 - Peanut', 'SP1', '', '', '', '']);
-  bao.appendRow([new Date(), 'Mr. Đức Anh', 'Bé Năm', 'S1.006 - Lychee', 'Kids', '', '', '', '']);
+  bao.appendRow([new Date(), 'Ms. Vân', 'S2.003 - Peanut', 'Bé Bốn', 'SP1', '', '', '', '']);
+  bao.appendRow([new Date(), 'Mr. Đức Anh', 'S1.006 - Lychee', 'Bé Năm', 'Kids', '', '', '', '']);
 
   sandbox.gomNhom();
 
@@ -359,7 +374,7 @@ console.log('\n=== T4: Gom nhóm lần 2 — không gửi trùng SOTW, không m�
 {
   const before = STATE.fetches.length;
   const bao = sheet('BAO_BU');
-  bao.appendRow([new Date(), 'Ms. Vân', 'Bé Sáu', 'C2.002 - Chestnut', 'SP0', '', '', '', '']);
+  bao.appendRow([new Date(), 'Ms. Vân', 'C2.002 - Chestnut', 'Bé Sáu', 'SP0', '', '', '', '']);
   sandbox.gomNhom();
   eq(STATE.fetches.length, before, 'Gom lại: KHÔNG gửi trùng SOTW (có mốc)');
   ok(lastAlert().includes('ĐÃ GỬI rồi'), 'Báo đã gửi rồi khi gom lại');
@@ -387,7 +402,7 @@ console.log('\n=== T6: Xử lý case đặc biệt (Xin đổi + Quá hạn) ===
   const lich = sheet('LICH_BU');
   const bao = sheet('BAO_BU');
   // thêm case Xin đổi (bé đã xếp sẵn)
-  const dongBeHai = findRow(bao, 2, 'Bé Hai');
+  const dongBeHai = findRow(bao, 3, 'Bé Hai');
   lich.appendRow(['T6-1', 'Thứ 6', '15h00 - 16h30', 'Ms. Vân', 'Bé Hai', 'S1.005 - Peach', 'SP1', '', '🔄 Xin đổi', '', '', '']);
   STATE.confirms.push(true);
   const fBefore = STATE.fetches.length;
@@ -397,7 +412,7 @@ console.log('\n=== T6: Xử lý case đặc biệt (Xin đổi + Quá hạn) ===
   // Bé Hai: quay về BAO_BU, KHÔNG trùng dòng, status trống
   const found = [];
   const rs = bao.rows;
-  for (let i = 1; i < rs.length; i++) if (rs[i][2] === 'Bé Hai') found.push(i + 1);
+  for (let i = 1; i < rs.length; i++) if (rs[i][3] === 'Bé Hai') found.push(i + 1);
   eq(found.length, 1, 'KHÔNG tạo dòng trùng cho Bé Hai');
   eq(bao.getRange(found[0], 7).getValue(), '', 'Bé Hai: status trống để xếp lại');
   eq(bao.getRange(found[0], 8).getValue(), '', 'Bé Hai: Ca xếp trống');
@@ -470,12 +485,12 @@ console.log('\n=== T10: Làm mới tuần mới — xoá tick + giữ mẫu + gi
   ok(sotw.getRange(3, 6).getValue() === true, 'Trước: còn tick');
   ok(!!sotw.getRange(1, 6).getValue(), 'Trước: còn mốc');
   // thêm 1 bé CHƯA xếp (GV báo mới, chưa gom) → phải được giữ lại
-  bao.appendRow([new Date(), 'Ms. Vân', 'Bé Mới', 'C2.002 - Chestnut', 'SP0', '', '', '', '']);
-  const dongMoi = findRow(bao, 2, 'Bé Mới');
+  bao.appendRow([new Date(), 'Ms. Vân', 'C2.002 - Chestnut', 'Bé Mới', 'SP0', '', '', '', '']);
+  const dongMoi = findRow(bao, 3, 'Bé Mới');
   ok(dongMoi > 0, 'Có Bé Mới (chưa xếp) trong BAO_BU');
   eq(bao.getRange(dongMoi, 8).getValue(), '', 'Bé Mới chưa xếp (Ca xếp trống)');
   // bé đã xếp có Ca xếp đầy → sẽ bị clear
-  const dongBaTruoc = findRow(bao, 2, 'Bé Ba');
+  const dongBaTruoc = findRow(bao, 3, 'Bé Ba');
   ok(dongBaTruoc > 0, 'Có Bé Ba (đã xếp) trong BAO_BU');
   ok(!!bao.getRange(dongBaTruoc, 8).getValue(), 'Bé Ba đã có Ca xếp');
   STATE.confirms.push(true);
@@ -491,10 +506,10 @@ console.log('\n=== T10: Làm mới tuần mới — xoá tick + giữ mẫu + gi
   ok(String(bao.getRange(2, 9).getValue()).includes('(DÒNG MẪU)'), 'Dòng mẫu 1 giữ');
   ok(String(bao.getRange(3, 9).getValue()).includes('(DÒNG MẪU)'), 'Dòng mẫu 2 giữ');
   // bé chưa xếp giữ; bé 'Chờ' được giữ nhờ chuyển chưa chốt; bé ✅ không giữ
-  const dongMoi2 = findRow(bao, 2, 'Bé Mới');
+  const dongMoi2 = findRow(bao, 3, 'Bé Mới');
   ok(dongMoi2 > 0, 'Bé chưa xếp (Bé Mới) ĐƯỢC GIỮ');
-  ok(findRow(bao, 2, 'Bé Ba') > 0, 'Bé "Chờ" (Bé Ba) ĐƯỢC GIỮ nhờ chuyển chưa chốt');
-  ok(findRow(bao, 2, 'Bé Một') < 0, 'Bé đã ✅ (Bé Một) KHÔNG giữ lại (đã backup)');
+  ok(findRow(bao, 3, 'Bé Ba') > 0, 'Bé "Chờ" (Bé Ba) ĐƯỢC GIỮ nhờ chuyển chưa chốt');
+  ok(findRow(bao, 3, 'Bé Một') < 0, 'Bé đã ✅ (Bé Một) KHÔNG giữ lại (đã backup)');
   // LICH clean
   eq(lich.rows.length, 1, 'LICH_BU chỉ còn header');
   // cột J link vẫn còn
@@ -584,7 +599,7 @@ console.log('\n=== T15: Tràn sức chứa → bé dư "Tuần sau" ===');
   // 20 bé chưa xếp, sức chứa = 4 ca × 4 = 16
   const bao = sheet('BAO_BU');
   for (let i = 1; i <= 20; i++) {
-    bao.appendRow([new Date(), 'Ms. Vân', 'Tràn Bé ' + i, 'S1.005 - Peach', 'SP1', '', '', '', '']);
+    bao.appendRow([new Date(), 'Ms. Vân', 'S1.005 - Peach', 'Tràn Bé ' + i, 'SP1', '', '', '', '']);
   }
   sandbox.gomNhom();
   const lich = rows('LICH_BU');
@@ -613,12 +628,12 @@ console.log('\n=== T16: Làm mới tuần mới — TỰ BACKUP + GIỮ bé chư
   const bkName = sheet(tenBk);
   ok(!!bkName && bkName.rows.some(r => r[5] === 'Bé A'), 'Backup chứa bé đã ✅ (Bé A)');
   // Bé 'Chờ' được GIỮ — trước đây sẽ MẤT (bug core logic đã fix)
-  const d1 = findRow(bao, 2, 'Tràn Bé 1');
+  const d1 = findRow(bao, 3, 'Tràn Bé 1');
   ok(d1 > 0, 'Bé "Chờ" được GIỮ lại trong BAO_BU (không mất)');
   eq(bao.getRange(d1, 8).getValue(), '', 'Bé giữ lại: Ca xếp trống');
   ok(String(bao.getRange(d1, 9).getValue()).includes('chưa chốt'), 'Có ghi chú "giữ lại từ tuần trước"');
   // Bé đã ✅: đã backup → KHÔNG quay lại BAO_BU (không cần xếp lại)
-  ok(findRow(bao, 2, 'Bé A') < 0, 'Bé đã ✅ (Bé A) đã backup → không quay lại BAO_BU');
+  ok(findRow(bao, 3, 'Bé A') < 0, 'Bé đã ✅ (Bé A) đã backup → không quay lại BAO_BU');
   // LICH sạch + mẫu giữ + backup không trùng
   eq(lich.rows.length, 1, 'LICH_BU chỉ còn header');
   ok(String(bao.getRange(2, 9).getValue()).includes('(DÒNG MẪU)'), 'Dòng mẫu giữ nguyên');
@@ -856,6 +871,113 @@ console.log('\n=== T22: Lọc DS theo GV + lớp — ẩn dòng THẬT, dropdown
   ok(!kq.loi, 'Đồng bộ OK' + (kq.loi ? ': ' + kq.loi : ''));
   ok(ds.isRowHiddenByUser(3), 'Dòng mới từ file (GV khác) bị ẩn theo filter');
   ok(!ds.isRowHiddenByUser(5) && !ds.isRowHiddenByUser(6), 'Bé Ms. Uyên Vi vẫn hiện sau đồng bộ');
+}
+
+console.log('\n=== T23: Đổi cột BAO_BU — Lớp ngay sau GV báo (sheet cũ tự chuyển) ===');
+{
+  const bao = sheet('BAO_BU');
+  // Giả lập sheet CHƯA nâng cấp: header kiểu cũ + 1 dòng data kiểu cũ
+  bao.getRange(1, 3).setValue('Tên bé');
+  bao.getRange(1, 4).setValue('Lớp');
+  bao.appendRow([new Date(), 'Ms. Vân', 'Bé Cũ CV', 'S1.005 - Peach', 'SP1', '', '', '', '']);
+  const chuyen = sandbox.chuyenCotMoiBAOBU(bao);
+  ok(chuyen === true, 'Nhận diện cột cũ → chuyển');
+  eq(bao.getRange(1, 3).getValue(), 'Lớp', 'C1 = Lớp (ngay sau GV báo)');
+  eq(bao.getRange(1, 4).getValue(), 'Tên bé', 'D1 = Tên bé');
+  const dCu = findRow(bao, 3, 'Bé Cũ CV');
+  ok(dCu > 0, 'Dữ liệu hoán cột đúng (tên về D)');
+  eq(bao.getRange(dCu, 3).getValue(), 'S1.005 - Peach', 'Lớp về cột C');
+  ok(sandbox.chuyenCotMoiBAOBU(bao) === false, 'Chạy lần 2 → bỏ qua (idempotent)');
+}
+
+console.log('\n=== T24: BAO_BU chọn nhanh GV → Lớp → Tên bé (cascade từ DS) ===');
+{
+  const bao = sheet('BAO_BU');
+  // Chọn GV → dropdown Lớp = lớp của GV đó (theo DS HỌC SINH)
+  bao.getRange(4, 2).setValue('Ms. Nhung');
+  sandbox.apCascading(bao, 4);
+  const dv3 = bao.validations.filter(v => v.r === 4 && v.c === 3).pop();
+  ok(dv3 && dv3.rule.list && dv3.rule.list.indexOf('S2.006 - Avocado') >= 0 && dv3.rule.list.indexOf('S1.005 - Peach') >= 0,
+    'Chọn GV → dropdown Lớp = lớp của Ms. Nhung');
+  ok(dv3.rule.list.indexOf('C2.001 - Strawberry') < 0, 'Không lẫn lớp của GV khác');
+  // Chọn lớp → dropdown Tên bé = bé lớp đó
+  bao.getRange(4, 3).setValue('S1.005 - Peach');
+  sandbox.apCascading(bao, 4);
+  const dv4 = bao.validations.filter(v => v.r === 4 && v.c === 4).pop();
+  eq(dv4.rule.list.join('|'), 'Bé N3', 'Chọn lớp → dropdown Tên bé = bé lớp đó');
+  // Xoá GV → dropdown Lớp về toàn bộ lớp trong DS
+  bao.getRange(4, 2).clearContent();
+  sandbox.apCascading(bao, 4);
+  const dv3b = bao.validations.filter(v => v.r === 4 && v.c === 3).pop();
+  ok(dv3b.rule.list.indexOf('S1.001 - Cashew') >= 0, 'Xoá GV → dropdown Lớp = mọi lớp trong DS');
+  // Người dùng sửa B1 (GV) → onEdit tự chạy cascade
+  bao.getRange(4, 2).setValue('Ms. Nhung');
+  sandbox.onEdit({ range: bao.getRange(4, 2) });
+  const dv3c = bao.validations.filter(v => v.r === 4 && v.c === 3).pop();
+  ok(dv3c.rule.list.indexOf('S2.006 - Avocado') >= 0, 'onEdit cột GV → tự cập nhật dropdown Lớp');
+}
+
+console.log('\n=== T25: Ghi chú GV — vào LICH + tin nhắn, gộp 2 bé cùng lớp ===');
+{
+  // a) Bé có ghi chú trong BAO_BU → khi gom vào lịch: cột Ghi chú + trong tin GV
+  const lich = sheet('LICH_BU');
+  lich.clear();
+  lich.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú']);
+  const bao = sheet('BAO_BU');
+  bao.appendRow([new Date(), 'Ms. Vân', 'S1.005 - Peach', 'Bé GhiChu', 'SP1', 'https://s/slide', '', '', 'Ôn unit 4 + 10 câu đọc lại']);
+  sandbox.gomNhom();
+  const dGC = findRow('LICH_BU', 4, 'Bé GhiChu');
+  ok(dGC > 0, 'Bé có ghi chú được xếp vào lịch');
+  eq(lich.getRange(dGC, 13).getValue(), 'Ôn unit 4 + 10 câu đọc lại', 'LICH có cột Ghi chú (13) chứa nội dung');
+  ok(String(lich.getRange(dGC, 11).getValue()).indexOf('📌 Ghi chú: Ôn unit 4') >= 0, 'Tin nhắn GV kèm 📌 Ghi chú');
+  const dBao = findRow(bao, 3, 'Bé GhiChu');
+  ok(dBao > 0 && bao.getRange(dBao, 7).getValue() === 'Đã xếp', 'Dánh dấu Đã xếp');
+
+  // b) 2 bé cùng lớp + cùng ghi chú → guiTinChoGV gộp 1 dòng ghi chú
+  lich.clear();
+  lich.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú']);
+  lich.appendRow(['T9-1', 'Thứ 9', '10h00', 'Ms. Vân', 'Bé G1', 'S1.002 - Almond', 'SP1', 'https://s/1', '✅ Đi được', '', '', '', 'Ôn unit 4, đọc từ vựng']);
+  lich.appendRow(['T9-1', 'Thứ 9', '10h00', 'Ms. Vân', 'Bé G2', 'S1.002 - Almond', 'SP1', 'https://s/2', '✅ Đi được', '', '', '', 'Ôn unit 4, đọc từ vựng']);
+  lich.appendRow(['T9-2', 'Thứ 9', '12h00', 'Ms. Vân', 'Bé G3', 'S1.003 - Hazelnut', 'SP1', '', '✅ Đi được', '', '', '', 'Ôn unit 5']);
+  STATE.fetches.length = 0;
+  sandbox.guiTinChoGV();
+  const texts = STATE.fetches.map(f => f.text);
+  const t91 = texts.find(t => t.indexOf('10h00') >= 0) || '';
+  const t92 = texts.find(t => t.indexOf('12h00') >= 0) || '';
+  const demNote = (t91.match(/Ôn unit 4, đọc từ vựng/g) || []).length;
+  eq(demNote, 1, '2 bé cùng lớp cùng ghi chú → GỘP 1 dòng (không lặp)');
+  ok(t91.indexOf('📌 Ghi chú (S1.002 - Almond)') >= 0, 'Ghi chú gộp nêu rõ lớp');
+  ok(t92.indexOf('📌 Ghi chú (S1.003 - Hazelnut): Ôn unit 5') >= 0, 'Ghi chú khác → dòng riêng');
+}
+
+console.log('\n=== T26: 🖼️ Gắn link ảnh từ folder Drive (khớp tên file) ===');
+{
+  const ds = sheet('DS HỌC SINH');
+  // Thiếu link folder → hướng dẫn đầy đủ
+  STATE.alerts.length = 0;
+  sandbox.ganLinkAnhTuFolder();
+  ok(lastAlert().indexOf('Ô H1') >= 0 || lastAlert().indexOf('ô H1') >= 0, 'Thiếu link → hướng dẫn dán vào ô H1');
+  ok(lastAlert().indexOf('Bất kỳ ai có') >= 0, 'Hướng dẫn share folder');
+  // Có link folder + file ảnh khớp tên bé
+  ds.getRange(1, 8).setValue('https://drive.google.com/drive/folders/x1y2z3abcDEFG');
+  STATE.driveFiles = [
+    { getName: () => 'Bé Một A.png', getUrl: () => 'https://drive.google.com/file/d/AAA' },
+    { getName: () => 'anh-la-khac.jpg', getUrl: () => 'https://drive.google.com/file/d/BBB' },
+  ];
+  STATE.alerts.length = 0;
+  sandbox.ganLinkAnhTuFolder();
+  const dAnh = findRow(ds, 0, 'Bé Một A');
+  ok(dAnh > 0, 'Bé khớp tên file vẫn có trong DS');
+  eq(ds.getRange(dAnh, 5).getValue(), 'https://drive.google.com/file/d/AAA', 'Link ảnh tự điền theo TÊN FILE (bỏ dấu)');
+  ok(lastAlert().indexOf('Đã gắn 1') >= 0, 'Báo số link đã gắn');
+  ok(lastAlert().indexOf('Chưa khớp file ảnh') >= 0, 'Liệt kê bé chưa có ảnh');
+  // Link sai dạng → báo rõ
+  ds.getRange(1, 8).setValue('khong-phai-link');
+  STATE.alerts.length = 0;
+  sandbox.ganLinkAnhTuFolder();
+  ok(lastAlert().indexOf('đúng dạng folder') >= 0, 'Link sai → báo đúng bệnh');
+  ds.getRange(1, 8).clearContent();
+  STATE.driveFiles = [];
 }
 
 console.log('\n============================');
