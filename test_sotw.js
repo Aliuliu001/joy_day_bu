@@ -22,6 +22,7 @@ class MockRange {
     return v === undefined ? '' : v;
   }
   _set(r, c, v) {
+    this.sheet.writes = (this.sheet.writes || 0) + 1; // đếm lượt GHI — test "chỉ đọc file chính"
     while (this.sheet.rows.length < r) this.sheet.rows.push([]);
     const row = this.sheet.rows[r - 1];
     while (row.length < c) row.push('');
@@ -130,6 +131,8 @@ const STATE = {
   triggers: [],
   logs: [],
   sheetLocale: 'vi_VN', // file Google Sheet tiếng Việt → công thức phải dùng ';'
+  ssFileChinh: null,     // bảng mock của FILE CHÍNH (độc lập với ss chính)
+  openByIdLoi: false,    // giả lập Google chưa cấp quyền đọc file chính
 };
 
 function makeUi() {
@@ -190,7 +193,14 @@ const Utilities = {
 
 const SpreadsheetApp = {
   getActiveSpreadsheet: () => STATE.ss,
-  openById: () => STATE.ss,
+  // openById: file chính → bảng mock riêng; ĐÚNG NGUYÊN TẮC: mock này chỉ có read (writes được đếm ở _set)
+  openById: (id) => {
+    if (id && typeof sandbox !== 'undefined' && sandbox.FCHINH_ID && id === sandbox.FCHINH_ID) {
+      if (STATE.openByIdLoi) throw new Error('Exception: You do not have permission to call openById');
+      return STATE.ssFileChinh || null;
+    }
+    return STATE.ss;
+  },
   getUi: () => ui,
   newDataValidation: () => Object.create(dvBuilder),
   // Builder mô phỏng đúng API THẬT của Google (ConditionalFormatRuleBuilder).
@@ -670,6 +680,78 @@ console.log('\n=== T19: Ngách công thức theo locale + ghi đè ô J đang #E
   sandbox.themLinkSotw(bao, ds.getSheetId());
   ok(String(bao.getRange(4, 10).getValue()).includes(',"Mở'), 'en_US → dùng ","');
   STATE.sheetLocale = 'vi_VN';
+}
+
+console.log('\n=== T20: Đồng bộ DS từ file chính — CHỈ ĐỌC, giữ tick/link, bé thiếu giữ lại ===');
+{
+  // File chính mock: 2 tab, tab theo gid = 294797681 (đúng gid anh gửi)
+  const fc = new MockSS();
+  const khac = fc.insertSheet('Sheet1'); khac.id = 111;
+  const goc = fc.insertSheet('DANH SACH'); goc.id = 294797681;
+  goc.getRange(1, 1, 5, 4).setValues([
+    ['STT', 'Họ và tên', 'Lớp', 'GV chính'],
+    [1, 'Ngô Bảo Hàn', 'S1.001 - Cashew', 'Mr. Ngọc'],
+    [2, 'Bé Mới Tên', 'S1.001 - Cashew', 'Mr. Ngọc'],
+    [3, 'Bé Lớp Khác', 'S2.003 - Peanut', 'Ms. Vân'],
+    [4, 'Bé GV Lạ', 'C2.002 - Chestnut', 'Cô Mai'],
+  ]);
+  goc.writes = 0; // reset bộ đếm TRƯỚC khi đồng bộ
+
+  // DS hiện tại: 1 bé khớp file (đã có link+tick), 1 bé chỉ có trong DS
+  const ds = sheet('DS HỌC SINH');
+  ds.getRange(3, 1, 2, 6).setValues([
+    ['Ngô Bảo Hàn', 'S1.001 - Cashew', 'Mr. Ngọc', 'Nam', 'https://x/a.png', true],
+    ['Bé Chỉ Trong DS', 'S1.001 - Cashew', 'Mr. Ngọc', '', '', false],
+  ]);
+
+  STATE.ssFileChinh = fc;
+  STATE.openByIdLoi = false;
+  const kq = sandbox.dongBoAnToan(STATE.ss);
+  ok(!kq.loi, 'Đồng bộ không lỗi' + (kq.loi ? ': ' + kq.loi : ''));
+  eq(kq.tongNguon, 4, 'Đọc đủ 4 bé từ file chính (tab theo gid)');
+  eq(kq.them, 3, '3 bé mới');
+  ok(kq.giuTen.includes('Bé Chỉ Trong DS'), 'Bé thiếu trong file chính → báo giữ lại');
+  ok(kq.gvLa.includes('Cô Mai'), 'GV lạ trong file chính được cảnh báo');
+
+  // GIỮ link/tick/giới tính theo tên bé
+  const dHan = findRow(ds, 0, 'Ngô Bảo Hàn');
+  ok(dHan > 0, 'Bé khớp file vẫn có trong DS');
+  eq(ds.getRange(dHan, 4).getValue(), 'Nam', 'Giới tính GIỮ');
+  eq(ds.getRange(dHan, 5).getValue(), 'https://x/a.png', 'Link ảnh GIỮ');
+  eq(ds.getRange(dHan, 6).getValue(), true, 'Tick SOTW GIữ');
+  // Bé mới vào với GV lấy từ file chính
+  const dMoi = findRow(ds, 0, 'Bé Mới Tên');
+  ok(dMoi > 0, 'Bé mới được thêm');
+  eq(ds.getRange(dMoi, 3).getValue(), 'Mr. Ngọc', 'GV chính lấy từ file chính');
+  // Bé chỉ trong DS: giữ lại, KHÔNG mất
+  const dGiu = findRow(ds, 0, 'Bé Chỉ Trong DS');
+  ok(dGiu > 0, 'Bé chỉ trong DS được GIỮ lại');
+  ok(dGiu > dMoi, 'Bé giữ lại chuyển xuống cuối bảng');
+  // Tiêu đề2 hàng đầu không bị đụng
+  eq(ds.getRange(1, 1).getValue(), 'GV đang chọn:', 'Hàng tiêu đề/filter nguyên vẹn');
+  // NGUYÊN TẮC BẤT DI BẤT DỌNG: file chính 0 lượt ghi
+  eq(goc.writes || 0, 0, 'CHỈ ĐỌC — file chính không 1 lần bị ghi');
+
+  // Thiếu quyền → bọc an toàn, không ném exception
+  STATE.openByIdLoi = true;
+  const kq2 = sandbox.dongBoAnToan(STATE.ss);
+  ok(!!kq2.loi, 'Thiếu quyền → trả {loi}, không ném lỗi');
+  // Nút menu thiếu quyền → hướng dẫn cấp quyền
+  STATE.alerts.length = 0;
+  sandbox.menuDongBoDS();
+  ok(lastAlert().indexOf('Chưa đọc được file chính') >= 0, 'Popup báo chưa đọc được');
+  ok(lastAlert().indexOf('Cho phép') >= 0, 'Nêu bước Cho phép quyền');
+  // Gom nhóm chạy được cả khi thiếu quyền (không chết)
+  STATE.alerts.length = 0;
+  try { sandbox.gomNhom(); ok(true, 'gomNhom vẫn chạy khi thiếu quyền file chính'); }
+  catch (e) { ok(false, 'gomNhom ném lỗi vì thiếu quyền: ' + e.message); }
+  ok(lastAlert().indexOf('chưa đọc được file chính') >= 0, 'Gom nhóm nhắc cách cấp quyền');
+  STATE.openByIdLoi = false;
+
+  // Nâng cấp sheet có nhắc kết quả đồng bộ
+  STATE.alerts.length = 0;
+  sandbox.nangCapSheetSotw();
+  ok(lastAlert().indexOf('file chính') >= 0, 'Nâng cấp nhắc kết quả đồng bộ file chính');
 }
 
 console.log('\n============================');

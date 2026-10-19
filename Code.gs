@@ -29,6 +29,10 @@ var CFG = {
 };
 
 var SHEET_ID = '1O_RUUL9P4YggLI2Vp1AcFraZuUHcF8CXULtZ9jPZGsg';
+
+// FILE CHÍNH — danh sách học sinh trung tâm (CHỈ ĐỌC, không bao giờ ghi — nguyên tắc của anh Trương)
+var FCHINH_ID = '1fD1ox5bz3oBzPogjtmbNbU0tjwaEJo3kJ8IAeJRD2ok';
+var FCHINH_GID = 294797681;
 var SOTW_SHEET = 'DS HỌC SINH';
 var DAU_MAU = '(DÒNG MẪU)';
 
@@ -135,7 +139,8 @@ function onOpen() {
       .addSubMenu(ui.createMenu('⚙️ Cài đặt (chạy 1 lần)')
         .addItem('🔧 Nâng cấp sheet SOTW', 'nangCapSheetSotw')
         .addItem('🔨 Tạo sheet mới (xoá data!)', 'setupDayBu')
-        .addItem('🗜️ Ẩn / hiện tab LOP', 'anTabLop'))
+        .addItem('🗜️ Ẩn / hiện tab LOP', 'anTabLop')
+        .addItem('🔄 Đồng bộ DS học sinh (chỉ đọc file chính)', 'menuDongBoDS'))
       .addToUi();
   } catch (e) {
     Logger.log('LỖI TẠO MENU: ' + e);
@@ -336,6 +341,13 @@ function nangCapSheetSotw() {
       }
     } catch (e) { loi.push('Cài backup T7: ' + e); }
   }
+  // Đồng bộ DS HỌC SINH từ file chính (chỉ đọc) — lỗi quyền chỉ báo, không chặn
+  try {
+    var kqDB2 = dongBoAnToan(ss);
+    msg += kqDB2.loi
+      ? '\n• DS HS chưa đọc file chính được → bấm 🔄 Đồng bộ trong Cài đặt khi Google hỏi quyền'
+      : ('\n• DS HS đồng bộ từ file chính: ' + kqDB2.tongNguon + ' bé' + (kqDB2.them ? ' (+' + kqDB2.them + ' mới)' : ''));
+  } catch (e) {}
   if (loi.length) {
     msg += '\n\n⚠️ ' + loi.length + ' chỗ gặp lỗi (xem Nhật ký thực thi — code vẫn chạy các bước khác):';
     loi.forEach(function (x) { msg += '\n• ' + x; });
@@ -450,8 +462,153 @@ function timDongBaoBu(bao, ten, lop) {
 }
 
 // ===== GOM NHÓM + SOTW (1 nút chạy gộp) =====
+// ===== ĐỒNG BỘ DS HỌC SINH TỪ FILE CHÍNH =====
+// NGUYÊN TẮC BẤT DI BẤT DỌNG (yêu cầu anh Trương): CHỈ getValues() —
+// KHÔNG BAO GIỜ ghi / sửa / xoá bất cứ ô nào trong file chính.
+
+// Bỏ dấu tiếng Việt + chuẩn hoá để so tên/lớp không lỗi chính tả
+function boDau(s) {
+  return (s === null || s === undefined ? '' : String(s)).toLowerCase()
+    .replace(/đ/g, 'd')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/\s+/g, ' ').trim();
+}
+
+// Đọc file chính → mảng {ten, lop, gv}. Tự tìm dòng tiêu đề trong 10 dòng đầu,
+// tự chọn tab theo gid, tự nhận diện cột Tên/Lớp/GV (không cần biết trước vị trí).
+function docFileChinh() {
+  var f = SpreadsheetApp.openById(FCHINH_ID); // CHỈ ĐỌC
+  var sheets = f.getSheets(), sh = null;
+  for (var i = 0; i < sheets.length; i++) {
+    if (String(sheets[i].getSheetId()) === String(FCHINH_GID)) { sh = sheets[i]; break; }
+  }
+  if (!sh) sh = sheets[0];
+  var data = sh.getDataRange().getValues();
+  var dongTieuDe = -1, cTen = -1, cLop = -1, cGv = -1;
+  for (var d = 0; d < data.length && d < 10; d++) {
+    var t = -1, l = -1, g = -1;
+    for (var c = 0; c < data[d].length; c++) {
+      var h = boDau(data[d][c]);
+      if (t < 0 && ((h.indexOf('ten') >= 0 && h.indexOf('tinh') < 0) || h.indexOf('name') >= 0)) t = c;
+      if (l < 0 && (h.indexOf('lop') >= 0 || h.indexOf('class') >= 0)) l = c;
+      if (g < 0 && (h === 'gv' || h.indexOf('giao vien') >= 0 || h.indexOf('teacher') >= 0 ||
+        h.indexOf('gv chinh') >= 0 || h.indexOf('gvchinh') >= 0)) g = c;
+    }
+    if (t >= 0 && l >= 0) { dongTieuDe = d; cTen = t; cLop = l; cGv = g; break; }
+  }
+  if (dongTieuDe < 0) throw new Error('không thấy dòng tiêu đề có cột "Tên" + "Lớp" trong 10 dòng đầu file chính');
+  var rows = [];
+  var bo = { 'ten': 1, 'ho ten': 1, 'ho va ten': 1, 'stt': 1 };
+  for (var r = dongTieuDe + 1; r < data.length; r++) {
+    var ten = String(data[r][cTen] === undefined || data[r][cTen] === null ? '' : data[r][cTen]).trim();
+    if (!ten || bo[boDau(ten)]) continue;
+    rows.push({
+      ten: ten,
+      lop: String(data[r][cLop] === undefined || data[r][cLop] === null ? '' : data[r][cLop]).trim(),
+      gv: cGv >= 0 ? String(data[r][cGv] === undefined || data[r][cGv] === null ? '' : data[r][cGv]).trim() : ''
+    });
+  }
+  return rows;
+}
+
+// Đồng bộ vào DS HỌC SINH:
+//  • A:B:C (Tên/Lớp/GV chính) ← lấy từ file chính
+//  • D:E:F (Giới tính/Link ảnh/Tick SOTW) ← GIỮ NGUYÊN theo tên bé, không bao giờ mất
+//  • Bé có trong DS nhưng KHÔNG có trong file chính → GIỮ LẠI cuối bảng + báo anh quyết
+function dongBoDSHocSinh(ss) {
+  var ds = ss.getSheetByName(SOTW_SHEET);
+  if (!ds) ds = taoBangSotw(ss);
+  var nguon = docFileChinh(); // ← CHỈ ĐỌC file chính
+  var cu = ds.getDataRange().getValues();
+  var dongCu = [];
+  for (var r = 2; r < cu.length; r++) {
+    var ten = String(cu[r][0] === undefined ? '' : cu[r][0]).trim();
+    if (!ten) continue;
+    dongCu.push({
+      ten: ten,
+      lop: String(cu[r][1] === undefined ? '' : cu[r][1]).trim(),
+      gv: String(cu[r][2] === undefined ? '' : cu[r][2]).trim(),
+      gt: cu[r][3], link: cu[r][4], tick: cu[r][5]
+    });
+  }
+  var daDung = {}, out = [], them = 0, gvLa = {};
+  nguon.forEach(function (x) {
+    var chon = -1;
+    for (var i = 0; i < dongCu.length && chon < 0; i++) { // Ưu tiên khớp TÊN + LỚP
+      if (daDung[i]) continue;
+      if (boDau(dongCu[i].ten) === boDau(x.ten) && boDau(dongCu[i].lop) === boDau(x.lop)) chon = i;
+    }
+    for (var j = 0; j < dongCu.length && chon < 0; j++) { // Bấm tên (bé đổi lớp)
+      if (daDung[j]) continue;
+      if (boDau(dongCu[j].ten) === boDau(x.ten)) chon = j;
+    }
+    if (chon >= 0) {
+      daDung[chon] = 1;
+      var c = dongCu[chon];
+      out.push([x.ten, x.lop, x.gv || c.gv || (LOP_GV_MAP[x.lop] || ''), c.gt, c.link, c.tick]);
+    } else {
+      them++;
+      out.push([x.ten, x.lop, x.gv || (LOP_GV_MAP[x.lop] || ''), '', '', '']);
+    }
+    if (x.gv && GV_LIST.indexOf(x.gv) < 0) gvLa[x.gv] = 1;
+  });
+  var giu = [], giuTen = [];
+  for (var k = 0; k < dongCu.length; k++) {
+    if (daDung[k]) continue;
+    var c2 = dongCu[k];
+    giu.push([c2.ten, c2.lop, c2.gv, c2.gt, c2.link, c2.tick]);
+    giuTen.push(c2.ten);
+  }
+  var ca = out.concat(giu);
+  var soDong = Math.max(cu.length - 2, ca.length, 1);
+  ds.getRange(3, 1, soDong, 6).clearContent();
+  if (ca.length) ds.getRange(3, 1, ca.length, 6).setValues(ca);
+  return { them: them, tongNguon: nguon.length, giuTen: giuTen, gvLa: Object.keys(gvLa) };
+}
+
+// Bọc an toàn: thiếu quyền / file đổi cấu trúc → {loi}, không ném lỗi làm dừng lệnh chính
+function dongBoAnToan(ss) {
+  try {
+    return dongBoDSHocSinh(ss);
+  } catch (e) {
+    Logger.log('Đồng bộ DS lỗi: ' + e);
+    return { loi: String(e) };
+  }
+}
+
+// Nút menu 🔄 Đồng bộ DS học sinh
+function menuDongBoDS() {
+  var kq = dongBoAnToan(laySS());
+  if (kq.loi) {
+    baoXong('⚠️ Chưa đọc được file chính:\n' + kq.loi
+      + '\n\nCÁCH LÀM:\n1. Bấm nút này lần nữa — Google sẽ hiện trang xin quyền đọc\n'
+      + '\n2. Nếu hiện trang cảnh báo "Google chưa xác minh": bấm Advanced → Go to ... → Allow (Cho phép)\n'
+      + '3. Xong là DS HỌC SINH tự lấy danh sách — file gốc KHÔNG bị thay đổi gì');
+    return;
+  }
+  var msg = '✅ Đồng bộ DS HỌC SINH từ file chính:\n• File có ' + kq.tongNguon + ' bé'
+    + (kq.them ? '\n• Thêm mới ' + kq.them + ' bé' : '\n• Không có bé mới')
+    + '\n• Link ảnh / tick SOTW / giới tính của bé cũ GIỮ NGUYÊN';
+  if (kq.giuTen.length) {
+    msg += '\n⚠️ ' + kq.giuTen.length + ' bé có trong DS nhưng KHÔNG có trong file chính → GIỮ LẠI: '
+      + kq.giuTen.slice(0, 6).join(', ') + (kq.giuTen.length > 6 ? ' …' : '')
+      + '\n(Nếu bé thật sự nghỉ học, anh xoá dòng tay giúp em)';
+  }
+  if (kq.gvLa.length) msg += '\n⚠️ Cột GV trong file chính có tên lạ: ' + kq.gvLa.join(', ');
+  baoXong(msg);
+}
+
 function gomNhom() {
   var ss = laySS();
+  // Tự đồng bộ DS HỌC SINH từ file chính (chỉ đọc) — thiếu quyền thì vẫn chạy tiếp, báo ở cuối
+  var dongBoNote = '';
+  try {
+    var kqDB = dongBoAnToan(ss);
+    if (kqDB.loi) dongBoNote = '\n\n⚠️ DS HS chưa đọc được file chính — bấm 🔄 Đồng bộ trong Cài đặt để Google hỏi quyền → Cho phép.';
+    else dongBoNote = '\n\n🔄 DS HS: ' + kqDB.tongNguon + ' bé từ file chính'
+      + (kqDB.them ? ', +' + kqDB.them + ' bé mới' : '')
+      + (kqDB.giuTen.length ? ', ' + kqDB.giuTen.length + ' bé thiếu trong file → giữ lại' : '');
+  } catch (e) {}
   var bao = laySheetBaoBu(ss);
   var lich = ss.getSheetByName('LICH_BU');
   if (!bao || !lich) {
@@ -460,7 +617,7 @@ function gomNhom() {
   }
   var msgXep = xepLichChinh(ss, bao, lich);
   var rs = guiSOTW(false);
-  baoXong(msgXep + (rs.skip ? '\n\nℹ️ SOTW: ' + rs.msg : '\n\n🏆 SOTW: ' + rs.msg));
+  baoXong(msgXep + (rs.skip ? '\n\nℹ️ SOTW: ' + rs.msg : '\n\n🏆 SOTW: ' + rs.msg) + dongBoNote);
 }
 
 function xepLichChinh(ss, bao, lich) {
