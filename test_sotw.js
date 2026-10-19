@@ -754,6 +754,45 @@ console.log('\n=== T20: Đồng bộ DS từ file chính — CHỈ ĐỌC, giữ
   ok(lastAlert().indexOf('file chính') >= 0, 'Nâng cấp nhắc kết quả đồng bộ file chính');
 }
 
+console.log('\n=== T21: Đọc file chính — "Full name"/"Lớp", fallback tab, lỗi nêu rõ ===');
+{
+  // A) tab theo gid TRỐNG → tự fallback sang tab có header 'Full name' + 'Lớp'
+  const fc = new MockSS();
+  const trong = fc.insertSheet('Trang trắng'); trong.id = 294797681;
+  const f2 = fc.insertSheet('DS GỐC'); f2.id = 777;
+  f2.getRange(1, 1, 3, 3).setValues([
+    ['Full name', 'Lớp', 'GV'],
+    ['Bé Một A', 'S1.001 - Cashew', 'Mr. Ngọc'],
+    ['Bé Hai A', 'S2.003 - Peanut', 'Ms. Vân'],
+  ]);
+  STATE.ssFileChinh = fc;
+  STATE.openByIdLoi = false;
+  const kq = sandbox.dongBoAnToan(STATE.ss);
+  ok(!kq.loi, 'Fallback sang tab có tiêu đề' + (kq.loi ? ': ' + kq.loi : ''));
+  eq(kq.tongNguon, 2, 'Đọc đủ 2 bé qua tab phụ');
+
+  // B) Không tab nào có header → lỗi nêu SỐ tab + TÊN tab đã thử
+  const fc2 = new MockSS();
+  const a = fc2.insertSheet('Ảnh'); a.id = 294797681;
+  a.getRange(1, 2, 2, 2).setValues([['Ghi chú', 'Khác'], ['abc', 'xyz']]);
+  const b = fc2.insertSheet('Báo cáo'); b.id = 5;
+  STATE.ssFileChinh = fc2;
+  const kq2 = sandbox.dongBoAnToan(STATE.ss);
+  ok(!!kq2.loi, 'Không có header → báo lỗi');
+  ok(String(kq2.loi).indexOf('Đã thử 2 tab') >= 0, 'Nêu số tab đã thử');
+  ok(String(kq2.loi).indexOf('"Ảnh"') >= 0 && String(kq2.loi).indexOf('"Báo cáo"') >= 0, 'Nêu tên các tab');
+  ok(String(kq2.loi).indexOf('Full name') >= 0, 'Gợi ý header cần có');
+
+  // C) Có cột Tên nhưng thiếu cột Lớp → báo ĐÚNG chỗ thiếu
+  const fc3 = new MockSS();
+  const c1 = fc3.insertSheet('DS'); c1.id = 294797681;
+  c1.getRange(1, 1, 2, 2).setValues([['Full name', 'Ghi chú'], ['Bé A', 'x']]);
+  STATE.ssFileChinh = fc3;
+  const kq3 = sandbox.dongBoAnToan(STATE.ss);
+  ok(!!kq3.loi && String(kq3.loi).indexOf('thiếu cột chứa chữ "Lớp"') >= 0, 'Báo đúng thiếu cột Lớp');
+  STATE.ssFileChinh = fc;
+}
+
 console.log('\n============================');
 console.log(`PASS: ${PASS}  FAIL: ${FAIL}`);
 process.exit(FAIL > 0 ? 1 : 0);

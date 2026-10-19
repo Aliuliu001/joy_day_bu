@@ -474,18 +474,12 @@ function boDau(s) {
     .replace(/\s+/g, ' ').trim();
 }
 
-// Đọc file chính → mảng {ten, lop, gv}. Tự tìm dòng tiêu đề trong 10 dòng đầu,
-// tự chọn tab theo gid, tự nhận diện cột Tên/Lớp/GV (không cần biết trước vị trí).
-function docFileChinh() {
-  var f = SpreadsheetApp.openById(FCHINH_ID); // CHỈ ĐỌC
-  var sheets = f.getSheets(), sh = null;
-  for (var i = 0; i < sheets.length; i++) {
-    if (String(sheets[i].getSheetId()) === String(FCHINH_GID)) { sh = sheets[i]; break; }
-  }
-  if (!sh) sh = sheets[0];
-  var data = sh.getDataRange().getValues();
-  var dongTieuDe = -1, cTen = -1, cLop = -1, cGv = -1;
-  for (var d = 0; d < data.length && d < 10; d++) {
+// Tìm dòng tiêu đề trong 30 dòng đầu. Header nhận diện được:
+//   cột Tên: chứa "ten"/"name" (vd "Full name", "Họ và tên"), cột Lớp: chứa "lop"/"class"
+// Trả {tim:true, dong, cTen, cLop, cGv} hoặc {tim:false, thieu:'thiếu...'}
+function timTieuDe(data) {
+  var coTen = false, coLop = false;
+  for (var d = 0; d < data.length && d < 30; d++) {
     var t = -1, l = -1, g = -1;
     for (var c = 0; c < data[d].length; c++) {
       var h = boDau(data[d][c]);
@@ -494,21 +488,52 @@ function docFileChinh() {
       if (g < 0 && (h === 'gv' || h.indexOf('giao vien') >= 0 || h.indexOf('teacher') >= 0 ||
         h.indexOf('gv chinh') >= 0 || h.indexOf('gvchinh') >= 0)) g = c;
     }
-    if (t >= 0 && l >= 0) { dongTieuDe = d; cTen = t; cLop = l; cGv = g; break; }
+    if (t >= 0) coTen = true;
+    if (l >= 0) coLop = true;
+    if (t >= 0 && l >= 0) return { tim: true, dong: d, cTen: t, cLop: l, cGv: g };
   }
-  if (dongTieuDe < 0) throw new Error('không thấy dòng tiêu đề có cột "Tên" + "Lớp" trong 10 dòng đầu file chính');
-  var rows = [];
-  var bo = { 'ten': 1, 'ho ten': 1, 'ho va ten': 1, 'stt': 1 };
-  for (var r = dongTieuDe + 1; r < data.length; r++) {
-    var ten = String(data[r][cTen] === undefined || data[r][cTen] === null ? '' : data[r][cTen]).trim();
-    if (!ten || bo[boDau(ten)]) continue;
-    rows.push({
-      ten: ten,
-      lop: String(data[r][cLop] === undefined || data[r][cLop] === null ? '' : data[r][cLop]).trim(),
-      gv: cGv >= 0 ? String(data[r][cGv] === undefined || data[r][cGv] === null ? '' : data[r][cGv]).trim() : ''
-    });
+  return {
+    tim: false,
+    thieu: coTen ? 'thiếu cột chứa chữ "Lớp"' : (coLop ? 'thiếu cột chứa chữ "Full name"/"Tên"' : 'không thấy dòng tiêu đề nào')
+  };
+}
+
+// Đọc file chính → mảng {ten, lop, gv}. CHỈ getValues.
+// Thử tab theo link (gid) trước → không thấy tiêu đề thì thử TỪNG tab còn lại (fallback);
+// quét 30 dòng đầu mỗi tab; lỗi cuối nêu rõ tên tab + cột nào đang thiếu.
+function docFileChinh() {
+  var f = SpreadsheetApp.openById(FCHINH_ID); // CHỈ ĐỌC
+  var sheets = f.getSheets();
+  if (!sheets || !sheets.length) throw new Error('file chính không có tab nào');
+  var thu = [], tenTab = [];
+  for (var i = 0; i < sheets.length; i++) {
+    if (String(sheets[i].getSheetId()) === String(FCHINH_GID)) thu.unshift(sheets[i]);
+    else thu.push(sheets[i]);
   }
-  return rows;
+  var thieuCuoi = null;
+  for (var k = 0; k < thu.length; k++) {
+    var tab = thu[k];
+    tenTab.push('"' + tab.getName() + '"');
+    var data = tab.getDataRange().getValues();
+    var td = timTieuDe(data);
+    if (td.tim) {
+      var rows = [];
+      var bo = { 'ten': 1, 'ho ten': 1, 'ho va ten': 1, 'stt': 1 };
+      for (var r = td.dong + 1; r < data.length; r++) {
+        var ten = String(data[r][td.cTen] === undefined || data[r][td.cTen] === null ? '' : data[r][td.cTen]).trim();
+        if (!ten || bo[boDau(ten)]) continue;
+        rows.push({
+          ten: ten,
+          lop: String(data[r][td.cLop] === undefined || data[r][td.cLop] === null ? '' : data[r][td.cLop]).trim(),
+          gv: td.cGv >= 0 ? String(data[r][td.cGv] === undefined || data[r][td.cGv] === null ? '' : data[r][td.cGv]).trim() : ''
+        });
+      }
+      return rows;
+    }
+    thieuCuoi = td.thieu;
+  }
+  throw new Error('Đã thử ' + thu.length + ' tab (' + tenTab.join(', ') + ') nhưng ' + (thieuCuoi || 'không thấy tiêu đề')
+    + '. Header cần cột kiểu "Full name"/"Tên" + "Lớp" — anh đối chiếu giúp em rồi chạy lại.');
 }
 
 // Đồng bộ vào DS HỌC SINH:
