@@ -368,9 +368,7 @@ function nangCapSheetSotw() {
   }
   msg += '\n\nBước tiếp: dán danh sách HS vào tab "' + SOTW_SHEET + '" từ ô A3'
     + '\n(Excel: Tên | Lớp | GV — copy rồi paste là vào đủ cột).';
-  kiemTraThuTuCot();
-  
-  msg += '\n• Tự kiểm tra/sửa cột BAO_BU\n• Khóa sheet quan trọng (GV chỉ sửa BAO_BU + DS HỌC SINH)';
+  msg += '\n• Tự kiểm tra/sửa cột BAO_BU';
   baoXong(msg);
 }
 
