@@ -120,6 +120,49 @@ function hongAnhConLam() {
   return homNay <= han;
 }
 
+// Parse cột "Ca đặc biệt": "T4 14h00-15h30 Mr. Ngọc" → {thu, gio, gv, ma}
+// Trả về null nếu rỗng hoặc không đúng format
+function parseCaDacBiet(text) {
+  var s = (text || '').toString().trim();
+  if (!s) return null;
+  
+  // Match: "T4 14h00-15h30 Mr. Ngọc" hoặc "Thứ 4 14h00-15h30 Mr. Ngọc"
+  var m = s.match(/^(T\d|Thứ \d)\s+([\d:h\-\s]+)\s+(.+)$/i);
+  if (!m) return null;
+  
+  var thu = m[1].trim();
+  // Chuẩn hóa: T4 → Thứ 4
+  if (thu.match(/^T(\d)$/i)) thu = 'Thứ ' + RegExp.$1;
+  
+  var gio = m[2].trim().replace(/h/g, ':').replace(/\s+/g, ' ');
+  var gv = m[3].trim();
+  
+  // Tạo mã ca duy nhất: T4-Rieng, T5-Rieng...
+  var ma = thu.replace('Thứ ', 'T') + '-Riêng';
+  
+  return { thu: thu, gio: gio, gv: gv, ma: ma, dacBiet: true };
+}
+
+// Tính ngày học cho thứ bất kỳ (T2..CN)
+function layNgayThuBatKy(thuText) {
+  var homNay = new Date();
+  var thuHienTai = parseInt(Utilities.formatDate(homNay, 'GMT+7', 'u'), 10) % 7; // 0=CN, 1=T2..6=T7
+  var thuMuon = 0;
+  
+  // Parse "Thứ 4" → 3
+  var m = thuText.match(/Thứ\s*(\d)/i);
+  if (m) {
+    thuMuon = parseInt(m[1], 10) === 1 ? 1 : parseInt(m[1], 10); // T2=1, T3=2..T7=6, CN=0
+  } else {
+    return layNgayThu(thuText); // fallback cũ
+  }
+  
+  var ngayCach = thuMuon - thuHienTai;
+  if (ngayCach <= 0) ngayCach += 7;
+  var ngayHoc = new Date(homNay.getTime() + ngayCach * 24 * 60 * 60 * 1000);
+  return Utilities.formatDate(ngayHoc, 'GMT+7', 'dd/MM/yyyy');
+}
+
 // ===== MENU (4 nút workflow + 3 menu con) =====
 // LƯU Ý: menu con KHÔNG được gọi addToUi() — chỉ gọi 1 lần cuối cho menu chính,
 // nếu không Google sẽ ném lỗi → menu chính không hiện (bug đã fix 17/10)
@@ -265,9 +308,9 @@ function taoDongMau(bao) {
   }
   if (dem >= 2) return false;
   var mau1 = ['', 'Mr. Ngọc', 'S1.001 - Cashew', 'Không bù', '', '', '', '',
-    DAU_MAU + ' Lớp đi đủ → gõ "Không bù" ở cột Tên bé', ''];
+    DAU_MAU + ' Lớp đi đủ → gõ "Không bù" ở cột Tên bé', '', ''];
   var mau2 = ['', 'Mr. Ngọc', 'S2.001 - Pumpkin Seed', 'Iphone', 'SP1', '', '', '',
-    DAU_MAU + ' Vắng bạn Iphone → ghi tên bé nghỉ ở cột Tên bé', ''];
+    DAU_MAU + ' Vắng bạn Iphone → ghi tên bé nghỉ ở cột Tên bé', '', ''];
   var dong2LaMau = false;
   if (data.length >= 2) {
     var dong2 = data[1];
@@ -275,18 +318,18 @@ function taoDongMau(bao) {
     dong2LaMau = (dong2[8] || '').toString().indexOf(DAU_MAU) >= 0 || tenDong2.indexOf('ghi chú mẫu') >= 0;
   }
   if (dong2LaMau) {
-    bao.getRange(2, 1, 1, 10).setValues([mau1]);
+    bao.getRange(2, 1, 1, 11).setValues([mau1]);
     bao.insertRows(3, 1);
-    bao.getRange(3, 1, 1, 10).setValues([mau2]);
+    bao.getRange(3, 1, 1, 11).setValues([mau2]);
   } else if (data.length < 2) {
     bao.appendRow(mau1);
     bao.appendRow(mau2);
   } else {
     bao.insertRows(2, 2);
-    bao.getRange(2, 1, 1, 10).setValues([mau1]);
-    bao.getRange(3, 1, 1, 10).setValues([mau2]);
+    bao.getRange(2, 1, 1, 11).setValues([mau1]);
+    bao.getRange(3, 1, 1, 11).setValues([mau2]);
   }
-  bao.getRange(2, 1, 2, 10).setFontStyle('italic').setFontColor('#999999');
+  bao.getRange(2, 1, 2, 11).setFontStyle('italic').setFontColor('#999999');
   return true;
 }
 
@@ -298,7 +341,7 @@ function chongCheDongMau(bao) {
       if ((olds[i].getDescription() || '').indexOf('Dòng mẫu') >= 0) return;
     }
   } catch (e) {}
-  var prot = bao.getRange(2, 1, 2, 10).protect().setDescription('Dòng mẫu - chỉ quản lý sửa');
+  var prot = bao.getRange(2, 1, 2, 11).protect().setDescription('Dòng mẫu - chỉ quản lý sửa');
   prot.addEditors(EMAIL_QUAN_LY);
   try { if (prot.canDomainEdit()) prot.setDomainEdit(false); } catch (e) {}
 }
@@ -379,8 +422,8 @@ function setupDayBu() {
 
   var sh1 = layHoacTaoSheet(ss, 'BAO_BU');
   sh1.clear();
-  sh1.appendRow(['Ngày báo', 'GV báo', 'Lớp', 'Tên bé', 'Trình độ', 'Link Canva', 'Trạng thái', 'Ca xếp', 'Ghi chú', 'SOTW']);
-  sh1.getRange(1, 1, 1, 10).setFontWeight('bold').setBackground('#F6F3EE');
+  sh1.appendRow(['Ngày báo', 'GV báo', 'Lớp', 'Tên bé', 'Trình độ', 'Link Canva', 'Trạng thái', 'Ca xếp', 'Ghi chú', 'SOTW', 'Ca đặc biệt']);
+  sh1.getRange(1, 1, 1, 11).setFontWeight('bold').setBackground('#F6F3EE');
   taoDongMau(sh1);
 
   var sh2 = layHoacTaoSheet(ss, 'LICH_BU');
@@ -411,8 +454,8 @@ function setupNhe() {
   var sh1 = layHoacTaoSheet(ss, 'BAO_BU');
   chuyenCotMoiBAOBU(sh1); // sheet cũ → thứ tự cột mới
   if (!sh1.getRange(1, 1).getValue()) {
-    sh1.getRange(1, 1, 1, 10).setValues([['Ngày báo', 'GV báo', 'Lớp', 'Tên bé', 'Trình độ', 'Link Canva', 'Trạng thái', 'Ca xếp', 'Ghi chú', 'SOTW']]);
-    sh1.getRange(1, 1, 1, 10).setFontWeight('bold').setBackground('#F6F3EE');
+    sh1.getRange(1, 1, 1, 11).setValues([['Ngày báo', 'GV báo', 'Lớp', 'Tên bé', 'Trình độ', 'Link Canva', 'Trạng thái', 'Ca xếp', 'Ghi chú', 'SOTW', 'Ca đặc biệt']]);
+    sh1.getRange(1, 1, 1, 11).setFontWeight('bold').setBackground('#F6F3EE');
   }
   var sh2n = layHoacTaoSheet(ss, 'LICH_BU');
   if (!sh2n.getRange(1, 1).getValue()) {
@@ -974,6 +1017,7 @@ function xepLichChinh(ss, bao, lich) {
   var data = bao.getDataRange().getValues();
   if (data.length < 2) return 'Chưa có bé nào báo bù.';
   var chuaXep = [];
+  var coDacBiet = []; // Bé có Ca đặc biệt → xếp trước, không check capacity
   for (var i = 1; i < data.length; i++) {
     var r = data[i];
     var trangThai = (r[6] || '').toString().trim();
@@ -982,10 +1026,26 @@ function xepLichChinh(ss, bao, lich) {
     if ((r[8] || '').toString().indexOf(DAU_MAU) >= 0) continue;
     if (tenBe.indexOf('ghi chú mẫu') >= 0 || tenBe.indexOf('không bù') === 0) continue;
     if (trangThai === '' || trangThai === 'Chờ') {
-      chuaXep.push({ dong: i + 1, gvBao: r[1], tenBe: r[3], lop: r[2], trinhDo: r[4], link: r[5], ghiChu: r[8] });
+      var caDacBiet = parseCaDacBiet(r[10]); // cột K = index 10
+      var beObj = { dong: i + 1, gvBao: r[1], tenBe: r[3], lop: r[2], trinhDo: r[4], link: r[5], ghiChu: r[8], caDacBiet: caDacBiet };
+      if (caDacBiet) {
+        coDacBiet.push(beObj);
+      } else {
+        chuaXep.push(beObj);
+      }
     }
   }
-  if (chuaXep.length === 0) return 'Không còn bé nào chờ xếp.';
+  
+  // 3. Xếp bé có Ca đặc biệt TRƯỚC (ưu tiên cao nhất, bỏ qua capacity/overlap)
+  var stt = 0;
+  coDacBiet.forEach(function (be) {
+    themBeVaoLich(lich, bao, be, be.caDacBiet);
+    stt++;
+  });
+  
+  if (chuaXep.length === 0) {
+    return 'Đã xếp ' + stt + ' bé (ca đặc biệt).';
+  }
 
   chuaXep.sort(function (a, b) {
     var au = LOP_DUC_ANH.indexOf(a.lop) >= 0 ? 0 : 1;
@@ -1000,7 +1060,6 @@ function xepLichChinh(ss, bao, lich) {
   var conCho = caList.length * CFG.TOI_DA_CA - daCo;
 
   var beDu = [];
-  var stt = 0;
   chuaXep.forEach(function (be) {
     var ca = conCho > 0 ? chonCaChoBe(be, caList, lich) : null;
     if (ca) {
@@ -1019,9 +1078,12 @@ function xepLichChinh(ss, bao, lich) {
 
   toDoCa3TrinhDo(lich);
 
-  return 'Đã xếp ' + stt + ' bé vào ' + caList.length + ' ca.'
-    + (beDu.length ? '\nDư ' + beDu.length + ' bé → đẩy sang tuần sau.' : '')
-    + '\nBước tiếp: mở tab LICH_BU, copy cột "Tin nhắn PH" gửi Zalo cho PH.';
+  var msg = 'Đã xếp ' + stt + ' bé';
+  if (coDacBiet.length > 0) msg += ' (' + coDacBiet.length + ' ca đặc biệt + ' + (stt - coDacBiet.length) + ' ca thường)';
+  msg += ' vào ' + (caList.length + coDacBiet.length) + ' ca.';
+  if (beDu.length) msg += '\nDư ' + beDu.length + ' bé → đẩy sang tuần sau.';
+  msg += '\nBước tiếp: mở tab LICH_BU, copy cột "Tin nhắn PH" gửi Zalo cho PH.';
+  return msg;
 }
 
 // Chọn ca cho 1 bé
@@ -1065,7 +1127,7 @@ function chonCaChoBe(be, caList, lich) {
 }
 
 function themBeVaoLich(lich, bao, be, ca) {
-  var ngayHoc = layNgayThu(ca.thu);
+  var ngayHoc = ca.dacBiet ? layNgayThuBatKy(ca.thu) : layNgayThu(ca.thu);
   var tinPH = 'Dạ em chào chị, em xin thông báo lịch học bù cho bé ' + be.tenBe + ':\n'
     + '• Thời gian: ' + ca.thu + ' ngày ' + ngayHoc + ' lúc ' + ca.gio + '\n'
     + 'Dạ thời gian này chị có sắp xếp đưa bé đến Trung tâm học bù được không ạ?\n'
