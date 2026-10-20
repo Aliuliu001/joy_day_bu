@@ -1642,12 +1642,29 @@ function lamMoiThongKe() {
 
   var dongBatDau = 4;
   var dongCuoi = dongBatDau + dsGV.length - 1;
+  // Tính tổng giờ THỰC từ cột "Giờ" (D) trong backup — parse "17h00 - 18h30" → 1.5h
   dsGV.forEach(function (gv, idx) {
     var dong = dongBatDau + idx;
     tk.getRange(dong, 1).setValue(gv);
     tk.getRange(dong, 2).setFormula(
       '=IFERROR(COUNTA(UNIQUE(FILTER(ARRAYFORMULA(' + b + '!A2:A&' + b + '!B2:B)' + sep + b + '!E2:E=A' + dong + ')))' + sep + '0)');
-    tk.getRange(dong, 3).setFormula('=B' + dong + '*1.5');
+    
+    // Tính tổng giờ thực từ data backup
+    var tongGio = 0;
+    for (var i = 1; i < dataBk.length; i++) {
+      var gvRow = String(dataBk[i][4] || '').trim();
+      if (gvRow !== gv) continue;
+      var gioStr = String(dataBk[i][3] || '').trim(); // cột D = Giờ
+      var m = gioStr.match(/(\d+)h(\d+).*?-.*?(\d+)h(\d+)/); // parse "17h00 - 18h30"
+      if (m) {
+        var start = parseInt(m[1], 10) + parseInt(m[2], 10) / 60;
+        var end = parseInt(m[3], 10) + parseInt(m[4], 10) / 60;
+        tongGio += (end - start);
+      } else if (gioStr.indexOf('h') >= 0) {
+        tongGio += 1.5; // fallback nếu parse lỗi: giả định 1.5h
+      }
+    }
+    tk.getRange(dong, 3).setValue(tongGio > 0 ? tongGio : '');
   });
 
   var dongTong = dongCuoi + 2;
