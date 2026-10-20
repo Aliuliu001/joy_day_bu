@@ -360,6 +360,14 @@ function nangCapSheetSotw() {
   if (bao) {
     try {
       if (chuyenCotMoiBAOBU(bao)) msg += '\n• Đã đổi cột: Lớp ngay sau GV báo (Tên bé dời sang cột D)';
+      
+      // Thêm cột K "Ca đặc biệt" nếu chưa có
+      if (!bao.getRange(1, 11).getValue()) {
+        bao.getRange(1, 11).setValue('Ca đặc biệt');
+        bao.getRange(1, 11).setFontWeight('bold').setBackground('#F6F3EE');
+        msg += '\n• Đã thêm cột K "Ca đặc biệt"';
+      }
+      
       if (sotw) themLinkSotw(bao, sotw.getSheetId());
       var themMau = false;
       themMau = taoDongMau(bao);
