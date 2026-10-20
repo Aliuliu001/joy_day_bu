@@ -310,7 +310,7 @@ function taoDongMau(bao) {
   var mau1 = ['', 'Mr. Ngọc', 'S1.001 - Cashew', 'Không bù', '', '', '', '',
     DAU_MAU + ' Lớp đi đủ → gõ "Không bù" ở cột Tên bé', '', ''];
   var mau2 = ['', 'Mr. Ngọc', 'S2.001 - Pumpkin Seed', 'Iphone', 'SP1', '', '', '',
-    DAU_MAU + ' Vắng bạn Iphone → ghi tên bé nghỉ ở cột Tên bé', '', ''];
+    DAU_MAU + ' Vắng bạn Iphone → ghi tên bé nghỉ ở cột Tên bé', '', 'T4 14h00-15h30 Mr. Ngọc'];
   var dong2LaMau = false;
   if (data.length >= 2) {
     var dong2 = data[1];
