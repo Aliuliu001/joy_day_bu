@@ -81,5 +81,5 @@
 - [x] Code test PASS 100%: **235 PASS / 0 FAIL**.
 - [x] Không còn thay đổi chưa kiểm tra.
 - [x] README, `plan.md`, `task.md` đã cập nhật.
-- [ ] Đã commit và push GitHub.
-- [ ] Đã kiểm tra lại commit trên nhánh `main`.
+- [x] Đã commit và push GitHub: `85527ee`.
+- [x] Đã kiểm tra lại commit trên nhánh `main`.
