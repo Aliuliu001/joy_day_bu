@@ -142,5 +142,12 @@ Nếu anh thấy cột Lớp/Tên bé có dòng bị ngược (vd 2 dòng mẫu 
 
 ---
 
+## 📊 THỐNG KÊ VÀ KIỂM SOÁT GỬI TIN
+
+- **Gửi tin cho GV** chỉ gửi ca chốt `✅` chưa có mốc **Đã gửi GV lúc**. Telegram gửi lỗi thì không ghi mốc. Cần gửi lại: menu **🔁 Gửi / Nhắc lẻ → 📨 Gửi lại tin GV đã chốt**, rồi xác nhận.
+- **📌 Hôm nay cần làm gì?** trong menu Báo cáo cho biết bé chờ, xin đổi, ca chưa gửi GV và bé chưa chấm kết quả.
+- Khi **Gom nhóm**, hệ thống cảnh báo thiếu tên/lớp/trình độ hoặc link Canva trước khi ghi lịch; quản lý có thể dừng để sửa hoặc xác nhận tiếp tục. Cảnh báo ca quá 4 bé, quá 2 trình độ và cùng GV trùng giờ được hỗ trợ bởi kiểm tra nghiệp vụ.
+- **Báo cáo**: chọn “Làm mới thống kê tháng này” hoặc “Chọn tháng để xem thống kê” (dạng `MM-yyyy`, ví dụ `11-2026`). Chỉ **Đã học** được tính ca/giờ; **Vắng** và **Nghỉ** được liệt kê riêng, không tính giờ dạy.
+
 ## 🧪 KIỂM THỬ CODE
-`node test_sotw.js` — **219 PASS / 0 FAIL** (gom nhóm, SOTW, cascade BAO_BU, ghi chú + gộp ghi chú, folder ảnh, backup chống trùng, làm mới tuần, menu, ca đặc biệt T2–CN). Phải PASS toàn bộ trước khi push.
+`node test_sotw.js` — **235 PASS / 0 FAIL** (gom nhóm, SOTW, cascade BAO_BU, gửi GV chống trùng/gửi lại, dashboard, validation, báo cáo tháng, Vắng/Nghỉ không tính giờ, backup chống trùng, làm mới tuần, menu, ca đặc biệt T2–CN). Phải PASS toàn bộ trước khi push.

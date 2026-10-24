@@ -173,6 +173,7 @@ function makeUi() {
   return {
     ButtonSet: { YES_NO: 'YES_NO' },
     Button: { YES: 'YES' },
+    prompt(title, message) { STATE.prompts = STATE.prompts || []; const text = STATE.prompts.length ? STATE.prompts.shift() : ''; return { getSelectedButton: () => 'OK', getResponseText: () => text }; },
     alert(a, b) {
       if (typeof a === 'string' && b === undefined) { STATE.alerts.push(a); return 'OK'; }
       const ans = STATE.confirms.length ? STATE.confirms.shift() : true;
@@ -478,7 +479,7 @@ console.log('\n=== T9: LamMoiThongKe không lỗi appendRow([]) ===');
     sandbox.lamMoiThongKe();
     ok(!!sheet('THỐNG KÊ'), 'Tạo tab THỐNG KÊ không exception');
     ok(sheet('THỐNG KÊ').getRange(4, 1).getValue() === 'Mr. Đức Anh', 'Dòng GV đầu tiên');
-    ok(String(sheet('THỐNG KÊ').getRange(4, 2).getValue()).includes(')));0'), 'Công thức stats dùng ";" theo locale vi_VN');
+    ok(typeof sheet('THỐNG KÊ').getRange(4, 2).getValue() === 'number', 'Thống kê ghi số ca thực, không phụ thuộc công thức locale');
   } catch (e) {
     ok(false, 'lamMoiThongKe exception: ' + e.message);
   }
@@ -1072,6 +1073,60 @@ console.log('\n=== T29: Backup — cùng bé/cùng ca ở hai ngày vẫn lưu �
   sandbox.backupTuanBu(true);
   const sauLan2 = bk.rows.filter(r => r[5] === 'Bé Backup Lặp').length;
   eq([sauLan1, sauLan2], [1, 2], 'Hai buổi khác ngày của cùng bé/cùng ca đều được backup');
+}
+
+console.log('\n=== T30: Gửi tin GV có kiểm soát + dashboard ===');
+{
+  STATE.ss = new MockSS(); STATE.fetches.length = 0; STATE.alerts.length = 0;
+  const lich = STATE.ss.insertSheet('LICH_BU');
+  lich.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú', 'Ngày học']);
+  lich.appendRow(['T5-1', 'Thứ 5', '17h00-18h30', 'Ms. Vân', 'Bé Đã Học', 'L1', 'SP1', '', '✅ Đi được', '', '', '✅ Đã học', '', '']);
+  lich.appendRow(['T6-1', 'Thứ 6', '15h00-16h30', 'Ms. Vân', 'Bé Chờ', 'L1', 'SP1', '', 'Chờ Ms. Vân Anh', '', '', '', '', '']);
+  lich.appendRow(['T6-2', 'Thứ 6', '17h00-18h30', 'Mr. Ngọc', 'Bé Đổi', 'L2', 'SP2', '', '🔄 Xin đổi', '', '', '', '', '']);
+  sandbox.guiTinChoGV();
+  eq(STATE.fetches.length, 1, 'Lần đầu chỉ gửi ca đã chốt');
+  eq(lich.getRange(1, 15).getValue(), 'Đã gửi GV lúc', 'Tự thêm cột đánh dấu gửi an toàn');
+  ok(!!lich.getRange(2, 15).getValue(), 'Chỉ đánh dấu sau khi Telegram gửi thành công');
+  sandbox.guiTinChoGV();
+  eq(STATE.fetches.length, 1, 'Lần hai không gửi trùng');
+  STATE.confirms.push(false); sandbox.guiLaiTinChoGV();
+  eq(STATE.fetches.length, 1, 'Gửi lại bị chặn nếu không xác nhận');
+  STATE.confirms.push(true); sandbox.guiLaiTinChoGV();
+  eq(STATE.fetches.length, 2, 'Gửi lại chỉ sau xác nhận rõ ràng');
+  sandbox.tongQuanCongViec();
+  ok(lastAlert().includes('Chờ PH xác nhận: 1 bé'), 'Dashboard đếm bé chờ');
+  ok(lastAlert().includes('PH xin đổi: 1 bé'), 'Dashboard đếm bé xin đổi');
+  ok(lastAlert().includes('Ca đã chốt chưa gửi GV: 0 ca'), 'Dashboard đếm ca chưa gửi');
+}
+
+console.log('\n=== T31: Kiểm tra gom nhóm trước khi ghi lịch ===');
+{
+  const kq = sandbox.kiemTraDuLieuTruocKhiXep([
+    { tenBe: 'Bé Thiếu', lop: '', trinhDo: '', link: '' },
+    { tenBe: 'Bé A', lop: 'L1', trinhDo: 'SP1', link: '' },
+    { tenBe: 'Bé B', lop: 'L1', trinhDo: 'SP2', link: 'x' }
+  ], [
+    { ma: 'T5-1', gv: 'Ms. Vân', thu: 'Thứ 5', gio: '17h00-18h30', bes: 5, trinhDos: 3 },
+    { ma: 'T5-2', gv: 'Ms. Vân', thu: 'Thứ 5', gio: '17h30-18h45', bes: 1, trinhDos: 1 }
+  ]);
+  eq(kq.thieuThongTin, 1, 'Phát hiện bé thiếu tên/lớp/trình độ');
+  eq(kq.thieuLink, 2, 'Tóm tắt bé thiếu link Canva');
+  ok(kq.canhBao.some(x => x.includes('quá 4 bé')), 'Cảnh báo ca quá sức chứa');
+  ok(kq.canhBao.some(x => x.includes('trùng giờ')), 'Cảnh báo cùng GV trùng giờ');
+}
+
+console.log('\n=== T32: Báo cáo tháng chỉ tính Đã học, chọn tháng ===');
+{
+  const ss = STATE.ss; const bk = ss.insertSheet('Backup tháng 11-2026');
+  bk.appendRow(['Ngày backup', 'Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'PH xác nhận', 'Đã dạy', 'Ngày học']);
+  bk.appendRow(['01/11/2026', 'T5-1', 'Thứ 5', '17h00-18h30', 'Ms. Vân', 'Bé Học', 'L1', '✅ Đi được', '✅ Đã học', '']);
+  bk.appendRow(['01/11/2026', 'T5-1', 'Thứ 5', '17h00-18h30', 'Ms. Vân', 'Bé Vắng', 'L1', '✅ Đi được', '❌ Vắng', '']);
+  bk.appendRow(['01/11/2026', 'T6-1', 'Thứ 6', '15h00-16h30', 'Mr. Ngọc', 'Bé Nghỉ', 'L2', '❌ Nghỉ', '❌ Nghỉ', '']);
+  const t = sandbox.tongHopBaoCaoBackup(bk.getDataRange().getValues());
+  eq([t.daHoc, t.vang, t.nghi, t.gioTheoGV['Ms. Vân'], t.gioTheoGV['Mr. Ngọc'] || 0], [1, 1, 1, 1.5, 0], 'Vắng/Nghỉ tách riêng và không tính giờ');
+  sandbox.lamMoiThongKeTheoThang('11-2026');
+  ok(String(sheet('THỐNG KÊ').getRange(1, 1).getValue()).includes('11-2026'), 'Báo cáo dùng tháng được chọn');
+  ok(String(sheet('THỐNG KÊ').getDataRange().getValues().flat().join(' ')).includes('Bé vắng'), 'Báo cáo hiện số bé vắng');
 }
 
 console.log('\n============================');

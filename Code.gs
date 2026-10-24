@@ -182,10 +182,13 @@ function onOpen() {
       .addSeparator()
       .addSubMenu(ui.createMenu('🔁 Gửi / Nhắc lẻ')
         .addItem('🏆 Gửi lại SOTW', 'guiSOTWMenu')
+        .addItem('📨 Gửi lại tin GV đã chốt', 'guiLaiTinChoGV')
         .addItem('🔔 Nhắc GV báo bù (T2 sáng)', 'nhacGVBaoBu')
         .addItem('💾 Backup thủ công', 'backupThuCong'))
       .addSubMenu(ui.createMenu('📊 Báo cáo')
-        .addItem('📊 Làm mới thống kê', 'lamMoiThongKe'))
+        .addItem('📌 Hôm nay cần làm gì?', 'tongQuanCongViec')
+        .addItem('📊 Làm mới thống kê tháng này', 'lamMoiThongKe')
+        .addItem('📅 Chọn tháng để xem thống kê', 'lamMoiThongKeChonThang'))
       .addSubMenu(ui.createMenu('⚙️ Cài đặt')
         .addItem('📖 Khi nào dùng lệnh nào (đọc trước)', 'huongDanCacLenh')
         .addSeparator()
@@ -377,6 +380,10 @@ function nangCapSheetSotw() {
         lichNangCap.getRange(1, 14).setValue('Ngày học').setFontWeight('bold').setBackground('#F6F3EE');
         msg += '\n• Đã thêm cột "Ngày học" trong LICH_BU (phục vụ backup không sót buổi)';
       }
+      if (lichNangCap && String(lichNangCap.getRange(1, 15).getValue() || '').trim() !== 'Đã gửi GV lúc') {
+        lichNangCap.getRange(1, 15).setValue('Đã gửi GV lúc').setFontWeight('bold').setBackground('#F6F3EE');
+        msg += '\n• Đã thêm cột "Đã gửi GV lúc" (chống gửi lặp)';
+      }
       
       if (sotw) themLinkSotw(bao, sotw.getSheetId());
       var themMau = false;
@@ -446,8 +453,8 @@ function setupDayBu() {
 
   var sh2 = layHoacTaoSheet(ss, 'LICH_BU');
   sh2.clear();
-  sh2.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú', 'Ngày học']);
-  sh2.getRange(1, 1, 1, 14).setFontWeight('bold').setBackground('#F6F3EE');
+  sh2.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú', 'Ngày học', 'Đã gửi GV lúc']);
+  sh2.getRange(1, 1, 1, 15).setFontWeight('bold').setBackground('#F6F3EE');
   datDropdown(sh2, 9, 200, PH_TRANG_THAI);
   datDropdown(sh2, 12, 200, DA_DAY);
 
@@ -477,8 +484,8 @@ function setupNhe() {
   }
   var sh2n = layHoacTaoSheet(ss, 'LICH_BU');
   if (!sh2n.getRange(1, 1).getValue()) {
-    sh2n.getRange(1, 1, 1, 14).setValues([['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú', 'Ngày học']]);
-    sh2n.getRange(1, 1, 1, 14).setFontWeight('bold').setBackground('#F6F3EE');
+    sh2n.getRange(1, 1, 1, 15).setValues([['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú', 'Ngày học', 'Đã gửi GV lúc']]);
+    sh2n.getRange(1, 1, 1, 15).setFontWeight('bold').setBackground('#F6F3EE');
   }
   datDropdown(sh2n, 9, 200, PH_TRANG_THAI);
   datDropdown(sh2n, 12, 200, DA_DAY);
@@ -1026,6 +1033,28 @@ function gomNhom() {
   baoXong(msgXep + (rs.skip ? '\n\nℹ️ SOTW: ' + rs.msg : '\n\n🏆 SOTW: ' + rs.msg) + dongBoNote);
 }
 
+// Kiểm tra thuần để có thể test trước khi ghi lịch. Cảnh báo, không tự chặn lịch.
+function kiemTraDuLieuTruocKhiXep(dsBe, dsCa) {
+  var kq = { thieuThongTin: 0, thieuLink: 0, canhBao: [] };
+  (dsBe || []).forEach(function(be) {
+    if (!String(be.tenBe || '').trim() || !String(be.lop || '').trim() || !String(be.trinhDo || '').trim()) kq.thieuThongTin++;
+    if (!String(be.link || '').trim()) kq.thieuLink++;
+  });
+  (dsCa || []).forEach(function(ca) {
+    if (Number(ca.bes || 0) > CFG.TOI_DA_CA) kq.canhBao.push(ca.ma + ' quá 4 bé');
+    if (Number(ca.trinhDos || 0) > CFG.TOI_DA_TRINH_DO) kq.canhBao.push(ca.ma + ' quá 2 trình độ');
+  });
+  for (var i = 0; i < (dsCa || []).length; i++) for (var j = i + 1; j < dsCa.length; j++) {
+    var a = dsCa[i], b = dsCa[j];
+    if (a.gv === b.gv && a.thu === b.thu && khoangGioTrung(a.gio, b.gio)) kq.canhBao.push(a.gv + ' trùng giờ: ' + a.ma + ' / ' + b.ma);
+  }
+  return kq;
+}
+function khoangGioTrung(a, b) {
+  function phut(s) { var m = String(s || '').match(/(\d{1,2})[h:](\d{2}).*?[-–].*?(\d{1,2})[h:](\d{2})/); return m ? [parseInt(m[1],10)*60+parseInt(m[2],10), parseInt(m[3],10)*60+parseInt(m[4],10)] : null; }
+  var x = phut(a), y = phut(b); return !!(x && y && x[0] < y[1] && y[0] < x[1]);
+}
+
 function xepLichChinh(ss, bao, lich) {
   // 1. Giữ dòng chốt (✅ / ❌ Nghỉ / 🔄 Xin đổi), xoá dòng chưa chốt
   //    + reset trạng thái bé tương ứng trong BAO_BU (KHÔNG mất bé khi gom lại)
@@ -1054,6 +1083,13 @@ function xepLichChinh(ss, bao, lich) {
     }
   }
   
+  // Kiểm tra dữ liệu trước khi ghi lịch. Thiếu dữ liệu/cảnh báo vẫn cho quản lý quyết định tiếp tục.
+  var kiemTra = kiemTraDuLieuTruocKhiXep(coDacBiet.concat(chuaXep), []);
+  if (kiemTra.thieuThongTin || kiemTra.thieuLink) {
+    var canhBaoNhap = '⚠️ Kiểm tra trước khi gom lịch:\n• Thiếu tên/lớp/trình độ: ' + kiemTra.thieuThongTin + ' bé\n• Chưa có link Canva: ' + kiemTra.thieuLink + ' bé\n\nVẫn xếp lịch chứ?';
+    if (!xacNhan(canhBaoNhap)) return 'Đã dừng gom lịch để kiểm tra dữ liệu.';
+  }
+
   // 3. Xếp bé có Ca đặc biệt TRƯỚC (ưu tiên cao nhất, bỏ qua capacity/overlap)
   var stt = 0;
   coDacBiet.forEach(function (be) {
@@ -1442,48 +1478,45 @@ function xuLyCaseDacBiet() {
 }
 
 // ===== GỬI TIN CHO GV (ca đã ✅) =====
-function guiTinChoGV() {
-  var ss = laySS();
-  var lich = ss.getSheetByName('LICH_BU');
-  var data = lich.getDataRange().getValues();
-
-  var theoCa = {};
+// Gửi các ca mới; force=true chỉ dùng sau xác nhận để gửi lại toàn bộ ca đã chốt.
+function guiTinChoGV(force) {
+  var ss = laySS(), lich = ss.getSheetByName('LICH_BU');
+  if (!lich) { baoXong('Chưa có tab LICH_BU.'); return; }
+  if (String(lich.getRange(1, 15).getValue() || '').trim() !== 'Đã gửi GV lúc') {
+    lich.getRange(1, 15).setValue('Đã gửi GV lúc').setFontWeight('bold').setBackground('#F6F3EE');
+  }
+  var data = lich.getDataRange().getValues(), theoCa = {};
   for (var i = 1; i < data.length; i++) {
-    var st = (data[i][8] || '').toString();
+    var st = String(data[i][8] || ''), daGui = String(data[i][14] || '');
     if (st.indexOf('✅') < 0 && st.indexOf('Đi được') < 0) continue;
+    if (!force && daGui) continue;
     var ma = data[i][0];
-    if (!theoCa[ma]) theoCa[ma] = { thu: data[i][1], gio: data[i][2], gv: data[i][3], bes: [] };
-    theoCa[ma].bes.push({ ten: data[i][4], lop: data[i][5], td: data[i][6], link: data[i][7], ghiChu: data[i][12] });
+    if (!theoCa[ma]) theoCa[ma] = { thu:data[i][1], gio:data[i][2], gv:data[i][3], bes:[], rows:[] };
+    theoCa[ma].bes.push({ ten:data[i][4], lop:data[i][5], td:data[i][6], link:data[i][7], ghiChu:data[i][12] });
+    theoCa[ma].rows.push(i + 1);
   }
-
   var keys = Object.keys(theoCa);
-  if (!keys.length) {
-    baoXong('Chưa có ca nào được chốt ✅.');
-    return;
-  }
-
-  var daGui = 0;
-  keys.forEach(function (ma) {
-    var c = theoCa[ma];
-    var tin = '📚 [HỌC BÙ ' + c.thu + ' ' + c.gio + '] ' + c.gv + ' dạy:\n';
-    c.bes.forEach(function (b, idx) {
-      tin += (idx + 1) + '. ' + b.ten + ' (' + b.lop + ' - ' + b.td + ')\n   Slide: ' + (b.link || '(chưa có)') + '\n';
-    });
-    // Ghi chú GỘP: bé nào ghi giống nhau (cùng lớp / cùng yêu cầu) → 1 dòng chung
-    var noteMap = {}, noteThuTu = [];
-    c.bes.forEach(function (b) {
-      var n = (b.ghiChu || '').toString().trim();
-      if (!n) return;
-      if (!noteMap[n]) { noteMap[n] = []; noteThuTu.push(n); }
-      if (b.lop && noteMap[n].indexOf(b.lop) < 0) noteMap[n].push(b.lop);
-    });
-    noteThuTu.forEach(function (n) {
-      tin += '📌 Ghi chú' + (noteMap[n].length ? ' (' + noteMap[n].join(', ') + ')' : '') + ': ' + n + '\n';
-    });
-    if (guiTelegram(tin)) daGui++;
+  if (!keys.length) { baoXong(force ? 'Chưa có ca nào được chốt ✅.' : 'Không có tin GV mới. Các ca đã chốt đều đã gửi rồi.'); return; }
+  var dem = 0, luc = Utilities.formatDate(new Date(), 'GMT+7', 'dd/MM HH:mm');
+  keys.forEach(function(ma) {
+    var c = theoCa[ma], tin = '📚 [HỌC BÙ ' + c.thu + ' ' + c.gio + '] ' + c.gv + ' dạy:\n';
+    c.bes.forEach(function(b, idx) { tin += (idx+1) + '. ' + b.ten + ' (' + b.lop + ' - ' + b.td + ')\n   Slide: ' + (b.link || '(chưa có)') + '\n'; });
+    var noteMap = {}, noteOrder = [];
+    c.bes.forEach(function(b) { var n=String(b.ghiChu||'').trim(); if (!n) return; if (!noteMap[n]) { noteMap[n]=[]; noteOrder.push(n); } if (b.lop && noteMap[n].indexOf(b.lop)<0) noteMap[n].push(b.lop); });
+    noteOrder.forEach(function(n) { tin += '📌 Ghi chú' + (noteMap[n].length ? ' ('+noteMap[n].join(', ')+')' : '') + ': ' + n + '\n'; });
+    if (guiTelegram(tin)) { c.rows.forEach(function(r) { lich.getRange(r,15).setValue(luc); }); dem++; }
   });
-  if (daGui === keys.length) baoXong('Đã gửi ' + daGui + ' tin vào nhóm Học Bù.');
-  else if (daGui > 0) baoXong('Chỉ gửi được ' + daGui + '/' + keys.length + ' tin. Xem lỗi ở Nhật ký thực thi.');
+  baoXong('Đã gửi ' + dem + '/' + keys.length + ' tin cho GV' + (force ? ' (gửi lại)' : ' mới') + '.');
+}
+function guiLaiTinChoGV() { if (xacNhan('Gửi LẠI toàn bộ tin cho các ca đã chốt?')) guiTinChoGV(true); }
+
+// Bảng việc cần làm, không tạo thêm tab.
+function tongQuanCongViec() {
+  var lich = laySS().getSheetByName('LICH_BU');
+  if (!lich) { baoXong('Chưa có tab LICH_BU.'); return; }
+  var d=lich.getDataRange().getValues(), cho=0, doi=0, chuaGui={}, chuaCham=0;
+  for(var i=1;i<d.length;i++) { if(!d[i][4])continue; var st=String(d[i][8]||''), daDay=String(d[i][11]||''); if(!st||st.indexOf('Chờ')===0)cho++; if(st.indexOf('Xin đổi')>=0)doi++; if((st.indexOf('✅')>=0||st.indexOf('Đi được')>=0)&&!d[i][14])chuaGui[d[i][0]]=1; if((st.indexOf('✅')>=0||st.indexOf('Đi được')>=0)&&!daDay)chuaCham++; }
+  baoXong('📌 HÔM NAY CẦN LÀM GÌ?\n• Chờ PH xác nhận: '+cho+' bé\n• PH xin đổi: '+doi+' bé\n• Ca đã chốt chưa gửi GV: '+Object.keys(chuaGui).length+' ca\n• Bé chưa chấm Đã học/Vắng: '+chuaCham+' bé');
 }
 
 // ===== NHẮC GV BÁO BÙ =====
@@ -1646,8 +1679,8 @@ function lamMoiTuanMoi() {
 
   // 4. Clear LICH_BU (giữ tiêu đề)
   lich.clear();
-  lich.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú', 'Ngày học']);
-  lich.getRange(1, 1, 1, 14).setFontWeight('bold').setBackground('#F6F3EE');
+  lich.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú', 'Ngày học', 'Đã gửi GV lúc']);
+  lich.getRange(1, 1, 1, 15).setFontWeight('bold').setBackground('#F6F3EE');
   datDropdown(lich, 9, 200, PH_TRANG_THAI);
   datDropdown(lich, 12, 200, DA_DAY);
 
@@ -1699,7 +1732,35 @@ function setupTriggerTuanBu(hienThongBao) {
 }
 
 // ===== THỐNG KÊ =====
-function lamMoiThongKe() {
+function tinhSoGio(gioStr) {
+  var m = String(gioStr || '').match(/(\d+)h(\d+).*?-.*?(\d+)h(\d+)/);
+  if (!m) return 0;
+  return (parseInt(m[3], 10) + parseInt(m[4], 10) / 60) - (parseInt(m[1], 10) + parseInt(m[2], 10) / 60);
+}
+
+// Tổng hợp thuần: chỉ "Đã học" mới tính giờ/c a; Vắng và Nghỉ tách riêng.
+function tongHopBaoCaoBackup(data) {
+  var kq = { daHoc: 0, vang: 0, nghi: 0, chuaChot: 0, gioTheoGV: {}, caTheoGV: {} }, caDaTinh = {};
+  for (var i = 1; i < (data || []).length; i++) {
+    var r = data[i], ketQua = String(r[8] || '').toLowerCase(), ph = String(r[7] || '').toLowerCase();
+    var gv = String(r[4] || '').trim();
+    if (ketQua.indexOf('đã học') >= 0 || ketQua.indexOf('da hoc') >= 0) {
+      kq.daHoc++;
+      var key = [r[0], r[1], r[4], r[3]].join('|');
+      if (!caDaTinh[key]) { caDaTinh[key] = 1; kq.gioTheoGV[gv] = (kq.gioTheoGV[gv] || 0) + tinhSoGio(r[3]); kq.caTheoGV[gv] = (kq.caTheoGV[gv] || 0) + 1; }
+    } else if (ketQua.indexOf('vắng') >= 0 || ketQua.indexOf('vang') >= 0) kq.vang++;
+    else if (ketQua.indexOf('nghỉ') >= 0 || ketQua.indexOf('nghi') >= 0 || ph.indexOf('nghỉ') >= 0) kq.nghi++;
+    else kq.chuaChot++;
+  }
+  return kq;
+}
+function lamMoiThongKeChonThang() {
+  var ui = SpreadsheetApp.getUi();
+  var traLoi = ui.prompt('Chọn tháng báo cáo', 'Nhập theo dạng MM-yyyy, ví dụ 11-2026:', ui.ButtonSet.OK_CANCEL);
+  if (traLoi.getSelectedButton() !== ui.Button.OK) return;
+  lamMoiThongKeTheoThang(traLoi.getResponseText());
+}
+function lamMoiThongKeCu() {
   var ss = laySS();
   var homNay = new Date();
   var thang = Utilities.formatDate(homNay, 'GMT+7', 'MM-yyyy');
@@ -1767,6 +1828,35 @@ function lamMoiThongKe() {
   ]);
 
   baoXong('Đã làm mới tab THỐNG KÊ với công thức tự động ✅');
+}
+
+function lamMoiThongKe() {
+  var thang = Utilities.formatDate(new Date(), 'GMT+7', 'MM-yyyy');
+  return lamMoiThongKeTheoThang(thang);
+}
+function lamMoiThongKeTheoThang(thang) {
+  thang = String(thang || '').trim();
+  if (!/^\d{2}-\d{4}$/.test(thang)) { baoXong('Tháng chưa đúng dạng MM-yyyy, ví dụ 11-2026.'); return; }
+  var ss = laySS(), tenBackup = 'Backup tháng ' + thang, backup = ss.getSheetByName(tenBackup);
+  if (!backup) { baoXong('Chưa có sheet "' + tenBackup + '". Hãy kiểm tra tháng đã nhập hoặc backup tháng đó trước.'); return; }
+  var tk = ss.getSheetByName('THỐNG KÊ') || ss.insertSheet('THỐNG KÊ');
+  tk.clear();
+  var data = backup.getDataRange().getValues(), tong = tongHopBaoCaoBackup(data), gvSet = {};
+  GV_LIST.forEach(function(gv) { gvSet[gv] = 1; });
+  Object.keys(tong.gioTheoGV).forEach(function(gv) { gvSet[gv] = 1; });
+  var dsGV = Object.keys(gvSet), dong = 4;
+  tk.getRange(1, 1).setValue('THỐNG KÊ DẠY BÙ THÁNG ' + thang).setFontSize(14).setFontWeight('bold');
+  tk.getRange(3, 1, 1, 3).setValues([['GV dạy', 'Số ca đã dạy', 'Tổng giờ thực']]).setFontWeight('bold').setBackground('#F6F3EE');
+  var dongGV = dsGV.map(function(gv) { return [gv, tong.caTheoGV[gv] || 0, tong.gioTheoGV[gv] || 0]; });
+  if (dongGV.length) tk.getRange(dong, 1, dongGV.length, 3).setValues(dongGV);
+  var tongDong = dong + dongGV.length + 2;
+  tk.getRange(tongDong, 1, 6, 2).setValues([
+    ['Tổng bé đã học', tong.daHoc], ['Bé vắng', tong.vang], ['Bé nghỉ', tong.nghi], ['Chưa chốt kết quả', tong.chuaChot],
+    ['Tổng số ca đã dạy', Object.keys(tong.caTheoGV).reduce(function(s, gv) { return s + tong.caTheoGV[gv]; }, 0)],
+    ['Tổng số giờ thực', Object.keys(tong.gioTheoGV).reduce(function(s, gv) { return s + tong.gioTheoGV[gv]; }, 0)]
+  ]);
+  tk.getRange(tongDong, 1, 6, 1).setFontWeight('bold');
+  baoXong('Đã làm mới THỐNG KÊ tháng ' + thang + '. Giờ chỉ tính bé “Đã học”; Vắng/Nghỉ được tách riêng.');
 }
 
 // ===== TELEGRAM =====

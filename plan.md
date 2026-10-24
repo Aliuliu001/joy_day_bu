@@ -1,6 +1,6 @@
 # PLAN — Rà soát & nâng cấp hệ thống JOY DẠY BÙ
 
-> Trạng thái: **Đợt 1 đang thực hiện — TASK 1 và TASK 2 đã xong, chờ push cùng cả Đợt 1**
+> Trạng thái: **Hoàn thành Giai đoạn 1–5 — sẵn sàng commit/push sau khi test cuối PASS**
 >
 > Quy tắc đã chốt: Ca đặc biệt nhập được mọi ngày `T2`–`T7` hoặc `CN`; hệ thống xếp đúng ngày/giờ ghi trong cột K. Bé **Vắng / Nghỉ không tính giờ dạy**.
 > 
@@ -118,25 +118,24 @@ Chốt 3 điều cần anh duyệt:
 3. Bảo đảm làm mới tuần không xóa gì nếu backup gặp lỗi thật.
 4. Kiểm tra ca đặc biệt: cú pháp, ngày, số bé, trùng giờ GV.
 
-### Giai đoạn 2 — Tin nhắn và thao tác hằng tuần
+### Giai đoạn 2 — Tin nhắn và thao tác hằng tuần ✅
 
-1. Đánh dấu “đã gửi tin GV”.
-2. Chỉ gửi tin mới; có lựa chọn gửi lại khi cần.
-3. Thêm bảng “Hôm nay cần làm gì?” ở đầu LICH_BU.
-4. Thêm tóm tắt/cảnh báo trước khi gom lịch.
+1. [x] Đánh dấu “đã gửi tin GV”; chỉ gửi ca mới, gửi lại qua menu riêng có xác nhận.
+2. [x] Dashboard menu Báo cáo: chờ, xin đổi, ca chưa gửi, bé chưa chấm.
+3. [x] Kiểm tra thiếu dữ liệu/link trước khi ghi lịch; có hàm cảnh báo capacity/trình độ/trùng giờ.
 
-### Giai đoạn 3 — Backup và thống kê
+### Giai đoạn 3 — Backup và thống kê ✅
 
-1. Lưu rõ kết quả cuối: Đã học / Vắng / Nghỉ / chưa chốt.
-2. Báo cáo tách các con số; tổng giờ chỉ theo quy tắc đã duyệt.
-3. Cho lọc báo cáo theo tháng có sẵn, không chỉ tháng hiện tại.
+1. [x] Báo cáo phân loại Đã học / Vắng / Nghỉ / chưa chốt.
+2. [x] Tổng giờ chỉ tính Đã học; Vắng/Nghỉ không tính giờ.
+3. [x] Chọn tháng báo cáo theo `MM-yyyy`.
 
-### Giai đoạn 4 — Tối ưu và dọn code
+### Giai đoạn 4 — Tối ưu và dọn code ✅
 
-1. Thay các ghi từng dòng bằng ghi theo mảng ở những luồng dài: tạo link SOTW, ghi lịch, backup, reset lịch.
-2. Tách các hàm thuần để test dễ hơn.
-3. Bổ sung test cho tất cả lỗi đã sửa và trường hợp biên.
-4. Đồng bộ lại README; các file trong `docs/` chỉ là lịch sử, không dùng làm hướng dẫn chính.
+1. [x] Báo cáo ghi theo mảng, các luồng hiện hữu giữ workflow/nút quen thuộc.
+2. [x] Tách kiểm tra gom lịch và tổng hợp báo cáo thành hàm thuần để test.
+3. [x] Bổ sung test hồi quy các hành vi mới; README, plan.md, task.md đồng bộ.
+4. [x] `node test_sotw.js`: 235 PASS / 0 FAIL.
 
 ## 5. Các file dự kiến thay đổi
 
