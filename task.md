@@ -1,6 +1,6 @@
 # TASK — JOY DẠY BÙ
 
-> Trạng thái: **ĐỢT 1 HOÀN THÀNH CỤC BỘ — đã test, chưa push GitHub**
+> Trạng thái: **HOÀN THÀNH TẤT CẢ ĐỢT 1–5 — đã test và đẩy GitHub**
 >
 > Quy tắc anh đã duyệt: cột **Ca đặc biệt** nhận `T2` đến `T7` hoặc `CN`, xếp đúng ngày/giờ/GV ghi trong ô. Bé **Vắng / Nghỉ không tính giờ dạy**.
 
