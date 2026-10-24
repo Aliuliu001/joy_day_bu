@@ -108,6 +108,14 @@ class MockSheet {
     for (let i = 0; i < amount; i++) this.rows.splice(at, 0, []);
     return this;
   }
+  // Google Sheets API thật: chèn cột sau vị trí chỉ định, giữ nguyên dữ liệu cũ.
+  insertColumnsAfter(columnPosition, howMany) {
+    const at = columnPosition;
+    this.rows.forEach(row => {
+      for (let i = 0; i < howMany; i++) row.splice(at, 0, '');
+    });
+    return this;
+  }
   deleteRow(rowIndex) { this.rows.splice(rowIndex - 1, 1); return this; }
   clear() { this.rows = []; return this; }
   getProtections() { return this.protectedRanges.slice(); }
@@ -1029,6 +1037,41 @@ console.log('\n=== T26: 🖼️ Gắn link ảnh từ folder Drive (khớp tên 
   ok(lastAlert().indexOf('đúng dạng folder') >= 0, 'Link sai → báo đúng bệnh');
   ds.getRange(1, 8).clearContent();
   STATE.driveFiles = [];
+}
+
+console.log('\n=== T28: Ca đặc biệt — thứ tiếng Việt T2 đến CN ===');
+{
+  // Quy ước hệ thống: T2=1 ... T7=6, CN=0 (JavaScript / Utilities ISO).
+  // Hàm này chưa tồn tại ở bản cũ: test phải đỏ trước khi sửa Code.gs.
+  eq(sandbox.thuVietSangSo('T2'), 1, 'T2 được hiểu là Thứ 2');
+  eq(sandbox.thuVietSangSo('T3'), 2, 'T3 được hiểu là Thứ 3');
+  eq(sandbox.thuVietSangSo('T4'), 3, 'T4 được hiểu là Thứ 4, không phải Thứ 5');
+  eq(sandbox.thuVietSangSo('T5'), 4, 'T5 được hiểu là Thứ 5');
+  eq(sandbox.thuVietSangSo('T6'), 5, 'T6 được hiểu là Thứ 6');
+  eq(sandbox.thuVietSangSo('T7'), 6, 'T7 được hiểu là Thứ 7');
+  eq(sandbox.thuVietSangSo('CN'), 0, 'CN được hiểu là Chủ nhật');
+  const caT2 = sandbox.parseCaDacBiet('T2 08h00-09h30 Ms. Vân');
+  eq([caT2.thu, caT2.gio, caT2.gv], ['Thứ 2', '08:00-09:30', 'Ms. Vân'], 'Ca riêng T2 giữ đúng ngày, giờ, GV');
+  const caCN = sandbox.parseCaDacBiet('CN 14h00-15h30 Mr. Ngọc');
+  eq([caCN.thu, caCN.gio, caCN.gv], ['Chủ nhật', '14:00-15:30', 'Mr. Ngọc'], 'Ca riêng CN được xếp như mọi ngày khác');
+}
+
+console.log('\n=== T29: Backup — cùng bé/cùng ca ở hai ngày vẫn lưu đủ ===');
+{
+  const lich = sheet('LICH_BU');
+  lich.clear();
+  lich.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú', 'Ngày học']);
+  lich.appendRow(['T2-Riêng', 'Thứ 2', '08:00-09:30', 'Ms. Vân', 'Bé Backup Lặp', 'S1.005 - Peach', 'SP1', '', '✅ Đi được', '', '', '✅ Đã học', '', '03/11/2026']);
+  sandbox.backupTuanBu(true);
+  const tenBk = 'Backup tháng ' + sandbox.Utilities.formatDate(new Date(), 'GMT+7', 'MM-yyyy');
+  const bk = sheet(tenBk);
+  const sauLan1 = bk.rows.filter(r => r[5] === 'Bé Backup Lặp').length;
+  lich.clear();
+  lich.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú', 'Ngày học']);
+  lich.appendRow(['T2-Riêng', 'Thứ 2', '08:00-09:30', 'Ms. Vân', 'Bé Backup Lặp', 'S1.005 - Peach', 'SP1', '', '✅ Đi được', '', '', '✅ Đã học', '', '10/11/2026']);
+  sandbox.backupTuanBu(true);
+  const sauLan2 = bk.rows.filter(r => r[5] === 'Bé Backup Lặp').length;
+  eq([sauLan1, sauLan2], [1, 2], 'Hai buổi khác ngày của cùng bé/cùng ca đều được backup');
 }
 
 console.log('\n============================');

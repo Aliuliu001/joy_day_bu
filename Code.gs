@@ -126,13 +126,16 @@ function parseCaDacBiet(text) {
   var s = (text || '').toString().trim();
   if (!s) return null;
   
-  // Match: "T4 14h00-15h30 Mr. Ngọc" hoặc "Thứ 4 14h00-15h30 Mr. Ngọc"
-  var m = s.match(/^(T\d|Thứ \d)\s+([\d:h\-\s]+)\s+(.+)$/i);
+  // Mẫu: T2…T7 hoặc CN, rồi đến giờ và tên GV.
+  // Ví dụ: "T2 08h00-09h30 Ms. Vân", "T4 14h00-15h30 Mr. Ngọc", "CN 09h00-10h30 Ms. Vân".
+  var m = s.match(/^(T[2-7]|CN|Thứ\s*[2-7]|Chủ\s*nhật)\s+([\d:h\-\s]+)\s+(.+)$/i);
   if (!m) return null;
   
-  var thu = m[1].trim();
-  // Chuẩn hóa: T4 → Thứ 4
-  if (thu.match(/^T(\d)$/i)) thu = 'Thứ ' + RegExp.$1;
+  var thuNhap = m[1].trim();
+  var soThu = thuVietSangSo(thuNhap);
+  if (soThu === null) return null;
+  var tenThu = { 1: 'Thứ 2', 2: 'Thứ 3', 3: 'Thứ 4', 4: 'Thứ 5', 5: 'Thứ 6', 6: 'Thứ 7', 0: 'Chủ nhật' };
+  var thu = tenThu[soThu];
   
   var gio = m[2].trim().replace(/h/g, ':').replace(/\s+/g, ' ');
   var gv = m[3].trim();
@@ -143,20 +146,22 @@ function parseCaDacBiet(text) {
   return { thu: thu, gio: gio, gv: gv, ma: ma, dacBiet: true };
 }
 
-// Tính ngày học cho thứ bất kỳ (T2..CN)
+// Đổi cách viết thứ tiếng Việt sang số ISO: T2=1 … T7=6, CN=0.
+// Không dùng trực tiếp số 4: “Thứ 4” tiếng Việt là Wednesday (3), không phải Thursday (4).
+function thuVietSangSo(thuText) {
+  var s = String(thuText || '').trim().toUpperCase().replace(/\s+/g, '');
+  var map = { 'T2': 1, 'THỨ2': 1, 'T3': 2, 'THỨ3': 2, 'T4': 3, 'THỨ4': 3,
+    'T5': 4, 'THỨ5': 4, 'T6': 5, 'THỨ6': 5, 'T7': 6, 'THỨ7': 6,
+    'CN': 0, 'CHỦNHẬT': 0 };
+  return Object.prototype.hasOwnProperty.call(map, s) ? map[s] : null;
+}
+
+// Tính ngày học gần nhất phía trước cho mọi ngày T2…CN.
 function layNgayThuBatKy(thuText) {
+  var thuMuon = thuVietSangSo(thuText);
+  if (thuMuon === null) return '';
   var homNay = new Date();
-  var thuHienTai = parseInt(Utilities.formatDate(homNay, 'GMT+7', 'u'), 10) % 7; // 0=CN, 1=T2..6=T7
-  var thuMuon = 0;
-  
-  // Parse "Thứ 4" → 3
-  var m = thuText.match(/Thứ\s*(\d)/i);
-  if (m) {
-    thuMuon = parseInt(m[1], 10) === 1 ? 1 : parseInt(m[1], 10); // T2=1, T3=2..T7=6, CN=0
-  } else {
-    return layNgayThu(thuText); // fallback cũ
-  }
-  
+  var thuHienTai = parseInt(Utilities.formatDate(homNay, 'GMT+7', 'u'), 10) % 7; // 0=CN, 1=T2…6=T7
   var ngayCach = thuMuon - thuHienTai;
   if (ngayCach <= 0) ngayCach += 7;
   var ngayHoc = new Date(homNay.getTime() + ngayCach * 24 * 60 * 60 * 1000);
@@ -308,9 +313,9 @@ function taoDongMau(bao) {
   }
   if (dem >= 2) return false;
   var mau1 = ['', 'Mr. Ngọc', 'S1.001 - Cashew', 'Không bù', '', '', '', '',
-    DAU_MAU + ' Lớp đi đủ → gõ "Không bù" ở cột Tên bé', '', ''];
+    DAU_MAU + ' Lớp đi đủ → gõ "Không bù" ở cột Tên bé. Ca đặc biệt: T2–T7/CN giờ-bắtđầu-giờ-kết thúc tên GV', '', 'T2 08h00-09h30 Ms. Vân'];
   var mau2 = ['', 'Mr. Ngọc', 'S2.001 - Pumpkin Seed', 'Iphone', 'SP1', '', '', '',
-    DAU_MAU + ' Vắng bạn Iphone → ghi tên bé nghỉ ở cột Tên bé', '', 'T4 14h00-15h30 Mr. Ngọc'];
+    DAU_MAU + ' Vắng bạn Iphone → ghi tên bé nghỉ ở cột Tên bé. Ví dụ ca riêng khác ngày/giờ', '', 'T4 14h00-15h30 Mr. Ngọc'];
   var dong2LaMau = false;
   if (data.length >= 2) {
     var dong2 = data[1];
@@ -366,6 +371,11 @@ function nangCapSheetSotw() {
         bao.getRange(1, 11).setValue('Ca đặc biệt');
         bao.getRange(1, 11).setFontWeight('bold').setBackground('#F6F3EE');
         msg += '\n• Đã thêm cột K "Ca đặc biệt"';
+      }
+      var lichNangCap = ss.getSheetByName('LICH_BU');
+      if (lichNangCap && String(lichNangCap.getRange(1, 14).getValue() || '').trim() !== 'Ngày học') {
+        lichNangCap.getRange(1, 14).setValue('Ngày học').setFontWeight('bold').setBackground('#F6F3EE');
+        msg += '\n• Đã thêm cột "Ngày học" trong LICH_BU (phục vụ backup không sót buổi)';
       }
       
       if (sotw) themLinkSotw(bao, sotw.getSheetId());
@@ -436,8 +446,8 @@ function setupDayBu() {
 
   var sh2 = layHoacTaoSheet(ss, 'LICH_BU');
   sh2.clear();
-  sh2.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú']);
-  sh2.getRange(1, 1, 1, 13).setFontWeight('bold').setBackground('#F6F3EE');
+  sh2.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú', 'Ngày học']);
+  sh2.getRange(1, 1, 1, 14).setFontWeight('bold').setBackground('#F6F3EE');
   datDropdown(sh2, 9, 200, PH_TRANG_THAI);
   datDropdown(sh2, 12, 200, DA_DAY);
 
@@ -467,8 +477,8 @@ function setupNhe() {
   }
   var sh2n = layHoacTaoSheet(ss, 'LICH_BU');
   if (!sh2n.getRange(1, 1).getValue()) {
-    sh2n.getRange(1, 1, 1, 13).setValues([['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú']]);
-    sh2n.getRange(1, 1, 1, 13).setFontWeight('bold').setBackground('#F6F3EE');
+    sh2n.getRange(1, 1, 1, 14).setValues([['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú', 'Ngày học']]);
+    sh2n.getRange(1, 1, 1, 14).setFontWeight('bold').setBackground('#F6F3EE');
   }
   datDropdown(sh2n, 9, 200, PH_TRANG_THAI);
   datDropdown(sh2n, 12, 200, DA_DAY);
@@ -1144,7 +1154,9 @@ function themBeVaoLich(lich, bao, be, ca) {
   var tinGV = '📚 [' + ca.thu + ' ' + ca.gio + '] ' + ca.gv + ' dạy bù: bé ' + be.tenBe
     + ' (' + be.lop + ' - ' + be.trinhDo + '). Slide: ' + (be.link || '(chưa có link)')
     + (ghiChu ? '\n📌 Ghi chú: ' + ghiChu : '');
-  lich.appendRow([ca.ma, ca.thu, ca.gio, ca.gv, be.tenBe, be.lop, be.trinhDo, be.link, 'Chờ Ms. Vân Anh', tinPH, tinGV, '', ghiChu]);
+  // Lưu ngày học ngay khi xếp: backup dùng ngày này để phân biệt hai buổi trùng ca/tên trong tháng.
+  lich.appendRow([ca.ma, ca.thu, ca.gio, ca.gv, be.tenBe, be.lop, be.trinhDo, be.link, 'Chờ Ms. Vân Anh', tinPH, tinGV, '', ghiChu, ngayHoc]);
+  lich.getRange(1, 14).setValue('Ngày học').setFontWeight('bold').setBackground('#F6F3EE');
   if (!be.link || !be.link.toString().trim()) {
     var dongMoi = lich.getLastRow();
     lich.getRange(dongMoi, 8).setBackground('#FFF3CD');
@@ -1160,6 +1172,7 @@ function giuLaiDongDaChot(lich, bao) {
   var header = data.length ? data[0].slice() : [];
   while (header.length < 12) header.push(header.length === 11 ? 'Đã dạy' : '');
   if (header.length === 12) header.push('Ghi chú'); // bản cũ 12 cột → thêm cột Ghi chú
+  if (header.length === 13) header.push('Ngày học'); // thêm ở cuối, không làm lệch cột cũ
   var giu = [header];
   var xoa = [];
   for (var i = 1; i < data.length; i++) {
@@ -1519,30 +1532,38 @@ function backupTuanBu(imLang) {
   var backup = ss.getSheetByName(tenBackup);
   if (!backup) {
     backup = ss.insertSheet(tenBackup);
-    backup.appendRow(['Ngày', 'Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'PH xác nhận', 'Đã dạy']);
-    backup.getRange(1, 1, 1, 9).setFontWeight('bold').setBackground('#F6F3EE');
+    backup.appendRow(['Ngày backup', 'Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'PH xác nhận', 'Đã dạy', 'Ngày học']);
+    backup.getRange(1, 1, 1, 10).setFontWeight('bold').setBackground('#F6F3EE');
+  } else if (String(backup.getRange(1, 10).getValue() || '').trim() !== 'Ngày học') {
+    // Backup cũ: thêm cột Ngày học ở CUỐI để không làm lệch các cột báo cáo hiện có.
+    backup.insertColumnsAfter(9, 1);
+    backup.getRange(1, 10).setValue('Ngày học').setFontWeight('bold').setBackground('#F6F3EE');
   }
 
-  // Đánh dấu các dòng ĐÃ có trong backup (khóa: Ca|Thứ|Giờ|GV|Tên bé)
+  var ngay = Utilities.formatDate(homNay, 'GMT+7', 'dd/MM/yyyy');
+  function ngayHocCua(r) { return String(r[13] || '').trim() || ngay; }
+  function khoaBackup(ngayHoc, r) { return [ngayHoc, r[0], r[1], r[2], r[3], r[4]].join('|'); }
+
+  // Khóa: Ngày học|Ca|Thứ|Giờ|GV|Tên bé — không lẫn hai buổi khác ngày.
   var daCo = {};
   var dataCu = backup.getDataRange().getValues();
   for (var c = 1; c < dataCu.length; c++) {
-    var k = [dataCu[c][1], dataCu[c][2], dataCu[c][3], dataCu[c][4], dataCu[c][5]].join('|');
-    if (k !== '||||') daCo[k] = 1;
+    var k = [dataCu[c][9], dataCu[c][1], dataCu[c][2], dataCu[c][3], dataCu[c][4], dataCu[c][5]].join('|');
+    if (k !== '|||||') daCo[k] = 1;
   }
 
   var dataLich = lich.getDataRange().getValues();
-  var ngay = Utilities.formatDate(homNay, 'GMT+7', 'dd/MM/yyyy');
   var demTong = 0, demMoi = 0;
   for (var i = 1; i < dataLich.length; i++) {
     if (!dataLich[i][4]) continue;
     var st = (dataLich[i][8] || '').toString().trim();
-    if (st === '' || st.indexOf('Chờ') === 0) continue; // chưa có phản hồi → không backup
+    if (st === '' || st.indexOf('Chờ') === 0) continue;
     demTong++;
-    var key = [dataLich[i][0], dataLich[i][1], dataLich[i][2], dataLich[i][3], dataLich[i][4]].join('|');
-    if (daCo[key]) continue; // dòng này đã backup rồi
+    var ngayHoc = ngayHocCua(dataLich[i]);
+    var key = khoaBackup(ngayHoc, dataLich[i]);
+    if (daCo[key]) continue;
     backup.appendRow([ngay, dataLich[i][0], dataLich[i][1], dataLich[i][2], dataLich[i][3],
-      dataLich[i][4], dataLich[i][5], st, dataLich[i][11]]);
+      dataLich[i][4], dataLich[i][5], st, dataLich[i][11], ngayHoc]);
     daCo[key] = 1;
     demMoi++;
   }
@@ -1625,8 +1646,8 @@ function lamMoiTuanMoi() {
 
   // 4. Clear LICH_BU (giữ tiêu đề)
   lich.clear();
-  lich.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú']);
-  lich.getRange(1, 1, 1, 13).setFontWeight('bold').setBackground('#F6F3EE');
+  lich.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú', 'Ngày học']);
+  lich.getRange(1, 1, 1, 14).setFontWeight('bold').setBackground('#F6F3EE');
   datDropdown(lich, 9, 200, PH_TRANG_THAI);
   datDropdown(lich, 12, 200, DA_DAY);
 

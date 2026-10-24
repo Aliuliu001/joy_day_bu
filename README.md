@@ -49,6 +49,7 @@ Menu 🔁 → **🔔 Nhắc GV báo bù** → tin vào nhóm Học Bù (kèm hư
 
 ### 2. CẢ TUẦN — GV nhập liệu (chỉ click & gõ theo mẫu)
 - **Báo bù:** vào BAO_BU → **chọn GV** (ô B) → **chọn Lớp** (ô C, chỉ hiện lớp của GV đó) → **chọn Tên bé** (ô D, chỉ hiện bé lớp đó) → gõ trình độ + link Canva. **Đảo chiều cũng được:** chọn TÊN BÉ trước → tự điền Lớp + GV báo, 2 ô còn lại tự lọc (tên bé chỉ ở 1 lớp; trùng tên 2 lớp → tự hiện 2 lớp cho anh chọn). Lớp đi đủ → gõ `Không bù` ở cột Tên bé. GV cần dặn dò → ghi thêm ô **Ghi chú** (ô I). *Xem 2 dòng mẫu đầu sheet.*
+- **Ca đặc biệt (cột K):** dùng khi xếp ca riêng vào bất kỳ ngày nào, theo đúng mẫu: `T2 08h00-09h30 Ms. Vân` hoặc `T4 14h00-15h30 Mr. Ngọc`. Dùng `T2` đến `T7` hoặc `CN`, sau đó là giờ bắt đầu-kết thúc và tên GV. Hệ thống ưu tiên xếp đúng ngày/giờ này, không đưa vào 4 ca cố định.
 - **SOTW:** vào **DS HỌC SINH** → chọn tên mình ở ô "GV đang chọn" → **tick ☑** bé SOTW (1-2 phút/tuần).
 
 ### 3. T2 CHIỀU — bấm **1️⃣ Gom nhóm + gửi SOTW** (1 nút làm 2 việc)
@@ -142,4 +143,4 @@ Nếu anh thấy cột Lớp/Tên bé có dòng bị ngược (vd 2 dòng mẫu 
 ---
 
 ## 🧪 KIỂM THỬ CODE
-`node test_sotw.js` — **209 assertion** (gom nhóm, SOTW, cascade BAO_BU, ghi chú + gộp ghi chú, folder ảnh, backup chống trùng, làm mới tuần, menu...). Phải **PASS 197/197** trước khi push.
+`node test_sotw.js` — **219 PASS / 0 FAIL** (gom nhóm, SOTW, cascade BAO_BU, ghi chú + gộp ghi chú, folder ảnh, backup chống trùng, làm mới tuần, menu, ca đặc biệt T2–CN). Phải PASS toàn bộ trước khi push.
