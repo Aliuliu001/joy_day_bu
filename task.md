@@ -95,5 +95,5 @@
 - [x] Code test PASS 100%: **241 PASS / 0 FAIL**.
 - [x] Không còn thay đổi chưa kiểm tra.
 - [x] README, `plan.md`, `task.md` đã cập nhật.
-- [ ] Commit/push đợt 1B sau khi kiểm tra cuối.
-- [ ] Kiểm tra lại commit mới trên nhánh `main`.
+- [x] Đã commit/push đợt 1B: `e636d8c`.
+- [x] Đã kiểm tra lại commit mới trên nhánh `main`.
