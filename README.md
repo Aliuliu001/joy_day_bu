@@ -150,4 +150,4 @@ Nếu anh thấy cột Lớp/Tên bé có dòng bị ngược (vd 2 dòng mẫu 
 - **Báo cáo**: chọn “Làm mới thống kê tháng này” hoặc “Chọn tháng để xem thống kê” (dạng `MM-yyyy`, ví dụ `11-2026`). Chỉ **Đã học** được tính ca/giờ; **Vắng** và **Nghỉ** được liệt kê riêng, không tính giờ dạy.
 
 ## 🧪 KIỂM THỬ CODE
-`node test_sotw.js` — **235 PASS / 0 FAIL** (gom nhóm, SOTW, cascade BAO_BU, gửi GV chống trùng/gửi lại, dashboard, validation, báo cáo tháng, Vắng/Nghỉ không tính giờ, backup chống trùng, làm mới tuần, menu, ca đặc biệt T2–CN). Phải PASS toàn bộ trước khi push.
+`node test_sotw.js` — **241 PASS / 0 FAIL** (gom nhóm, SOTW, cascade BAO_BU, gửi GV chống trùng/gửi lại, dashboard, validation, báo cáo tháng, Vắng/Nghỉ không tính giờ, backup chống trùng, làm mới tuần dừng an toàn khi backup lỗi, menu, ca đặc biệt T2–CN và cảnh báo trùng giờ/quá tải). Phải PASS toàn bộ trước khi push.

@@ -1055,10 +1055,46 @@ function khoangGioTrung(a, b) {
   var x = phut(a), y = phut(b); return !!(x && y && x[0] < y[1] && y[0] < x[1]);
 }
 
-function xepLichChinh(ss, bao, lich) {
-  // 1. Giữ dòng chốt (✅ / ❌ Nghỉ / 🔄 Xin đổi), xoá dòng chưa chốt
-  //    + reset trạng thái bé tương ứng trong BAO_BU (KHÔNG mất bé khi gom lại)
-  var daCo = giuLaiDongDaChot(lich, bao);
+// Chỉ kiểm tra các rủi ro PHÁT SINH từ ca đặc biệt; quản lý luôn được quyền xác nhận tiếp tục.
+function taoCanhBaoCaDacBiet(lich, beDacBiet) {
+  var caTheoMa = {}, canhBao = [], daBao = {};
+  function themCa(ca, trinhDo) {
+    if (!caTheoMa[ca.ma]) caTheoMa[ca.ma] = { ma:ca.ma, thu:ca.thu, gio:ca.gio, gv:ca.gv, bes:0, trinhDo:{} };
+    caTheoMa[ca.ma].bes++;
+    if (trinhDo) caTheoMa[ca.ma].trinhDo[trinhDo] = 1;
+  }
+  var rows = lich.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (!rows[i][0] || String(rows[i][8] || '').indexOf('❌ Nghỉ') >= 0) continue;
+    themCa({ ma:rows[i][0], thu:rows[i][1], gio:rows[i][2], gv:rows[i][3] }, rows[i][6]);
+  }
+  (beDacBiet || []).forEach(function(be) { themCa(be.caDacBiet, be.trinhDo); });
+  var dsCa = Object.keys(caTheoMa).map(function(ma) { return caTheoMa[ma]; });
+  (beDacBiet || []).forEach(function(be) {
+    var ca = caTheoMa[be.caDacBiet.ma];
+    if (ca.bes > CFG.TOI_DA_CA && !daBao['suc'+ca.ma]) {
+      canhBao.push(ca.ma + ' quá ' + CFG.TOI_DA_CA + ' bé (' + ca.bes + ' bé)'); daBao['suc'+ca.ma] = 1;
+    }
+    if (Object.keys(ca.trinhDo).length > CFG.TOI_DA_TRINH_DO && !daBao['td'+ca.ma]) {
+      canhBao.push(ca.ma + ' quá ' + CFG.TOI_DA_TRINH_DO + ' trình độ'); daBao['td'+ca.ma] = 1;
+    }
+    dsCa.forEach(function(khac) {
+      if (khac.ma === ca.ma || khac.gv !== ca.gv || khac.thu !== ca.thu || !khoangGioTrung(khac.gio, ca.gio)) return;
+      var key = 'trung' + [ca.ma, khac.ma].sort().join('|');
+      if (!daBao[key]) {
+        canhBao.push(ca.gv + ' trùng giờ: ' + ca.ma + ' / ' + khac.ma);
+        if (khac.bes >= CFG.TOI_DA_CA) canhBao.push(khac.ma + ' quá ' + CFG.TOI_DA_CA + ' bé (' + khac.bes + ' bé), không còn chỗ trống');
+        daBao[key] = 1;
+      }
+    });
+  });
+  return canhBao;
+}
+
+function xepLichChinh(ss, bao, lich, daKiemTra) {
+  // Lượt đầu chỉ kiểm tra. Lượt sau mới dọn lịch cũ, rồi đọc lại BAO_BU để xếp.
+  // Nhờ vậy nếu quản lý bấm Không thì không dữ liệu nào bị thay đổi.
+  var daCo = daKiemTra ? giuLaiDongDaChot(lich, bao) : 0;
 
   // 2. Đọc bé chưa xếp
   var data = bao.getDataRange().getValues();
@@ -1085,12 +1121,24 @@ function xepLichChinh(ss, bao, lich) {
   
   // Kiểm tra dữ liệu trước khi ghi lịch. Thiếu dữ liệu/cảnh báo vẫn cho quản lý quyết định tiếp tục.
   var kiemTra = kiemTraDuLieuTruocKhiXep(coDacBiet.concat(chuaXep), []);
-  if (kiemTra.thieuThongTin || kiemTra.thieuLink) {
+  if (!daKiemTra && (kiemTra.thieuThongTin || kiemTra.thieuLink)) {
     var canhBaoNhap = '⚠️ Kiểm tra trước khi gom lịch:\n• Thiếu tên/lớp/trình độ: ' + kiemTra.thieuThongTin + ' bé\n• Chưa có link Canva: ' + kiemTra.thieuLink + ' bé\n\nVẫn xếp lịch chứ?';
     if (!xacNhan(canhBaoNhap)) return 'Đã dừng gom lịch để kiểm tra dữ liệu.';
   }
 
-  // 3. Xếp bé có Ca đặc biệt TRƯỚC (ưu tiên cao nhất, bỏ qua capacity/overlap)
+  // Ca đặc biệt không tự chặn, nhưng phải báo RÕ quá tải/trùng giờ trước khi ghi lịch.
+  var caCanhBao = taoCanhBaoCaDacBiet(lich, coDacBiet);
+  if (!daKiemTra && caCanhBao.length) {
+    var canhBaoCa = '⚠️ CẢNH BÁO CA ĐẶC BIỆT:\n• ' + caCanhBao.join('\n• ')
+      + '\n\nVẫn xếp các ca đặc biệt này chứ?';
+    if (!xacNhan(canhBaoCa)) return 'Đã dừng gom lịch để kiểm tra cảnh báo ca đặc biệt.';
+  }
+
+  // Lần đầu chỉ kiểm tra. Sau khi quản lý đồng ý, chạy lại một lượt để dọn rồi ĐỌC LẠI bé cần xếp.
+  // Nhờ vậy không có bé nào bị mất khỏi danh sách chỉ vì lịch cũ vừa được dọn.
+  if (!daKiemTra) return xepLichChinh(ss, bao, lich, true);
+
+  // 3. Xếp bé có Ca đặc biệt TRƯỚC (ưu tiên cao nhất)
   var stt = 0;
   coDacBiet.forEach(function (be) {
     themBeVaoLich(lich, bao, be, be.caDacBiet);
@@ -1551,13 +1599,18 @@ function backupThuCong() {
 
 // imLang=true: trả về thông điệp thay vì popup (dùng khi chạy gộp trong "Làm mới tuần mới")
 // Chống trùng theo TỪNG DÒNG (Ca+Thứ+Giờ+GV+Tên bé) → chạy bao nhiêu lần cũng không trùng
-function backupTuanBu(imLang) {
-  function ketQua(m) { if (imLang === true) return m; baoXong(m); return m; }
+function backupTuanBuNoiBo(imLang) {
+  function ketQua(m, ok) {
+    var kq = { ok: ok !== false, msg: m };
+    if (imLang === true) return kq;
+    baoXong(m);
+    return kq;
+  }
 
   var ss = laySS();
   try { chuyenCotMoiBAOBU(ss.getSheetByName('BAO_BU')); } catch (e) {} // sheet cũ → đổi cột trước
   var lich = ss.getSheetByName('LICH_BU');
-  if (!lich) return ketQua('Chưa có sheet LICH_BU.');
+  if (!lich) return ketQua('Chưa có sheet LICH_BU.', false);
 
   var homNay = new Date();
   var thang = Utilities.formatDate(homNay, 'GMT+7', 'MM-yyyy');
@@ -1611,6 +1664,17 @@ function backupTuanBu(imLang) {
     + ' (chạy lại sẽ không trùng).\n📝 Bao gồm: Đi được, Nghỉ, Vắng — chưa có phản hồi thì không backup.');
 }
 
+// Hàm công khai cho nút/trigger. Luôn trả kết quả rõ để Làm mới tuần biết có được phép xoá hay không.
+function backupTuanBu(imLang) {
+  try {
+    return backupTuanBuNoiBo(imLang);
+  } catch (e) {
+    var kq = { ok: false, msg: '❌ Backup gặp lỗi: ' + e };
+    if (imLang !== true) baoXong(kq.msg);
+    return kq;
+  }
+}
+
 // ===== LÀM MỚI TUẦN MỚI (backup → clear → xoá tick SOTW) =====
 function lamMoiTuanMoi() {
   if (!xacNhan('Việc này sẽ:\n'
@@ -1629,8 +1693,15 @@ function lamMoiTuanMoi() {
     return;
   }
 
-  // 1. TỰ BACKUP trước khi xoá (im lặng — chèn vào thông báo cuối)
-  var msgBackup = backupTuanBu(true);
+  // 1. TỰ BACKUP trước khi xoá. Lỗi thật → DỪNG ngay, tuyệt đối không động vào lịch.
+  var kqBackup = backupTuanBu(true);
+  if (!kqBackup || kqBackup.ok === false) {
+    baoXong('⛔ DỪNG làm mới tuần: backup chưa hoàn tất.\n'
+      + ((kqBackup && kqBackup.msg) || 'Không nhận được kết quả backup.')
+      + '\n\nBAO_BU và LICH_BU vẫn được giữ nguyên. Hãy xử lý backup rồi bấm lại.');
+    return;
+  }
+  var msgBackup = kqBackup.msg;
 
   // 2. Chuyển bé CHƯA CHỐT trong LICH → về BAO_BU (trạng thái trống) → sẽ được GIỮ
   var dataLich = lich.getDataRange().getValues();

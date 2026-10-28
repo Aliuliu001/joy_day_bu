@@ -1129,6 +1129,44 @@ console.log('\n=== T32: Báo cáo tháng chỉ tính Đã học, chọn tháng =
   ok(String(sheet('THỐNG KÊ').getDataRange().getValues().flat().join(' ')).includes('Bé vắng'), 'Báo cáo hiện số bé vắng');
 }
 
+console.log('\n=== T33: Làm mới tuần dừng an toàn khi backup lỗi ===');
+{
+  STATE.ss = new MockSS(); STATE.alerts.length = 0; STATE.confirms.length = 0;
+  const bao = STATE.ss.insertSheet('BAO_BU');
+  bao.appendRow(['Ngày báo', 'GV báo', 'Lớp', 'Tên bé', 'Trình độ', 'Link Canva', 'Trạng thái', 'Ca xếp', 'Ghi chú']);
+  bao.appendRow(['01/11/2026', '', 'L1', 'Bé Giữ Lại', 'SP1', '', '', '', '']);
+  const lich = STATE.ss.insertSheet('LICH_BU');
+  lich.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận']);
+  lich.appendRow(['T5-1', 'Thứ 5', '17h00-18h30', 'Ms. Vân', 'Bé Trong Lịch', 'L1', 'SP1', '', '✅ Đi được']);
+  const backupGoc = sandbox.backupTuanBu;
+  sandbox.backupTuanBu = function() { return { ok: false, msg: 'Lỗi backup mô phỏng' }; };
+  STATE.confirms.push(true);
+  sandbox.lamMoiTuanMoi();
+  eq(rows('LICH_BU').length, 2, 'Backup lỗi → LICH_BU không bị xoá');
+  eq(rows('BAO_BU').length, 2, 'Backup lỗi → BAO_BU không bị xoá');
+  ok(lastAlert().includes('DỪNG làm mới tuần'), 'Backup lỗi → báo dừng an toàn rõ ràng');
+  sandbox.backupTuanBu = backupGoc;
+}
+
+console.log('\n=== T34: Ca đặc biệt cảnh báo rõ trước khi ghi lịch ===');
+{
+  STATE.ss = new MockSS(); STATE.alerts.length = 0; STATE.confirms.length = 0;
+  const bao = STATE.ss.insertSheet('BAO_BU');
+  bao.appendRow(['Ngày báo', 'GV báo', 'Lớp', 'Tên bé', 'Trình độ', 'Link Canva', 'Trạng thái', 'Ca xếp', 'Ghi chú', 'SOTW', 'Ca đặc biệt']);
+  bao.appendRow(['01/11/2026', '', 'L1', 'Bé Ca Riêng', 'SP1', 'https://slide', '', '', '', '', 'T5 17h30-18h45 Ms. Vân']);
+  const lich = STATE.ss.insertSheet('LICH_BU');
+  lich.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận']);
+  lich.appendRow(['T5-1', 'Thứ 5', '17h00-18h30', 'Ms. Vân', 'Bé 1', 'L1', 'SP1', '', '✅ Đi được']);
+  lich.appendRow(['T5-1', 'Thứ 5', '17h00-18h30', 'Ms. Vân', 'Bé 2', 'L1', 'SP1', '', '✅ Đi được']);
+  lich.appendRow(['T5-1', 'Thứ 5', '17h00-18h30', 'Ms. Vân', 'Bé 3', 'L1', 'SP1', '', '✅ Đi được']);
+  lich.appendRow(['T5-1', 'Thứ 5', '17h00-18h30', 'Ms. Vân', 'Bé 4', 'L1', 'SP1', '', '✅ Đi được']);
+  STATE.confirms.push(false);
+  const msg = sandbox.xepLichChinh(STATE.ss, bao, lich);
+  eq(rows('LICH_BU').length, 5, 'Không xác nhận cảnh báo → không ghi ca đặc biệt');
+  ok(msg.includes('Đã dừng gom lịch'), 'Không xác nhận cảnh báo → dừng gom lịch');
+  ok(lastAlert().includes('trùng giờ') && lastAlert().includes('quá 4 bé'), 'Cảnh báo nêu trùng giờ và quá sức chứa');
+}
+
 console.log('\n============================');
 console.log(`PASS: ${PASS}  FAIL: ${FAIL}`);
 process.exit(FAIL > 0 ? 1 : 0);

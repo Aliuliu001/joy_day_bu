@@ -34,6 +34,20 @@
 
 **Kết quả Đợt 1:** `node test_sotw.js` = **219 PASS / 0 FAIL**.
 
+## Đợt 1B — Khoá an toàn khi làm mới tuần và ca đặc biệt ✅
+
+### TASK 12 — Backup lỗi thì dừng, không xoá lịch ✅
+
+- [x] `backupTuanBu()` trả kết quả rõ: thành công hoặc lỗi.
+- [x] `Làm mới tuần mới` dừng ngay nếu backup lỗi; BAO_BU và LICH_BU không bị sửa/xoá.
+- [x] Test T33 mô phỏng backup lỗi, xác nhận hai tab vẫn nguyên vẹn.
+
+### TASK 13 — Cảnh báo rõ ca đặc biệt trước khi ghi ✅
+
+- [x] Kiểm tra ca đặc biệt với lịch đang có: trùng giờ cùng GV, ca đang đủ/quá số bé và quá số trình độ.
+- [x] Hiện hộp xác nhận trước khi dọn lịch hoặc ghi thêm ca; chọn Không thì dữ liệu giữ nguyên.
+- [x] Test T34 xác nhận chọn Không không ghi ca riêng và cảnh báo nêu đủ rủi ro.
+
 ## Đợt 2 — Không gửi tin trùng ✅
 
 ### TASK 4 — Đánh dấu tin đã gửi cho GV ✅
@@ -74,12 +88,12 @@
 
 - [x] Giữ ghi dữ liệu theo mảng ở báo cáo/dashboard; không đổi 4 nút workflow.
 - [x] README là hướng dẫn chính, plan/task đánh dấu hoàn thành.
-- [x] `node test_sotw.js`: **235 PASS / 0 FAIL**.
+- [x] `node test_sotw.js`: **241 PASS / 0 FAIL**.
 
 ## Checklist trước khi đẩy GitHub
 
-- [x] Code test PASS 100%: **235 PASS / 0 FAIL**.
+- [x] Code test PASS 100%: **241 PASS / 0 FAIL**.
 - [x] Không còn thay đổi chưa kiểm tra.
 - [x] README, `plan.md`, `task.md` đã cập nhật.
-- [x] Đã commit và push GitHub: `85527ee`.
-- [x] Đã kiểm tra lại commit trên nhánh `main`.
+- [ ] Commit/push đợt 1B sau khi kiểm tra cuối.
+- [ ] Kiểm tra lại commit mới trên nhánh `main`.

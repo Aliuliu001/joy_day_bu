@@ -130,12 +130,18 @@ Chốt 3 điều cần anh duyệt:
 2. [x] Tổng giờ chỉ tính Đã học; Vắng/Nghỉ không tính giờ.
 3. [x] Chọn tháng báo cáo theo `MM-yyyy`.
 
+### Giai đoạn 1B — Khoá an toàn backup và ca đặc biệt ✅
+
+1. [x] Làm mới tuần chỉ được xoá sau khi backup trả kết quả thành công; backup lỗi thật → dừng ngay, BAO_BU và LICH_BU giữ nguyên.
+2. [x] Trước khi xếp ca đặc biệt, cảnh báo rõ khi trùng giờ cùng GV, ca đang đủ/quá 4 bé, hoặc vượt 2 trình độ; quản lý chọn Có/Không trước khi lịch bị thay đổi.
+3. [x] Có test lỗi backup không xoá lịch và test từ chối cảnh báo không ghi ca đặc biệt.
+
 ### Giai đoạn 4 — Tối ưu và dọn code ✅
 
 1. [x] Báo cáo ghi theo mảng, các luồng hiện hữu giữ workflow/nút quen thuộc.
 2. [x] Tách kiểm tra gom lịch và tổng hợp báo cáo thành hàm thuần để test.
 3. [x] Bổ sung test hồi quy các hành vi mới; README, plan.md, task.md đồng bộ.
-4. [x] `node test_sotw.js`: 235 PASS / 0 FAIL.
+4. [x] `node test_sotw.js`: **241 PASS / 0 FAIL** (gồm test backup lỗi không xoá lịch và ca đặc biệt cảnh báo trước khi ghi).
 
 ## 5. Các file dự kiến thay đổi
 
