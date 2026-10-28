@@ -1037,6 +1037,13 @@ console.log('\n=== T26: 🖼️ Gắn link ảnh từ folder Drive (khớp tên 
   sandbox.ganLinkAnhTuFolder();
   eq(ds.getRange(dAnh, 5).getValue(), 'https://drive.google.com/file/d/HV152', 'Link ảnh tự điền theo MSHS trong tên file');
   ok(lastAlert().indexOf('Đã gắn 1') >= 0, 'Báo số link gồm ảnh khớp theo MSHS');
+  // MSHS đúng nhưng phần họ tên trong file sai: vẫn ghép theo MSHS, đồng thời phải cảnh báo rõ để quản lý kiểm tra.
+  STATE.driveFiles = [{ getName: () => 'HV152-Tên Ghi Nhầm.png', getUrl: () => 'https://drive.google.com/file/d/HV152-sai' }];
+  STATE.alerts.length = 0;
+  sandbox.ganLinkAnhTuFolder();
+  eq(ds.getRange(dAnh, 5).getValue(), 'https://drive.google.com/file/d/HV152-sai', 'MSHS đúng vẫn gắn ảnh dù tên file khác');
+  ok(lastAlert().indexOf('⚠️ MSHS và họ tên chưa khớp') >= 0, 'MSHS đúng nhưng tên sai → có cảnh báo');
+  ok(lastAlert().indexOf('HV152') >= 0 && lastAlert().indexOf('Phạm Gia Khải') >= 0 && lastAlert().indexOf('Tên Ghi Nhầm') >= 0, 'Cảnh báo nêu MSHS, tên danh sách và tên file');
   ok(lastAlert().indexOf('Chưa khớp file ảnh') >= 0, 'Liệt kê bé chưa có ảnh');
   // Link sai dạng → báo rõ
   ds.getRange(1, 8).setValue('khong-phai-link');

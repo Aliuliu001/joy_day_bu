@@ -56,6 +56,7 @@
 - [x] Thêm cột MSHS ở cuối DS HỌC SINH để không làm đổi những cột đang dùng.
 - [x] Khi gắn ảnh, ưu tiên ghép MSHS; tên bé là phương án dự phòng cho ảnh cũ.
 - [x] Test mẫu `HV152-Phạm Gia Khải.png` tự điền đúng link ảnh.
+- [x] MSHS khớp nhưng tên file sai: vẫn gắn ảnh, popup báo MSHS + tên danh sách + tên file.
 
 ## Đợt 2 — Không gửi tin trùng ✅
 
@@ -97,11 +98,11 @@
 
 - [x] Giữ ghi dữ liệu theo mảng ở báo cáo/dashboard; không đổi 4 nút workflow.
 - [x] README là hướng dẫn chính, plan/task đánh dấu hoàn thành.
-- [x] `node test_sotw.js`: **242 PASS / 0 FAIL**.
+- [x] `node test_sotw.js`: **245 PASS / 0 FAIL**.
 
 ## Checklist trước khi đẩy GitHub
 
-- [x] Code test PASS 100%: **242 PASS / 0 FAIL**.
+- [x] Code test PASS 100%: **245 PASS / 0 FAIL**.
 - [x] Không còn thay đổi chưa kiểm tra.
 - [x] README, `plan.md`, `task.md` đã cập nhật.
 - [x] Đã commit/push đợt 1B: `e636d8c`.

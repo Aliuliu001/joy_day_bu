@@ -136,6 +136,7 @@ Chốt 3 điều cần anh duyệt:
 2. [x] Tab DS HỌC SINH thêm MSHS ở cột cuối, không làm lệch cột cũ; link/tick/giới tính vẫn được giữ.
 3. [x] Nút gắn ảnh ưu tiên tên file dạng `HVxxx-Họ tên.png`, sau đó mới khớp theo họ tên cho ảnh cũ.
 4. [x] Đã kiểm thử với mẫu `HV152-Phạm Gia Khải.png`.
+5. [x] Nếu MSHS khớp nhưng họ tên trong file ảnh khác danh sách, vẫn gắn theo MSHS và popup liệt kê rõ MSHS + tên danh sách + tên file để kiểm tra.
 
 ### Giai đoạn 1B — Khoá an toàn backup và ca đặc biệt ✅
 
@@ -148,7 +149,7 @@ Chốt 3 điều cần anh duyệt:
 1. [x] Báo cáo ghi theo mảng, các luồng hiện hữu giữ workflow/nút quen thuộc.
 2. [x] Tách kiểm tra gom lịch và tổng hợp báo cáo thành hàm thuần để test.
 3. [x] Bổ sung test hồi quy các hành vi mới; README, plan.md, task.md đồng bộ.
-4. [x] `node test_sotw.js`: **242 PASS / 0 FAIL** (gồm test backup lỗi không xoá lịch, cảnh báo ca đặc biệt và ghép ảnh MSHS trước khi ghi).
+4. [x] `node test_sotw.js`: **245 PASS / 0 FAIL** (gồm test backup lỗi không xoá lịch, cảnh báo ca đặc biệt, ghép ảnh MSHS và báo tên không khớp).
 
 ## 5. Các file dự kiến thay đổi
 

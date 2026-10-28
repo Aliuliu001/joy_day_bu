@@ -98,8 +98,10 @@ Menu 🔁 → **🔔 Nhắc GV báo bù** → tin vào nhóm Học Bù (kèm hư
 2. Chuột phải folder → **Chia sẻ** → "Bất kỳ ai có đường liên kết" → Người xem → Xong *(share 1 lần)*
 3. Copy **link folder** (dạng `https://drive.google.com/drive/folders/xxxx`) → dán vào **ô H1 tab DS HỌC SINH**
 4. Bấm **⚙️ Cài đặt → 🖼️ Gắn link ảnh SOTW (theo tên file)** → cột Link ảnh tự điền hết (tin SOTW kèm sẵn link 🔗 cho Mr. Khôi)
-   - Bé chưa có file ảnh → báo tên bé thiếu, thêm ảnh vào folder rồi bấm lại
-   - Thêm/đổi ảnh sau này → bấm lại nút 🖼️ là cập nhật
+   - Ưu tiên khớp **MSHS**; nếu file ảnh cũ không có MSHS thì khớp theo **họ tên**.
+   - Nếu MSHS khớp nhưng tên trong file khác tên danh sách, ảnh vẫn được gắn theo MSHS và popup sẽ báo rõ từng trường hợp để anh kiểm tra lại tên file.
+   - Bé chưa có file ảnh → báo tên bé thiếu, thêm ảnh vào folder rồi bấm lại.
+   - Thêm/đổi ảnh sau này → bấm lại nút 🖼️ là cập nhật.
    - *Cách cũ (copy từng link dán tay) vẫn dùng được*
 
 ---
@@ -150,4 +152,4 @@ Nếu anh thấy cột Lớp/Tên bé có dòng bị ngược (vd 2 dòng mẫu 
 - **Báo cáo**: chọn “Làm mới thống kê tháng này” hoặc “Chọn tháng để xem thống kê” (dạng `MM-yyyy`, ví dụ `11-2026`). Chỉ **Đã học** được tính ca/giờ; **Vắng** và **Nghỉ** được liệt kê riêng, không tính giờ dạy.
 
 ## 🧪 KIỂM THỬ CODE
-`node test_sotw.js` — **242 PASS / 0 FAIL** (gom nhóm, SOTW, cascade BAO_BU, gửi GV chống trùng/gửi lại, dashboard, validation, báo cáo tháng, Vắng/Nghỉ không tính giờ, backup chống trùng, làm mới tuần dừng an toàn khi backup lỗi, menu, ca đặc biệt T2–CN và cảnh báo trùng giờ/quá tải). Phải PASS toàn bộ trước khi push.
+`node test_sotw.js` — **245 PASS / 0 FAIL** (gom nhóm, SOTW, cascade BAO_BU, gửi GV chống trùng/gửi lại, dashboard, validation, báo cáo tháng, Vắng/Nghỉ không tính giờ, backup chống trùng, làm mới tuần dừng an toàn khi backup lỗi, menu, ca đặc biệt T2–CN và cảnh báo trùng giờ/quá tải). Phải PASS toàn bộ trước khi push.

@@ -989,26 +989,35 @@ function ganLinkAnhTuFolder() {
       var tenFile = boDau(tenGoc);
       if (!tenFile) continue;
       var urlFile = f.getUrl();
-      anhTheoTen[tenFile] = urlFile;
+      anhTheoTen[tenFile] = { url: urlFile, tenFile: tenGoc };
       // Nhận cả "HV152-Phạm Gia Khải" lẫn "HV152 Phạm Gia Khải".
       var ma = tenGoc.match(/\b(HV\s*\d{2,})\b/i);
-      if (ma) anhTheoMshs[String(ma[1]).replace(/\s+/g, '').toUpperCase()] = urlFile;
+      if (ma) {
+        var maChuan = String(ma[1]).replace(/\s+/g, '').toUpperCase();
+        var tenSauMa = tenGoc.replace(/^\s*HV\s*\d{2,}\s*[-_–—]?\s*/i, '').trim();
+        anhTheoMshs[maChuan] = { url: urlFile, tenFile: tenGoc, tenSauMa: tenSauMa };
+      }
     }
   } catch (e) {
     baoXong('Không đọc được folder: ' + e + '\n\nKiểm tra: (1) link H1 đúng, (2) folder đã share "Bất kỳ ai có link", (3) Google hỏi quyền Drive thì bấm Advanced → Allow.');
     return;
   }
   var data = ds.getDataRange().getValues();
-  var dem = 0, thieu = [];
+  var dem = 0, thieu = [], lechTen = [];
   for (var r = 2; r < data.length; r++) {
     var tenBe = String(data[r][0] === undefined || data[r][0] === null ? '' : data[r][0]).trim();
     if (!tenBe) continue;
     var mshs = String(data[r][6] === undefined || data[r][6] === null ? '' : data[r][6]).replace(/\s+/g, '').toUpperCase();
     // Ưu tiên MSHS vì tên file anh đặt "HVxxx-Họ tên"; tên chỉ là phương án dự phòng cho ảnh cũ.
-    var url = (mshs && anhTheoMshs[mshs]) || anhTheoTen[boDau(tenBe)];
-    if (url) {
-      if (String(data[r][4] === undefined || data[r][4] === null ? '' : data[r][4]).trim() !== url) {
-        ds.getRange(r + 1, 5).setValue(url);
+    var fileTheoMa = mshs ? anhTheoMshs[mshs] : null;
+    var fileTheoTen = anhTheoTen[boDau(tenBe)];
+    var fileAnh = fileTheoMa || fileTheoTen;
+    if (fileAnh) {
+      if (fileTheoMa && fileTheoMa.tenSauMa && boDau(fileTheoMa.tenSauMa) !== boDau(tenBe)) {
+        lechTen.push(mshs + ': Danh sách "' + tenBe + '" ≠ tên file "' + fileTheoMa.tenSauMa + '"');
+      }
+      if (String(data[r][4] === undefined || data[r][4] === null ? '' : data[r][4]).trim() !== fileAnh.url) {
+        ds.getRange(r + 1, 5).setValue(fileAnh.url);
         dem++;
       }
     } else {
@@ -1016,6 +1025,11 @@ function ganLinkAnhTuFolder() {
     }
   }
   var msgXong = '🖼️ Đã gắn ' + dem + ' link ảnh mới (folder có ' + Object.keys(anhTheoTen).length + ' file)';
+  if (lechTen.length) {
+    msgXong += '\n\n⚠️ MSHS và họ tên chưa khớp (' + lechTen.length + '):\n• ' + lechTen.slice(0, 8).join('\n• ')
+      + (lechTen.length > 8 ? '\n… và ' + (lechTen.length - 8) + ' bạn khác' : '')
+      + '\n→ Ảnh vẫn được gắn theo MSHS, anh kiểm tra lại tên file giúp em.';
+  }
   if (thieu.length) {
     msgXong += '\n⚠️ Chưa khớp file ảnh (' + thieu.length + '): ' + thieu.slice(0, 8).join(', ')
       + (thieu.length > 8 ? ' …' : '') + '\n(Đổi tên file ảnh = tên bé trong DS là khớp nha)';
