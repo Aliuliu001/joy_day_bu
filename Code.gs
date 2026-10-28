@@ -241,9 +241,12 @@ function taoBangSotw(ss) {
     sh.getRange(1, 1).setValue('GV đang chọn:');
     sh.getRange(1, 3).setValue('Lớp cần chọn:');
     sh.getRange(1, 5).setValue('SOTW đã gửi:');
-    sh.getRange(2, 1, 1, 6).setValues([['Tên bé', 'Lớp', 'GV chính', 'Giới tính', 'Link ảnh', '☑ SOTW tuần này']]);
-    sh.getRange(1, 1, 1, 6).setFontWeight('bold').setBackground('#F6F3EE');
-    sh.getRange(2, 1, 1, 6).setFontWeight('bold').setBackground('#F6F3EE');
+    sh.getRange(2, 1, 1, 7).setValues([['Tên bé', 'Lớp', 'GV chính', 'Giới tính', 'Link ảnh', '☑ SOTW tuần này', 'MSHS']]);
+    sh.getRange(1, 1, 1, 7).setFontWeight('bold').setBackground('#F6F3EE');
+    sh.getRange(2, 1, 1, 7).setFontWeight('bold').setBackground('#F6F3EE');
+  } else if (sh.getRange(2, 7).getValue() !== 'MSHS') {
+    // Thêm MSHS ở CUỐI để tab DS cũ không lệch dữ liệu đang dùng.
+    sh.getRange(2, 7).setValue('MSHS').setFontWeight('bold').setBackground('#F6F3EE');
   }
   // Dropdown GV đang chọn + lớp cần chọn
   sh.getRange(1, 2).setDataValidation(SpreadsheetApp.newDataValidation()
@@ -806,21 +809,22 @@ function boDau(s) {
 
 // Tìm dòng tiêu đề trong 30 dòng đầu. Header nhận diện được:
 //   cột Tên: chứa "ten"/"name" (vd "Full name", "Họ và tên"), cột Lớp: chứa "lop"/"class"
-// Trả {tim:true, dong, cTen, cLop, cGv} hoặc {tim:false, thieu:'thiếu...'}
+// Trả {tim:true, dong, cTen, cLop, cGv, cMshs}; MSHS là tuỳ chọn để ghép ảnh chính xác.
 function timTieuDe(data) {
   var coTen = false, coLop = false;
   for (var d = 0; d < data.length && d < 30; d++) {
-    var t = -1, l = -1, g = -1;
+    var t = -1, l = -1, g = -1, m = -1;
     for (var c = 0; c < data[d].length; c++) {
       var h = boDau(data[d][c]);
       if (t < 0 && ((h.indexOf('ten') >= 0 && h.indexOf('tinh') < 0) || h.indexOf('name') >= 0)) t = c;
       if (l < 0 && (h.indexOf('lop') >= 0 || h.indexOf('class') >= 0)) l = c;
       if (g < 0 && (h === 'gv' || h.indexOf('giao vien') >= 0 || h.indexOf('teacher') >= 0 ||
         h.indexOf('gv chinh') >= 0 || h.indexOf('gvchinh') >= 0)) g = c;
+      if (m < 0 && (h === 'mshs' || h.indexOf('ma so hoc sinh') >= 0 || h.indexOf('ma hs') >= 0)) m = c;
     }
     if (t >= 0) coTen = true;
     if (l >= 0) coLop = true;
-    if (t >= 0 && l >= 0) return { tim: true, dong: d, cTen: t, cLop: l, cGv: g };
+    if (t >= 0 && l >= 0) return { tim: true, dong: d, cTen: t, cLop: l, cGv: g, cMshs: m };
   }
   return {
     tim: false,
@@ -855,7 +859,8 @@ function docFileChinh() {
         rows.push({
           ten: ten,
           lop: String(data[r][td.cLop] === undefined || data[r][td.cLop] === null ? '' : data[r][td.cLop]).trim(),
-          gv: td.cGv >= 0 ? String(data[r][td.cGv] === undefined || data[r][td.cGv] === null ? '' : data[r][td.cGv]).trim() : ''
+          gv: td.cGv >= 0 ? String(data[r][td.cGv] === undefined || data[r][td.cGv] === null ? '' : data[r][td.cGv]).trim() : '',
+          mshs: td.cMshs >= 0 ? String(data[r][td.cMshs] === undefined || data[r][td.cMshs] === null ? '' : data[r][td.cMshs]).trim() : ''
         });
       }
       return rows;
@@ -883,7 +888,7 @@ function dongBoDSHocSinh(ss) {
       ten: ten,
       lop: String(cu[r][1] === undefined ? '' : cu[r][1]).trim(),
       gv: String(cu[r][2] === undefined ? '' : cu[r][2]).trim(),
-      gt: cu[r][3], link: cu[r][4], tick: cu[r][5]
+      gt: cu[r][3], link: cu[r][4], tick: cu[r][5], mshs: String(cu[r][6] === undefined ? '' : cu[r][6]).trim()
     });
   }
   var daDung = {}, out = [], them = 0, gvLa = {};
@@ -900,10 +905,10 @@ function dongBoDSHocSinh(ss) {
     if (chon >= 0) {
       daDung[chon] = 1;
       var c = dongCu[chon];
-      out.push([x.ten, x.lop, x.gv || c.gv || (LOP_GV_MAP[x.lop] || ''), c.gt, c.link, c.tick]);
+      out.push([x.ten, x.lop, x.gv || c.gv || (LOP_GV_MAP[x.lop] || ''), c.gt, c.link, c.tick, x.mshs || c.mshs]);
     } else {
       them++;
-      out.push([x.ten, x.lop, x.gv || (LOP_GV_MAP[x.lop] || ''), '', '', '']);
+      out.push([x.ten, x.lop, x.gv || (LOP_GV_MAP[x.lop] || ''), '', '', '', x.mshs]);
     }
     if (x.gv && GV_LIST.indexOf(x.gv) < 0) gvLa[x.gv] = 1;
   });
@@ -911,13 +916,13 @@ function dongBoDSHocSinh(ss) {
   for (var k = 0; k < dongCu.length; k++) {
     if (daDung[k]) continue;
     var c2 = dongCu[k];
-    giu.push([c2.ten, c2.lop, c2.gv, c2.gt, c2.link, c2.tick]);
+    giu.push([c2.ten, c2.lop, c2.gv, c2.gt, c2.link, c2.tick, c2.mshs]);
     giuTen.push(c2.ten);
   }
   var ca = out.concat(giu);
   var soDong = Math.max(cu.length - 2, ca.length, 1);
-  ds.getRange(3, 1, soDong, 6).clearContent();
-  if (ca.length) ds.getRange(3, 1, ca.length, 6).setValues(ca);
+  ds.getRange(3, 1, soDong, 7).clearContent();
+  if (ca.length) ds.getRange(3, 1, ca.length, 7).setValues(ca);
   apLocDS(ds); // chạy lại bộ lọc → dòng mới không lẫn khi GV đang lọc
   return { them: them, tongNguon: nguon.length, giuTen: giuTen, gvLa: Object.keys(gvLa) };
 }
@@ -975,13 +980,19 @@ function ganLinkAnhTuFolder() {
     baoXong('Link chưa đúng dạng folder. Cần dạng: https://drive.google.com/drive/folders/xxxx (anh kiểm tra lại ô H1)');
     return;
   }
-  var anh = {};
+  var anhTheoTen = {}, anhTheoMshs = {};
   try {
     var files = DriveApp.getFolderById(m[1]).getFiles();
     while (files.hasNext()) {
       var f = files.next();
-      var tenFile = boDau(String(f.getName() || '').replace(/\.[^.]+$/, ''));
-      if (tenFile) anh[tenFile] = f.getUrl();
+      var tenGoc = String(f.getName() || '').replace(/\.[^.]+$/, '').trim();
+      var tenFile = boDau(tenGoc);
+      if (!tenFile) continue;
+      var urlFile = f.getUrl();
+      anhTheoTen[tenFile] = urlFile;
+      // Nhận cả "HV152-Phạm Gia Khải" lẫn "HV152 Phạm Gia Khải".
+      var ma = tenGoc.match(/\b(HV\s*\d{2,})\b/i);
+      if (ma) anhTheoMshs[String(ma[1]).replace(/\s+/g, '').toUpperCase()] = urlFile;
     }
   } catch (e) {
     baoXong('Không đọc được folder: ' + e + '\n\nKiểm tra: (1) link H1 đúng, (2) folder đã share "Bất kỳ ai có link", (3) Google hỏi quyền Drive thì bấm Advanced → Allow.');
@@ -992,17 +1003,19 @@ function ganLinkAnhTuFolder() {
   for (var r = 2; r < data.length; r++) {
     var tenBe = String(data[r][0] === undefined || data[r][0] === null ? '' : data[r][0]).trim();
     if (!tenBe) continue;
-    var url = anh[boDau(tenBe)];
+    var mshs = String(data[r][6] === undefined || data[r][6] === null ? '' : data[r][6]).replace(/\s+/g, '').toUpperCase();
+    // Ưu tiên MSHS vì tên file anh đặt "HVxxx-Họ tên"; tên chỉ là phương án dự phòng cho ảnh cũ.
+    var url = (mshs && anhTheoMshs[mshs]) || anhTheoTen[boDau(tenBe)];
     if (url) {
       if (String(data[r][4] === undefined || data[r][4] === null ? '' : data[r][4]).trim() !== url) {
         ds.getRange(r + 1, 5).setValue(url);
         dem++;
       }
     } else {
-      thieu.push(tenBe);
+      thieu.push(tenBe + (mshs ? ' (' + mshs + ')' : ''));
     }
   }
-  var msgXong = '🖼️ Đã gắn ' + dem + ' link ảnh mới (folder có ' + Object.keys(anh).length + ' file)';
+  var msgXong = '🖼️ Đã gắn ' + dem + ' link ảnh mới (folder có ' + Object.keys(anhTheoTen).length + ' file)';
   if (thieu.length) {
     msgXong += '\n⚠️ Chưa khớp file ảnh (' + thieu.length + '): ' + thieu.slice(0, 8).join(', ')
       + (thieu.length > 8 ? ' …' : '') + '\n(Đổi tên file ảnh = tên bé trong DS là khớp nha)';

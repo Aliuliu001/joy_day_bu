@@ -130,6 +130,13 @@ Chốt 3 điều cần anh duyệt:
 2. [x] Tổng giờ chỉ tính Đã học; Vắng/Nghỉ không tính giờ.
 3. [x] Chọn tháng báo cáo theo `MM-yyyy`.
 
+### Giai đoạn 1C — Ghép ảnh SOTW theo MSHS ✅
+
+1. [x] Đồng bộ danh sách từ file chính đọc thêm cột `MSHS` (file tháng 10 có cột này).
+2. [x] Tab DS HỌC SINH thêm MSHS ở cột cuối, không làm lệch cột cũ; link/tick/giới tính vẫn được giữ.
+3. [x] Nút gắn ảnh ưu tiên tên file dạng `HVxxx-Họ tên.png`, sau đó mới khớp theo họ tên cho ảnh cũ.
+4. [x] Đã kiểm thử với mẫu `HV152-Phạm Gia Khải.png`.
+
 ### Giai đoạn 1B — Khoá an toàn backup và ca đặc biệt ✅
 
 1. [x] Làm mới tuần chỉ được xoá sau khi backup trả kết quả thành công; backup lỗi thật → dừng ngay, BAO_BU và LICH_BU giữ nguyên.
@@ -141,7 +148,7 @@ Chốt 3 điều cần anh duyệt:
 1. [x] Báo cáo ghi theo mảng, các luồng hiện hữu giữ workflow/nút quen thuộc.
 2. [x] Tách kiểm tra gom lịch và tổng hợp báo cáo thành hàm thuần để test.
 3. [x] Bổ sung test hồi quy các hành vi mới; README, plan.md, task.md đồng bộ.
-4. [x] `node test_sotw.js`: **241 PASS / 0 FAIL** (gồm test backup lỗi không xoá lịch và ca đặc biệt cảnh báo trước khi ghi).
+4. [x] `node test_sotw.js`: **242 PASS / 0 FAIL** (gồm test backup lỗi không xoá lịch, cảnh báo ca đặc biệt và ghép ảnh MSHS trước khi ghi).
 
 ## 5. Các file dự kiến thay đổi
 

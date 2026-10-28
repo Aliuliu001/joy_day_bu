@@ -1029,7 +1029,14 @@ console.log('\n=== T26: 🖼️ Gắn link ảnh từ folder Drive (khớp tên 
   const dAnh = findRow(ds, 0, 'Bé Một A');
   ok(dAnh > 0, 'Bé khớp tên file vẫn có trong DS');
   eq(ds.getRange(dAnh, 5).getValue(), 'https://drive.google.com/file/d/AAA', 'Link ảnh tự điền theo TÊN FILE (bỏ dấu)');
-  ok(lastAlert().indexOf('Đã gắn 1') >= 0, 'Báo số link đã gắn');
+  // File thật có dạng MSHS-Họ tên.png: phải ưu tiên MSHS để không lệch khi tên có ký tự Unicode khác nhau.
+  ds.getRange(dAnh, 7).setValue('HV152');
+  STATE.driveFiles.push({ getName: () => 'HV152-Phạm Gia Khải.png', getUrl: () => 'https://drive.google.com/file/d/HV152' });
+  ds.getRange(dAnh, 1).setValue('Phạm Gia Khải');
+  STATE.alerts.length = 0;
+  sandbox.ganLinkAnhTuFolder();
+  eq(ds.getRange(dAnh, 5).getValue(), 'https://drive.google.com/file/d/HV152', 'Link ảnh tự điền theo MSHS trong tên file');
+  ok(lastAlert().indexOf('Đã gắn 1') >= 0, 'Báo số link gồm ảnh khớp theo MSHS');
   ok(lastAlert().indexOf('Chưa khớp file ảnh') >= 0, 'Liệt kê bé chưa có ảnh');
   // Link sai dạng → báo rõ
   ds.getRange(1, 8).setValue('khong-phai-link');
