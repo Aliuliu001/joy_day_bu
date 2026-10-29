@@ -48,6 +48,15 @@
 - [x] Hiện hộp xác nhận trước khi dọn lịch hoặc ghi thêm ca; chọn Không thì dữ liệu giữ nguyên.
 - [x] Test T34 xác nhận chọn Không không ghi ca riêng và cảnh báo nêu đủ rủi ro.
 
+## Đợt 1D — SOTW gửi topic riêng ✅
+
+### TASK 15 — Chỉ SOTW sang topic 🏆 SOTW ✅
+
+- [x] Giữ nguyên nhóm/topic Học Bù cho lịch học bù, nhắc GV và case Xin đổi.
+- [x] Route riêng SOTW sang Office - Joy, topic 22.
+- [x] Có hàm/nút **🧪 Gửi thử topic SOTW** để anh xác nhận trước khi gửi thật.
+- [x] Test kiểm đúng `chat_id` Office - Joy và đúng `message_thread_id` 22.
+
 ## Đợt 1C — Ghép ảnh SOTW theo MSHS ✅
 
 ### TASK 14 — Nhận ảnh tên `HVxxx-Họ tên.png` ✅
@@ -98,11 +107,11 @@
 
 - [x] Giữ ghi dữ liệu theo mảng ở báo cáo/dashboard; không đổi 4 nút workflow.
 - [x] README là hướng dẫn chính, plan/task đánh dấu hoàn thành.
-- [x] `node test_sotw.js`: **245 PASS / 0 FAIL**.
+- [x] `node test_sotw.js`: **250 PASS / 0 FAIL**.
 
 ## Checklist trước khi đẩy GitHub
 
-- [x] Code test PASS 100%: **245 PASS / 0 FAIL**.
+- [x] Code test PASS 100%: **250 PASS / 0 FAIL**.
 - [x] Không còn thay đổi chưa kiểm tra.
 - [x] README, `plan.md`, `task.md` đã cập nhật.
 - [x] Đã commit/push đợt 1B: `e636d8c`.

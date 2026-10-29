@@ -130,6 +130,13 @@ Chốt 3 điều cần anh duyệt:
 2. [x] Tổng giờ chỉ tính Đã học; Vắng/Nghỉ không tính giờ.
 3. [x] Chọn tháng báo cáo theo `MM-yyyy`.
 
+### Giai đoạn 1D — SOTW gửi topic riêng ✅
+
+1. [x] Tin SOTW đi riêng sang nhóm Office - Joy, topic `🏆 SOTW / Tuyên dương tuần` (topic 22).
+2. [x] Tin lịch học bù, nhắc GV và Xin đổi vẫn giữ nguyên nhóm/topic Học Bù cũ.
+3. [x] Có nút gửi thử topic SOTW trước khi dùng gửi SOTW thật.
+4. [x] Đã có test xác nhận đúng nhóm và đúng topic.
+
 ### Giai đoạn 1C — Ghép ảnh SOTW theo MSHS ✅
 
 1. [x] Đồng bộ danh sách từ file chính đọc thêm cột `MSHS` (file tháng 10 có cột này).
@@ -149,7 +156,7 @@ Chốt 3 điều cần anh duyệt:
 1. [x] Báo cáo ghi theo mảng, các luồng hiện hữu giữ workflow/nút quen thuộc.
 2. [x] Tách kiểm tra gom lịch và tổng hợp báo cáo thành hàm thuần để test.
 3. [x] Bổ sung test hồi quy các hành vi mới; README, plan.md, task.md đồng bộ.
-4. [x] `node test_sotw.js`: **245 PASS / 0 FAIL** (gồm test backup lỗi không xoá lịch, cảnh báo ca đặc biệt, ghép ảnh MSHS và báo tên không khớp).
+4. [x] `node test_sotw.js`: **250 PASS / 0 FAIL** (gồm test backup lỗi không xoá lịch, cảnh báo ca đặc biệt, ghép ảnh MSHS, báo tên không khớp và gửi SOTW đúng topic riêng).
 
 ## 5. Các file dự kiến thay đổi
 

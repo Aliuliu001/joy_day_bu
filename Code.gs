@@ -19,8 +19,10 @@
 
 // ===== CẤU HÌNH =====
 var CFG = {
-  GROUP_ID: '-1004378772858',    // nhóm Học Bù
+  GROUP_ID: '-1004378772858',    // nhóm Học Bù — lịch, nhắc GV, xin đổi
   TOPIC_ID: 2,                   // topic Học Bù
+  SOTW_GROUP_ID: '-1003955550981', // nhóm Office - Joy
+  SOTW_TOPIC_ID: 22,             // topic 🏆 SOTW / Tuyên dương tuần
   HAN_TRA_LOI: '12h trưa Thứ 4',
   HAN_PH_XAC_NHAN: '11h trưa Thứ 3',
   TOI_DA_CA: 4,
@@ -196,6 +198,7 @@ function onOpen() {
         .addItem('🔍 Kiểm tra / sửa thứ tự cột BAO_BU', 'kiemTraThuTuCot')
         .addItem('🔄 Đồng bộ DS học sinh — khi có HS mới vào/ra (chỉ đọc file chính)', 'menuDongBoDS')
         .addItem('🖼️ Gắn link ảnh SOTW — khi thêm/thay ảnh (theo tên file)', 'ganLinkAnhTuFolder')
+        .addItem('🧪 Gửi thử topic SOTW', 'testGuiTelegramSOTW')
         .addItem('🗜️ Ẩn / hiện tab LOP', 'anTabLop')
         .addSeparator()
         .addItem('🔨 Tạo sheet mới — ⚠️ XOÁ HẾT DATA, chỉ dùng khi sheet trống', 'setupDayBu'))
@@ -1427,7 +1430,7 @@ function guiSOTW(force) {
     return { sent: false, skip: true, msg: d.tuan + ' ĐÃ GỬI rồi (' + d.moc + ') — bỏ qua để tránh trùng. Cần gửi lại → bấm "4️⃣ 🏆 Gửi SOTW".' };
   }
   var tin = taoTinSotw(d);
-  if (!guiTelegram(tin)) {
+  if (!guiTelegramSOTW(tin)) {
     return { sent: false, msg: 'Gửi Telegram thất bại — xem Nhật ký thực thi.' };
   }
   var mocMoi = d.tuan + ' — đã gửi ' + Utilities.formatDate(new Date(), 'GMT+7', 'dd/MM HH:mm');
@@ -1958,7 +1961,7 @@ function lamMoiThongKeTheoThang(thang) {
 }
 
 // ===== TELEGRAM =====
-function guiTelegram(text) {
+function guiTelegramDen(text, groupId, topicId, nhan) {
   var token = PropertiesService.getScriptProperties().getProperty('TELEGRAM_BOT_TOKEN');
   if (!token) {
     baoXong('Chưa có token bot. Vào Cài đặt dự án → Thuộc tính tập lệnh → thêm TELEGRAM_BOT_TOKEN.');
@@ -1970,19 +1973,35 @@ function guiTelegram(text) {
     var res = UrlFetchApp.fetch(url, {
       method: 'post',
       muteHttpExceptions: true,
-      payload: { chat_id: CFG.GROUP_ID, message_thread_id: CFG.TOPIC_ID, text: text }
+      payload: { chat_id: groupId, message_thread_id: topicId, text: text }
     });
     if (res.getResponseCode() !== 200) {
-      baoXong('Telegram báo lỗi ' + res.getResponseCode() + ': ' + res.getContentText());
+      baoXong((nhan || 'Telegram') + ' báo lỗi ' + res.getResponseCode() + ': ' + res.getContentText());
       return false;
     }
     return true;
   } catch (err) {
-    baoXong('Không gửi được Telegram: ' + err);
+    baoXong('Không gửi được ' + (nhan || 'Telegram') + ': ' + err);
     return false;
   }
 }
 
+// Tin vận hành Dạy Bù: giữ nguyên nhóm/topic Học Bù cũ.
+function guiTelegram(text) {
+  return guiTelegramDen(text, CFG.GROUP_ID, CFG.TOPIC_ID, 'Telegram Dạy Bù');
+}
+
+// Chỉ SOTW đi sang topic riêng trong nhóm Office - Joy.
+function guiTelegramSOTW(text) {
+  return guiTelegramDen(text, CFG.SOTW_GROUP_ID, CFG.SOTW_TOPIC_ID, 'Telegram SOTW');
+}
+
 function testGuiTelegram() {
-  if (guiTelegram('✅ Bot Dạy Bù đã vào nhóm thành công!')) baoXong('Gửi thử thành công ✅');
+  if (guiTelegram('✅ Bot Dạy Bù đã vào nhóm thành công!')) baoXong('Gửi thử Dạy Bù thành công ✅');
+}
+
+function testGuiTelegramSOTW() {
+  if (guiTelegramSOTW('🏆 Bot Dạy Bù đã vào topic SOTW thành công!')) {
+    baoXong('Gửi thử SOTW thành công ✅');
+  }
 }

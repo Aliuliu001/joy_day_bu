@@ -136,7 +136,8 @@ Nếu anh thấy cột Lớp/Tên bé có dòng bị ngược (vd 2 dòng mẫu 
 | Gom nhóm báo "Chưa có sheet" | Bấm 🔧 Nâng cấp sheet SOTW |
 | SOTW báo "chưa bé nào tick" | Bình thường nếu GV chưa tick |
 | Gửi Telegram lỗi | Kiểm tra `TELEGRAM_BOT_TOKEN` trong Thuộc tính tập lệnh |
-| Gửi lại SOTW | 🔁 → 🏆 Gửi lại SOTW (hỏi trước) |
+- **Gửi thử topic SOTW** | ⚙️ Cài đặt → 🧪 Gửi thử topic SOTW; phải thấy tin `🏆 Bot Dạy Bù...` trong topic SOTW trước khi gửi SOTW thật |
+- **Gửi lại SOTW** | 🔁 → 🏆 Gửi lại SOTW (hỏi trước) |
 | Xem tab LOP | ⚙️ Cài đặt → 🗜️ Ẩn / hiện tab LOP |
 | Cột Lớp/Tên bé bị ngược | ⚙️ Cài đặt → 🔍 Kiểm tra / sửa thứ tự cột BAO_BU |
 | Không nhớ lệnh nào dùng lúc nào | ⚙️ Cài đặt → 📖 Hướng dẫn (đọc trước 1 lần) |

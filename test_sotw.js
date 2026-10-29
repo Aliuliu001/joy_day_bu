@@ -251,7 +251,7 @@ const sandbox = {
   PropertiesService: { getScriptProperties: () => ({ getProperty: () => 'TEST_TOKEN' }) },
   UrlFetchApp: {
     fetch(url, opts) {
-      STATE.fetches.push({ url, text: opts.payload.text });
+      STATE.fetches.push({ url, text: opts.payload.text, payload: opts.payload });
       return { getResponseCode: () => 200, getContentText: () => 'ok' };
     },
   },
@@ -1160,6 +1160,18 @@ console.log('\n=== T33: Làm mới tuần dừng an toàn khi backup lỗi ===')
   eq(rows('BAO_BU').length, 2, 'Backup lỗi → BAO_BU không bị xoá');
   ok(lastAlert().includes('DỪNG làm mới tuần'), 'Backup lỗi → báo dừng an toàn rõ ràng');
   sandbox.backupTuanBu = backupGoc;
+}
+
+console.log('\n=== T35: SOTW gửi đúng topic riêng ===');
+{
+  STATE.fetches.length = 0; STATE.alerts.length = 0;
+  const rs = sandbox.guiTelegramSOTW('🏆 Tin thử SOTW');
+  ok(rs, 'Gửi thử SOTW thành công');
+  eq(STATE.fetches.length, 1, 'Gửi thử SOTW tạo đúng 1 tin');
+  eq(STATE.fetches[0].payload.chat_id, '-1003955550981', 'SOTW gửi đúng nhóm Office - Joy');
+  eq(STATE.fetches[0].payload.message_thread_id, 22, 'SOTW gửi đúng topic 22');
+  eq(STATE.fetches[0].text, '🏆 Tin thử SOTW', 'Nội dung tin thử SOTW giữ nguyên');
+  STATE.fetches.length = 0;
 }
 
 console.log('\n=== T34: Ca đặc biệt cảnh báo rõ trước khi ghi lịch ===');
