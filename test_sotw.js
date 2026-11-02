@@ -250,7 +250,8 @@ const sandbox = {
   Logger: { log: (m) => STATE.logs.push(String(m)) },
   PropertiesService: { getScriptProperties: () => ({
     getProperty: (key) => ({
-      TELEGRAM_BOT_TOKEN: 'TEST_DAY_BU_TOKEN',
+      TELEGRAM_BOT_TOKEN: 'TEST_LEGACY_TOKEN',
+      DAY_BU_BOT_TOKEN: 'TEST_DAY_BU_TOKEN',
       SOTW_BOT_TOKEN: 'TEST_SOTW_TOKEN',
       SOTW_CHAT_ID: '-1003955550981',
       SOTW_THREAD_ID: '22',
@@ -1171,6 +1172,18 @@ console.log('\n=== T33: Làm mới tuần dừng an toàn khi backup lỗi ===')
   eq(rows('BAO_BU').length, 2, 'Backup lỗi → BAO_BU không bị xoá');
   ok(lastAlert().includes('DỪNG làm mới tuần'), 'Backup lỗi → báo dừng an toàn rõ ràng');
   sandbox.backupTuanBu = backupGoc;
+}
+
+console.log('\n=== T36: Dạy Bù dùng bot riêng ===');
+{
+  STATE.fetches.length = 0; STATE.alerts.length = 0;
+  const rs = sandbox.guiTelegram('🧪 Tin thử Dạy Bù');
+  ok(rs, 'Gửi thử Dạy Bù thành công');
+  eq(STATE.fetches.length, 1, 'Gửi thử Dạy Bù tạo đúng 1 tin');
+  eq(STATE.fetches[0].payload.chat_id, sandbox.CFG.GROUP_ID, 'Dạy Bù gửi đúng nhóm đã cài');
+  eq(STATE.fetches[0].payload.message_thread_id, sandbox.CFG.TOPIC_ID, 'Dạy Bù gửi đúng Topic Dạy Bù');
+  ok(STATE.fetches[0].url.includes('TEST_DAY_BU_TOKEN'), 'Dạy Bù chỉ dùng DAY_BU_BOT_TOKEN riêng');
+  ok(!STATE.fetches[0].url.includes('TEST_LEGACY_TOKEN'), 'Dạy Bù không dùng TELEGRAM_BOT_TOKEN cũ');
 }
 
 console.log('\n=== T35: SOTW gửi đúng topic riêng ===');

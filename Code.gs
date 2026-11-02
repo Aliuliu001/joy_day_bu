@@ -181,6 +181,7 @@ function onOpen() {
       .addItem('4️⃣ Làm mới tuần mới (cuối tuần)', 'lamMoiTuanMoi')
       .addSeparator()
       .addSubMenu(ui.createMenu('🔁 Gửi / Nhắc lẻ')
+        .addItem('🧪 Gửi thử Topic Dạy Bù', 'testGuiTelegram')
         .addItem('🏆 Gửi lại SOTW', 'guiSOTWMenu')
         .addItem('📨 Gửi lại tin GV đã chốt', 'guiLaiTinChoGV')
         .addItem('🔔 Nhắc GV báo bù (T2 sáng)', 'nhacGVBaoBu')
@@ -1915,15 +1916,22 @@ function guiTelegramDenBangToken(text, groupId, topicId, nhan, token) {
   }
 }
 
-// Tin Dạy Bù thông thường dùng token cũ của luồng Dạy Bù.
-function guiTelegramDen(text, groupId, topicId, nhan) {
-  var token = PropertiesService.getScriptProperties().getProperty('TELEGRAM_BOT_TOKEN');
-  return guiTelegramDenBangToken(text, groupId, topicId, nhan, token);
+// Dạy Bù dùng bot RIÊNG; không được rơi về TELEGRAM_BOT_TOKEN cũ.
+function layDichDayBu() {
+  var p = PropertiesService.getScriptProperties();
+  var token = String(p.getProperty('DAY_BU_BOT_TOKEN') || '').trim();
+  if (!token) {
+    baoXong('Chưa có DAY_BU_BOT_TOKEN. Anh tạo/dán token bot Dạy Bù riêng trong Thuộc tính tập lệnh; SOTW vẫn không bị ảnh hưởng.');
+    return null;
+  }
+  return { token: token, groupId: CFG.GROUP_ID, topicId: CFG.TOPIC_ID };
 }
 
-// Tin vận hành Dạy Bù: giữ nguyên nhóm/topic Học Bù cũ.
+// Tin vận hành Dạy Bù: chỉ gửi bằng bot Dạy Bù riêng vào Topic Dạy Bù.
 function guiTelegram(text) {
-  return guiTelegramDen(text, CFG.GROUP_ID, CFG.TOPIC_ID, 'Telegram Dạy Bù');
+  var dich = layDichDayBu();
+  if (!dich) return false;
+  return guiTelegramDenBangToken(text, dich.groupId, dich.topicId, 'Telegram Dạy Bù', dich.token);
 }
 
 // Chỉ SOTW đi sang topic riêng trong nhóm Office - Joy.
