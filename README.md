@@ -29,16 +29,18 @@ File này là hướng dẫn DUY NHẤT cần đọc — mọi bản plan/audit 
                         ▸ 🔄 Đồng bộ DS · 🖼️ Gắn link ảnh · 🗜️ Ẩn/hiện LOP · 🔨 Tạo sheet mới (⚠️ xoá data)
 ```
 
-**4 ca cố định mỗi tuần:**
+**6 ca cố định mỗi tuần:**
 
 | Ca | Giờ | GV |
 |----|-----|-----|
-| T5-1 | T5 17h00-18h30 | Ms. Vân (Hồng Anh hết T10/2026) |
-| T6-1 | T6 15h00-16h30 | Ms. Vân |
-| T6-2 | T6 17h00-18h30 | Ms. Vân |
-| T6-3 | T6 18h00-19h30 | Mr. Đức Anh (ưu tiên mầm non) |
+| T4-1 | T4 17h30-19h00 | Mr. Đức Anh (ưu tiên mầm non) |
+| T5-1 | T5 17h30-19h00 | Ms. Vân |
+| T6-1 | T6 13h30-15h00 | Ms. Vân |
+| T6-2 | T6 15h00-16h30 | Ms. Vân |
+| T6-3 | T6 13h30-15h00 | Mr. Đức Anh |
+| T6-4 | T6 15h00-16h30 | Mr. Đức Anh |
 
-*Luật: mỗi ca tối đa 4 bé, ≤2 trình độ/ca (ghép 3 trình độ máy tô đỏ). Quá 16 bé → "Tuần sau". Bé "Nghỉ" không chiếm chỗ.*
+*Luật: mỗi ca tối đa 4 bé, ≤2 trình độ/ca (ghép 3 trình độ máy tô đỏ). Quá 24 bé → "Tuần sau". Bé "Nghỉ" không chiếm chỗ.*
 
 ---
 

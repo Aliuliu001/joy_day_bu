@@ -27,7 +27,6 @@ var CFG = {
   HAN_PH_XAC_NHAN: '11h trưa Thứ 3',
   TOI_DA_CA: 4,
   TOI_DA_TRINH_DO: 2,
-  HONG_ANH_DEN_HT: '2026-10-31',
 };
 
 var SHEET_ID = '1O_RUUL9P4YggLI2Vp1AcFraZuUHcF8CXULtZ9jPZGsg';
@@ -98,11 +97,14 @@ var LOP_DUC_ANH = ['S1.006 - Lychee', 'S2.004 - Cherry', 'C2.004 - Kiwi', 'T1.00
 
 function layDanhSachCa() {
   var gvVan = 'Ms. Vân';
+  var gvDucAnh = 'Mr. Đức Anh';
   return [
-    { ma: 'T5-1', thu: 'Thứ 5', gio: '17h00 - 18h30', gv: gvVan },
-    { ma: 'T6-1', thu: 'Thứ 6', gio: '15h00 - 16h30', gv: gvVan },
-    { ma: 'T6-2', thu: 'Thứ 6', gio: '17h00 - 18h30', gv: gvVan },
-    { ma: 'T6-3', thu: 'Thứ 6', gio: '18h00 - 19h30', gv: 'Mr. Đức Anh' },
+    { ma: 'T4-1', thu: 'Thứ 4', gio: '17h30 - 19h00', gv: gvDucAnh },
+    { ma: 'T5-1', thu: 'Thứ 5', gio: '17h30 - 19h00', gv: gvVan },
+    { ma: 'T6-1', thu: 'Thứ 6', gio: '13h30 - 15h00', gv: gvVan },
+    { ma: 'T6-2', thu: 'Thứ 6', gio: '15h00 - 16h30', gv: gvVan },
+    { ma: 'T6-3', thu: 'Thứ 6', gio: '13h30 - 15h00', gv: gvDucAnh },
+    { ma: 'T6-4', thu: 'Thứ 6', gio: '15h00 - 16h30', gv: gvDucAnh },
   ];
 }
 
@@ -114,12 +116,6 @@ function layNgayThu(thu) {
   if (ngayCach <= 0) ngayCach += 7;
   var ngayHoc = new Date(homNay.getTime() + ngayCach * 24 * 60 * 60 * 1000);
   return Utilities.formatDate(ngayHoc, 'GMT+7', 'dd/MM/yyyy');
-}
-
-function hongAnhConLam() {
-  var homNay = new Date();
-  var han = new Date(CFG.HONG_ANH_DEN_HT + 'T23:59:59+07:00');
-  return homNay <= han;
 }
 
 // Parse cột "Ca đặc biệt": "T4 14h00-15h30 Mr. Ngọc" → {thu, gio, gv, ma}
@@ -223,285 +219,6 @@ function anTabLop() {
 }
 
 // ===== TẠO / NÂNG CẤP SHEET =====
-function layHoacTaoSheet(ss, ten) {
-  var sh = ss.getSheetByName(ten);
-  if (!sh) sh = ss.insertSheet(ten);
-  return sh;
-}
-
-function datDropdown(sh, cot, toiDong, danhSach) {
-  var rule = SpreadsheetApp.newDataValidation()
-    .requireValueInList(danhSach, true)
-    .setAllowInvalid(false)
-    .build();
-  sh.getRange(2, cot, toiDong - 1, 1).setDataValidation(rule);
-}
-
-// Tạo/cập nhật tab DS HỌC SINH (không xoá data)
-function taoBangSotw(ss) {
-  var sh = layHoacTaoSheet(ss, SOTW_SHEET);
-  if (sh.getRange(2, 1).getValue() !== 'Tên bé') {
-    sh.getRange(1, 1).setValue('GV đang chọn:');
-    sh.getRange(1, 3).setValue('Lớp cần chọn:');
-    sh.getRange(1, 5).setValue('SOTW đã gửi:');
-    sh.getRange(2, 1, 1, 7).setValues([['Tên bé', 'Lớp', 'GV chính', 'Giới tính', 'Link ảnh', '☑ SOTW tuần này', 'MSHS']]);
-    sh.getRange(1, 1, 1, 7).setFontWeight('bold').setBackground('#F6F3EE');
-    sh.getRange(2, 1, 1, 7).setFontWeight('bold').setBackground('#F6F3EE');
-  } else if (sh.getRange(2, 7).getValue() !== 'MSHS') {
-    // Thêm MSHS ở CUỐI để tab DS cũ không lệch dữ liệu đang dùng.
-    sh.getRange(2, 7).setValue('MSHS').setFontWeight('bold').setBackground('#F6F3EE');
-  }
-  // Dropdown GV đang chọn + lớp cần chọn
-  sh.getRange(1, 2).setDataValidation(SpreadsheetApp.newDataValidation()
-    .requireValueInList(GV_LIST, true).setAllowInvalid(true).build());
-  sh.getRange(1, 4).setDataValidation(SpreadsheetApp.newDataValidation()
-    .requireValueInList(LOP_LIST, true).setAllowInvalid(true).build());
-  // Giới tính + tick checkbox
-  sh.getRange(3, 4, 500, 1).setDataValidation(SpreadsheetApp.newDataValidation()
-    .requireValueInList(GIOI_TINH, true).setAllowInvalid(true).build());
-  sh.getRange(3, 6, 500, 1).setDataValidation(SpreadsheetApp.newDataValidation()
-    .requireCheckbox().setAllowInvalid(true).build());
-  // Conditional formatting: chọn GV → chỉ lớp GV đó sáng
-  // API THẬT = whenFormulaSatisfied (setFormulaRelativeFormula KHÔNG tồn tại — bug 17/10)
-  // Bọc try/catch: tô màu chỉ là trang trí → lỗi không được chặn các bước còn lại
-  try {
-    var rule = SpreadsheetApp.newConditionalFormatRule()
-      .whenFormulaSatisfied('=AND($B$1<>"",OR($C3<>$B$1,AND($D$1<>"",$B3<>$D$1)))')
-      .setRanges([sh.getRange(3, 1, 500, 6)])
-      .setBackground('#EDEDED')
-      .setFontColor('#AAAAAA')
-      .build();
-    sh.setConditionalFormatRules([rule]);
-  } catch (eRule) {
-    Logger.log('Bỏ qua rule tô màu (không quan trọng): ' + eRule);
-  }
-  // Điền GV chính cho các dòng đã có Lớp (chưa có GV)
-  var last = sh.getLastRow();
-  if (last >= 3) {
-    var vals = sh.getRange(3, 1, last - 2, 3).getValues();
-    for (var i = 0; i < vals.length; i++) {
-      var lop = (vals[i][1] || '').toString().trim();
-      if (lop && !(vals[i][2] || '').toString().trim()) {
-        sh.getRange(3 + i, 3).setValue(LOP_GV_MAP[lop] || '');
-      }
-    }
-  }
-  apLocDS(sh); // dropdown + bộ lọc ẩn/hiện theo dữ liệu thật
-  return sh;
-}
-
-// Ngách phân tách tham số công thức theo NGÔN NGỮ CỦA FILE (File → Cài đặt → Ngôn ngữ).
-// vi_VN dùng ';' — gõ ',' → Google báo #ERROR! + "Khắc phục" (bug 17/10: cột J BAO_BU)
-function ngachCongThuc() {
-  var loc = '';
-  try { loc = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetLocale() || ''; } catch (e) {}
-  return loc && loc.indexOf('en_') !== 0 ? ';' : ',';
-}
-
-// Cột J BAO_BU = link mở DS HỌC SINH
-function themLinkSotw(bao, gid) {
-  if (!bao.getRange(1, 10).getValue()) {
-    bao.getRange(1, 10).setValue('SOTW');
-    bao.getRange(1, 10).setFontWeight('bold').setBackground('#F6F3EE');
-  }
-  var sep = ngachCongThuc();
-  var toiDong = Math.max(bao.getLastRow(), 100);
-  for (var r = 2; r <= toiDong; r++) {
-    // Ghi ĐÈ mọi ô cột J (cột này chỉ chứa link của mình) → sửa luôn ô đang #ERROR!
-    bao.getRange(r, 10).setFormula('=HYPERLINK("#gid=' + gid + '"' + sep + '"Mở DS SOTW ⬈")');
-  }
-}
-
-// 2 dòng mẫu BAO_BU (bảo vệ — không cho GV sửa, gom nhóm bỏ qua)
-function taoDongMau(bao) {
-  try { chuyenCotMoiBAOBU(bao); } catch (e) {} // phòng sheet cũ đang ở thứ tự cột cũ
-  var data = bao.getDataRange().getValues();
-  var dem = 0;
-  for (var i = 1; i < data.length; i++) {
-    if ((data[i][8] || '').toString().indexOf(DAU_MAU) >= 0) dem++;
-  }
-  if (dem >= 2) return false;
-  var mau1 = ['', 'Mr. Ngọc', 'S1.001 - Cashew', 'Không bù', '', '', '', '',
-    DAU_MAU + ' Lớp đi đủ → gõ "Không bù" ở cột Tên bé. Ca đặc biệt: T2–T7/CN giờ-bắtđầu-giờ-kết thúc tên GV', '', 'T2 08h00-09h30 Ms. Vân'];
-  var mau2 = ['', 'Mr. Ngọc', 'S2.001 - Pumpkin Seed', 'Iphone', 'SP1', '', '', '',
-    DAU_MAU + ' Vắng bạn Iphone → ghi tên bé nghỉ ở cột Tên bé. Ví dụ ca riêng khác ngày/giờ', '', 'T4 14h00-15h30 Mr. Ngọc'];
-  var dong2LaMau = false;
-  if (data.length >= 2) {
-    var dong2 = data[1];
-    var tenDong2 = ((dong2[2] || '') + ' ' + (dong2[3] || '')).toLowerCase();
-    dong2LaMau = (dong2[8] || '').toString().indexOf(DAU_MAU) >= 0 || tenDong2.indexOf('ghi chú mẫu') >= 0;
-  }
-  if (dong2LaMau) {
-    bao.getRange(2, 1, 1, 11).setValues([mau1]);
-    bao.insertRows(3, 1);
-    bao.getRange(3, 1, 1, 11).setValues([mau2]);
-  } else if (data.length < 2) {
-    bao.appendRow(mau1);
-    bao.appendRow(mau2);
-  } else {
-    bao.insertRows(2, 2);
-    bao.getRange(2, 1, 1, 11).setValues([mau1]);
-    bao.getRange(3, 1, 1, 11).setValues([mau2]);
-  }
-  bao.getRange(2, 1, 2, 11).setFontStyle('italic').setFontColor('#999999');
-  return true;
-}
-
-// Bảo vệ 2 dòng mẫu: chỉ quản lý sửa được
-function chongCheDongMau(bao) {
-  try {
-    var olds = bao.getProtections(SpreadsheetApp.ProtectionType.RANGE) || [];
-    for (var i = 0; i < olds.length; i++) {
-      if ((olds[i].getDescription() || '').indexOf('Dòng mẫu') >= 0) return;
-    }
-  } catch (e) {}
-  var prot = bao.getRange(2, 1, 2, 11).protect().setDescription('Dòng mẫu - chỉ quản lý sửa');
-  prot.addEditors(EMAIL_QUAN_LY);
-  try { if (prot.canDomainEdit()) prot.setDomainEdit(false); } catch (e) {}
-}
-
-// NÂNG CẤP SHEET (menu) — không xoá data cũ
-// Nâng cấp sheet: mỗi bước BỌC RIÊNG — 1 chỗ lỗi không được chặn các bước còn lại,
-// lỗi gom vào mảng `loi` báo cuối cùng (trước đây lỗi API → dừng giữa chừng, không biết đã chạy tới đâu)
-function nangCapSheetSotw() {
-  var ss = laySS();
-  var loi = [];
-  var sotw = null;
-  try { sotw = taoBangSotw(ss); } catch (e) { loi.push('Tạo tab ' + SOTW_SHEET + ': ' + e); }
-  var msg = '✅ Đã nâng cấp sheet SOTW:\n• Tab "' + SOTW_SHEET + '"';
-  if (sotw) msg = '✅ Đã nâng cấp sheet SOTW:\n• Tab "' + SOTW_SHEET + '" sẵn sàng (dropdown GV / lớp, ô tick)';
-  var bao = ss.getSheetByName('BAO_BU');
-  if (bao) {
-    try {
-      if (chuyenCotMoiBAOBU(bao)) msg += '\n• Đã đổi cột: Lớp ngay sau GV báo (Tên bé dời sang cột D)';
-      
-      // Thêm cột K "Ca đặc biệt" nếu chưa có
-      if (!bao.getRange(1, 11).getValue()) {
-        bao.getRange(1, 11).setValue('Ca đặc biệt');
-        bao.getRange(1, 11).setFontWeight('bold').setBackground('#F6F3EE');
-        msg += '\n• Đã thêm cột K "Ca đặc biệt"';
-      }
-      var lichNangCap = ss.getSheetByName('LICH_BU');
-      if (lichNangCap && String(lichNangCap.getRange(1, 14).getValue() || '').trim() !== 'Ngày học') {
-        lichNangCap.getRange(1, 14).setValue('Ngày học').setFontWeight('bold').setBackground('#F6F3EE');
-        msg += '\n• Đã thêm cột "Ngày học" trong LICH_BU (phục vụ backup không sót buổi)';
-      }
-      if (lichNangCap && String(lichNangCap.getRange(1, 15).getValue() || '').trim() !== 'Đã gửi GV lúc') {
-        lichNangCap.getRange(1, 15).setValue('Đã gửi GV lúc').setFontWeight('bold').setBackground('#F6F3EE');
-        msg += '\n• Đã thêm cột "Đã gửi GV lúc" (chống gửi lặp)';
-      }
-      
-      if (sotw) themLinkSotw(bao, sotw.getSheetId());
-      var themMau = false;
-      themMau = taoDongMau(bao);
-      chongCheDongMau(bao);
-      datDropdownBaoBu(ss, bao);
-      khoaCotQuanLy();
-      msg += '\n• Cột J BAO_BU = link mở DS HỌC SINH';
-      msg += '\n• Chọn nhanh GV → Lớp → Tên bé (dropdown theo DS HỌC SINH)';
-      msg += '\n• Khóa cột Trạng thái/Ca xếp — ô GHI CHÚ GV được sửa';
-      msg += themMau ? '\n• Đã thêm 2 dòng mẫu (bảo vệ)' : '\n• 2 dòng mẫu đã có';
-    } catch (e) { loi.push('BAO_BU (cột J / dòng mẫu / ô chọn): ' + e); }
-  } else {
-    msg += '\n⚠️ Chưa có tab BAO_BU.';
-  }
-  // Ẩn tab LOP cho gọn (dữ liệu không mất)
-  try {
-    var lop = ss.getSheetByName('LOP');
-    if (lop && !lop.isSheetHidden()) {
-      lop.hideSheet();
-      msg += '\n• Đã ẨN tab LOP (hiện lại: 🗜️ trong menu Cài đặt)';
-    }
-  } catch (e) { loi.push('Ẩn tab LOP: ' + e); }
-  // Cài backup tự động T7 — chỉ hỏi 1 lần khi chưa có trigger
-  var daCoTrigger = false;
-  try {
-    var triggers = ScriptApp.getProjectTriggers();
-    for (var i = 0; i < triggers.length; i++) {
-      if (triggers[i].getHandlerFunction() === 'backupTuanBu') daCoTrigger = true;
-    }
-  } catch (e) {}
-  if (!daCoTrigger) {
-    try {
-      if (xacNhan('Cài luôn backup tự động mỗi tối Thứ 7 lúc 22h?\n(Chỉ LƯU dữ liệu, không xoá gì — an toàn)')) {
-        setupTriggerTuanBu(false);
-        msg += '\n• Đã cài backup tự động tối T7 22h';
-      }
-    } catch (e) { loi.push('Cài backup T7: ' + e); }
-  }
-  // Đồng bộ DS HỌC SINH từ file chính (chỉ đọc) — lỗi quyền chỉ báo, không chặn
-  try {
-    var kqDB2 = dongBoAnToan(ss);
-    msg += kqDB2.loi
-      ? '\n• DS HS chưa đọc file chính được → bấm 🔄 Đồng bộ trong Cài đặt khi Google hỏi quyền'
-      : ('\n• DS HS đồng bộ từ file chính: ' + kqDB2.tongNguon + ' bé' + (kqDB2.them ? ' (+' + kqDB2.them + ' mới)' : ''));
-  } catch (e) {}
-  if (loi.length) {
-    msg += '\n\n⚠️ ' + loi.length + ' chỗ gặp lỗi (xem Nhật ký thực thi — code vẫn chạy các bước khác):';
-    loi.forEach(function (x) { msg += '\n• ' + x; });
-  }
-  msg += '\n\nBước tiếp: dán danh sách HS vào tab "' + SOTW_SHEET + '" từ ô A3'
-    + '\n(Excel: Tên | Lớp | GV — copy rồi paste là vào đủ cột).';
-  msg += '\n• Tự kiểm tra/sửa cột BAO_BU';
-  baoXong(msg);
-}
-
-// ===== TẠO SHEET (1 lần) =====
-function setupDayBu() {
-  if (!xacNhan('Việc này sẽ XOÁ HẾT dữ liệu 3 tab BAO_BU, LICH_BU, LOP và tạo lại. Tiếp tục?')) return;
-  var ss = laySS();
-
-  var sh1 = layHoacTaoSheet(ss, 'BAO_BU');
-  sh1.clear();
-  sh1.appendRow(['Ngày báo', 'GV báo', 'Lớp', 'Tên bé', 'Trình độ', 'Link Canva', 'Trạng thái', 'Ca xếp', 'Ghi chú', 'SOTW', 'Ca đặc biệt']);
-  sh1.getRange(1, 1, 1, 11).setFontWeight('bold').setBackground('#F6F3EE');
-  taoDongMau(sh1);
-
-  var sh2 = layHoacTaoSheet(ss, 'LICH_BU');
-  sh2.clear();
-  sh2.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú', 'Ngày học', 'Đã gửi GV lúc']);
-  sh2.getRange(1, 1, 1, 15).setFontWeight('bold').setBackground('#F6F3EE');
-  datDropdown(sh2, 9, 200, PH_TRANG_THAI);
-  datDropdown(sh2, 12, 200, DA_DAY);
-
-  var sh3 = layHoacTaoSheet(ss, 'LOP');
-  sh3.clear();
-  sh3.appendRow(['Lớp', 'GV chính']);
-  LOP_LIST.forEach(function (lop) {
-    sh3.appendRow([lop, LOP_GV_MAP[lop] || '']);
-  });
-
-  var sotw = taoBangSotw(ss);
-  themLinkSotw(sh1, sotw.getSheetId());
-  chongCheDongMau(sh1);
-  datDropdownBaoBu(ss, sh1);
-  khoaCotQuanLy();
-  try { sh3.hideSheet(); } catch (e) {}
-  baoXong('Xong! Đã tạo: BAO_BU (kèm 2 dòng mẫu + cột SOTW), LICH_BU, DS HỌC SINH (tab LOP đã ẩn).');
-}
-
-function setupNhe() {
-  var ss = laySS();
-  var sh1 = layHoacTaoSheet(ss, 'BAO_BU');
-  chuyenCotMoiBAOBU(sh1); // sheet cũ → thứ tự cột mới
-  if (!sh1.getRange(1, 1).getValue()) {
-    sh1.getRange(1, 1, 1, 11).setValues([['Ngày báo', 'GV báo', 'Lớp', 'Tên bé', 'Trình độ', 'Link Canva', 'Trạng thái', 'Ca xếp', 'Ghi chú', 'SOTW', 'Ca đặc biệt']]);
-    sh1.getRange(1, 1, 1, 11).setFontWeight('bold').setBackground('#F6F3EE');
-  }
-  var sh2n = layHoacTaoSheet(ss, 'LICH_BU');
-  if (!sh2n.getRange(1, 1).getValue()) {
-    sh2n.getRange(1, 1, 1, 15).setValues([['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú', 'Ngày học', 'Đã gửi GV lúc']]);
-    sh2n.getRange(1, 1, 1, 15).setFontWeight('bold').setBackground('#F6F3EE');
-  }
-  datDropdown(sh2n, 9, 200, PH_TRANG_THAI);
-  datDropdown(sh2n, 12, 200, DA_DAY);
-  layHoacTaoSheet(ss, 'LOP');
-  var sotw = taoBangSotw(ss);
-  themLinkSotw(sh1, sotw.getSheetId());
-  datDropdownBaoBu(ss, sh1);
-  khoaCotQuanLy();
-  baoXong('Xong bản nhẹ! Không mất dữ liệu cũ.');
-}
 
 // ===== QUYỀN SỬA =====
 function khoaCotQuanLy() {
@@ -1407,7 +1124,7 @@ function taoTinSotw(d) {
   });
   var daNop = {};
   d.list.forEach(function (p) { daNop[p.gv] = 1; });
-  var gvCanBao = GV_LIST.filter(function (g) { return g !== 'Ms. Hồng Anh' || hongAnhConLam(); });
+  var gvCanBao = GV_LIST.filter(function (g) { return g !== 'Ms. Hồng Anh'; });
   var chua = gvCanBao.filter(function (g) { return !daNop[g]; });
   if (chua.length) tin += '\n⚠️ Chưa nộp SOTW: ' + chua.join(', ');
   if (d.warnings.length) tin += '\n⚠️ Kiểm tra lại:\n• ' + d.warnings.join('\n• ');
@@ -1609,7 +1326,7 @@ function nhacGVBaoBu() {
     var tenBe = (data[i][3] || '').toString().trim().toLowerCase();
     if (gv && tenBe) daBao[gv] = 1;
   }
-  var gvCanBao = GV_LIST.filter(function (g) { return g !== 'Ms. Hồng Anh' || hongAnhConLam(); });
+  var gvCanBao = GV_LIST.filter(function (g) { return g !== 'Ms. Hồng Anh'; });
   var chuaBao = gvCanBao.filter(function (g) { return !daBao[g]; });
   var tin = '📢 [SÁNG T2] Nhắc báo bù:\n';
   if (!chuaBao.length) {
@@ -1860,80 +1577,6 @@ function lamMoiThongKeChonThang() {
   var traLoi = ui.prompt('Chọn tháng báo cáo', 'Nhập theo dạng MM-yyyy, ví dụ 11-2026:', ui.ButtonSet.OK_CANCEL);
   if (traLoi.getSelectedButton() !== ui.Button.OK) return;
   lamMoiThongKeTheoThang(traLoi.getResponseText());
-}
-function lamMoiThongKeCu() {
-  var ss = laySS();
-  var homNay = new Date();
-  var thang = Utilities.formatDate(homNay, 'GMT+7', 'MM-yyyy');
-  var tenBackup = 'Backup tháng ' + thang;
-
-  var backup = ss.getSheetByName(tenBackup);
-  if (!backup) {
-    baoXong('Chưa có sheet "' + tenBackup + '" (tháng này chưa backup lần nào).\n'
-      + 'Cách tạo: bấm 🔁 Gửi/Nhắc lẻ → 💾 Backup thủ công, hoặc bấm 4️⃣ Làm mới tuần mới (tự backup trước).');
-    return;
-  }
-
-  var tk = ss.getSheetByName('THỐNG KÊ');
-  if (!tk) tk = ss.insertSheet('THỐNG KÊ');
-  tk.clear();
-
-  var b = '\'' + tenBackup + '\'';
-  var sep = ngachCongThuc(); // ';' với file vi_VN — gõ ',' → #ERROR!
-  tk.getRange(1, 1).setValue('THỐNG KÊ DẠY BÙ THÁNG ' + thang).setFontSize(14).setFontWeight('bold');
-  tk.getRange(3, 1, 1, 3).setValues([['GV dạy', 'Số ca dạy', 'Tổng giờ']]).setFontWeight('bold').setBackground('#F6F3EE');
-
-  // Danh sách GV lấy TỪ DATA backup thật (cộng GV_LIST cho chắc) — có GV mới là tự có dòng
-  var gvSet = {};
-  GV_LIST.forEach(function (gv) { gvSet[gv] = 1; });
-  var dataBk = backup.getDataRange().getValues();
-  for (var iB = 1; iB < dataBk.length; iB++) {
-    var gvB = String(dataBk[iB][4] === undefined || dataBk[iB][4] === null ? '' : dataBk[iB][4]).trim();
-    if (gvB) gvSet[gvB] = 1;
-  }
-  var dsGV = Object.keys(gvSet);
-
-  var dongBatDau = 4;
-  var dongCuoi = dongBatDau + dsGV.length - 1;
-  // Tính tổng giờ THỰC từ cột "Giờ" (D) trong backup — parse "17h00 - 18h30" → 1.5h
-  dsGV.forEach(function (gv, idx) {
-    var dong = dongBatDau + idx;
-    tk.getRange(dong, 1).setValue(gv);
-    tk.getRange(dong, 2).setFormula(
-      '=IFERROR(COUNTA(UNIQUE(FILTER(ARRAYFORMULA(' + b + '!A2:A&' + b + '!B2:B)' + sep + b + '!E2:E=A' + dong + ')))' + sep + '0)');
-    
-    // Tính tổng giờ thực từ data backup
-    var tongGio = 0;
-    for (var i = 1; i < dataBk.length; i++) {
-      var gvRow = String(dataBk[i][4] || '').trim();
-      if (gvRow !== gv) continue;
-      var gioStr = String(dataBk[i][3] || '').trim(); // cột D = Giờ
-      var m = gioStr.match(/(\d+)h(\d+).*?-.*?(\d+)h(\d+)/); // parse "17h00 - 18h30"
-      if (m) {
-        var start = parseInt(m[1], 10) + parseInt(m[2], 10) / 60;
-        var end = parseInt(m[3], 10) + parseInt(m[4], 10) / 60;
-        tongGio += (end - start);
-      } else if (gioStr.indexOf('h') >= 0) {
-        tongGio += 1.5; // fallback nếu parse lỗi: giả định 1.5h
-      }
-    }
-    tk.getRange(dong, 3).setValue(tongGio > 0 ? tongGio : '');
-  });
-
-  var dongTong = dongCuoi + 2;
-  tk.getRange(dongTong, 1).setValue('Tổng cả tháng').setFontWeight('bold');
-  tk.getRange(dongTong + 1, 1, 3, 2).setValues([
-    ['Tổng số bé học bù', '=COUNTA(' + b + '!F2:F)'],
-    ['Tổng số ca dạy', '=SUM(B' + dongBatDau + ':B' + dongCuoi + ')'],
-    ['Tổng số giờ', '=SUM(C' + dongBatDau + ':C' + dongCuoi + ')']
-  ]);
-
-  baoXong('Đã làm mới tab THỐNG KÊ với công thức tự động ✅');
-}
-
-function lamMoiThongKe() {
-  var thang = Utilities.formatDate(new Date(), 'GMT+7', 'MM-yyyy');
-  return lamMoiThongKeTheoThang(thang);
 }
 function lamMoiThongKeTheoThang(thang) {
   thang = String(thang || '').trim();
