@@ -1643,8 +1643,35 @@ function testGuiTelegram() {
   if (guiTelegram('✅ Bot Dạy Bù đã vào nhóm thành công!')) baoXong('Gửi thử Dạy Bù thành công ✅');
 }
 
-function testGuiTelegramSOTW() {
-  if (guiTelegramSOTW('🏆 Bot Dạy Bù đã vào topic SOTW thành công!')) {
-    baoXong('Gửi thử SOTW thành công ✅');
+// Kiểm tra bot nào đang nằm trong TELEGRAM_BOT_TOKEN, rồi gửi thử đúng topic SOTW.
+// Dùng khi vừa đổi group/topic để tránh nhầm bot khác trong cùng group.
+function kiemTraBotVaTopicSOTW() {
+  var token = PropertiesService.getScriptProperties().getProperty('TELEGRAM_BOT_TOKEN');
+  if (!token) {
+    baoXong('Chưa có TELEGRAM_BOT_TOKEN trong Thuộc tính tập lệnh.');
+    return false;
   }
+  try {
+    var me = UrlFetchApp.fetch('https://api.telegram.org/bot' + token + '/getMe', { muteHttpExceptions: true });
+    if (me.getResponseCode() !== 200) {
+      baoXong('Không đọc được bot đang dùng: ' + me.getContentText());
+      return false;
+    }
+    var bot = JSON.parse(me.getContentText()).result || {};
+    var tenBot = bot.username ? '@' + bot.username : '(không rõ tên bot)';
+    var text = '🧪 Kiểm tra Dạy Bù\nBot đang dùng: ' + tenBot
+      + '\nĐích: Office - Joy → topic SOTW\nNếu anh thấy tin này đúng topic thì đã xong ✅';
+    if (guiTelegramSOTW(text)) {
+      baoXong('Đã gửi thử bằng ' + tenBot + '. Kiểm tra topic SOTW trong Office - Joy.');
+      return true;
+    }
+    return false;
+  } catch (err) {
+    baoXong('Không kiểm tra được bot/topic: ' + err);
+    return false;
+  }
+}
+
+function testGuiTelegramSOTW() {
+  return kiemTraBotVaTopicSOTW();
 }
