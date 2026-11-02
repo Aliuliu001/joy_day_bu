@@ -2023,7 +2023,7 @@ function layMaTopicSOTW() {
       baoXong('Đã lấy được mã Topic SOTW_3: ' + msg.message_thread_id + '. Đã tự lưu; giờ anh chạy nút Gửi thử topic SOTW.');
       return msg.message_thread_id;
     }
-    baoXong('Bot @joy_lichlam_sotw_daybu_bot chưa thấy tin “test SOTW”. Kiểm tra đúng bot này đã ở group Office - Joy, rồi gửi lại đúng câu đó trong Topic SOTW_3 và chạy lại nút này.');
+    baoXong('Bot SOTW chưa thấy tin “test SOTW”. Kiểm tra bot của SOTW_BOT_TOKEN đã ở group Office - Joy, rồi gửi lại đúng câu đó trong Topic SOTW_3 và chạy lại nút này.');
     return false;
   } catch (err) {
     baoXong('Không lấy được mã Topic SOTW: ' + err);

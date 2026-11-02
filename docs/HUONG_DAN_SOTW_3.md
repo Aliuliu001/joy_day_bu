@@ -2,7 +2,7 @@
 
 ## Mục tiêu
 
-Bot `@joy_lichlam_sotw_daybu_bot` chỉ gửi **Student of the Week** vào đúng Topic `SOTW_3` trong group **Office - Joy**.
+Bot Lịch Làm/SOTW (`@joy_lichlam_bot` hoặc username Telegram hiện tại của bot này) chỉ gửi **Student of the Week** vào đúng Topic `SOTW_3` trong group **Office - Joy**.
 
 Tin Dạy Bù thông thường vẫn giữ nguyên nơi gửi cũ.
 
@@ -10,7 +10,7 @@ Tin Dạy Bù thông thường vẫn giữ nguyên nơi gửi cũ.
 
 SOTW dùng ba mục riêng trong **Thuộc tính tập lệnh**:
 
-- `SOTW_BOT_TOKEN` — token của bot `@joy_lichlam_sotw_daybu_bot`.
+- `SOTW_BOT_TOKEN` — token của bot Lịch Làm/SOTW đang chạy (không phải bot Dạy Bù mới).
 - `SOTW_CHAT_ID` — mã group Office - Joy.
 - `SOTW_THREAD_ID` — mã Topic SOTW_3.
 
@@ -24,7 +24,7 @@ Không ghi token hoặc mã topic cũ trực tiếp trong code. Nhờ vậy khi 
 2. Mở **Cài đặt dự án** (hình bánh răng ở thanh bên trái).
 3. Kéo xuống **Thuộc tính tập lệnh** → bấm **Thêm thuộc tính tập lệnh**.
 4. Nhập lần lượt ba dòng sau:
-   - `SOTW_BOT_TOKEN` → dán token của bot `@joy_lichlam_sotw_daybu_bot`.
+   - `SOTW_BOT_TOKEN` → giữ token của bot Lịch Làm/SOTW đang chạy.
    - `SOTW_CHAT_ID` → mã group Office - Joy.
    - `SOTW_THREAD_ID` → mã Topic SOTW_3.
 5. Bấm **Lưu thuộc tính tập lệnh**.
@@ -50,6 +50,6 @@ Không ghi token hoặc mã topic cũ trực tiếp trong code. Nhờ vậy khi 
 
 ## Kiểm tra sau cùng
 
-- Tin thử phải hiển thị tên bot `@joy_lichlam_sotw_daybu_bot`.
+- Tin thử phải hiển thị đúng bot Lịch Làm/SOTW đang hoạt động.
 - Tin thử phải nằm trong Topic **SOTW_3**, không lẫn vào topic Lịch làm việc / Dạy Bù.
 - Sau đó tick một học sinh SOTW và dùng luồng gửi bình thường để xác nhận tin SOTW thật.
