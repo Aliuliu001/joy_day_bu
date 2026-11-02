@@ -250,14 +250,19 @@ const sandbox = {
   Logger: { log: (m) => STATE.logs.push(String(m)) },
   PropertiesService: { getScriptProperties: () => ({
     getProperty: (key) => ({
-      TELEGRAM_BOT_TOKEN: 'TEST_TOKEN',
+      TELEGRAM_BOT_TOKEN: 'TEST_DAY_BU_TOKEN',
+      SOTW_BOT_TOKEN: 'TEST_SOTW_TOKEN',
       SOTW_CHAT_ID: '-1003955550981',
       SOTW_THREAD_ID: '22',
-    })[key] || ''
+    })[key] || '',
+    setProperty: (key, value) => { STATE.scriptProperties = STATE.scriptProperties || {}; STATE.scriptProperties[key] = value; }
   }) },
   UrlFetchApp: {
     fetch(url, opts) {
-      STATE.fetches.push({ url, text: opts.payload.text, payload: opts.payload });
+      opts = opts || {};
+      const payload = opts.payload || {};
+      STATE.fetches.push({ url, text: payload.text || '', payload });
+      if (url.indexOf('/getMe') >= 0) return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ result: { username: 'joy_lichlam_sotw_daybu_bot' } }) };
       return { getResponseCode: () => 200, getContentText: () => 'ok' };
     },
   },
@@ -1175,7 +1180,9 @@ console.log('\n=== T35: SOTW gửi đúng topic riêng ===');
   ok(rs, 'Gửi thử SOTW thành công');
   eq(STATE.fetches.length, 1, 'Gửi thử SOTW tạo đúng 1 tin');
   eq(STATE.fetches[0].payload.chat_id, '-1003955550981', 'SOTW gửi đúng nhóm Office - Joy');
-  eq(STATE.fetches[0].payload.message_thread_id, 22, 'SOTW gửi đúng topic 22');
+  eq(STATE.fetches[0].payload.message_thread_id, 22, 'SOTW gửi đúng topic đã cài');
+  ok(STATE.fetches[0].url.includes('TEST_SOTW_TOKEN'), 'SOTW chỉ dùng SOTW_BOT_TOKEN riêng');
+  ok(!STATE.fetches[0].url.includes('TEST_DAY_BU_TOKEN'), 'SOTW không dùng token Dạy Bù/chấm công cũ');
   eq(STATE.fetches[0].text, '🏆 Tin thử SOTW', 'Nội dung tin thử SOTW giữ nguyên');
   STATE.fetches.length = 0;
 }

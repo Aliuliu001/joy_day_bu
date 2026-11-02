@@ -1890,14 +1890,14 @@ function lamMoiThongKeTheoThang(thang) {
 }
 
 // ===== TELEGRAM =====
-function guiTelegramDen(text, groupId, topicId, nhan) {
-  var token = PropertiesService.getScriptProperties().getProperty('TELEGRAM_BOT_TOKEN');
+function guiTelegramDenBangToken(text, groupId, topicId, nhan, token) {
   if (!token) {
-    baoXong('Chưa có token bot. Vào Cài đặt dự án → Thuộc tính tập lệnh → thêm TELEGRAM_BOT_TOKEN.');
+    baoXong('Chưa có token cho ' + (nhan || 'bot') + '.');
     return false;
   }
   if (text.length > 4000) text = text.substring(0, 4000) + '…';
   var url = 'https://api.telegram.org/bot' + token + '/sendMessage';
+
   try {
     var res = UrlFetchApp.fetch(url, {
       method: 'post',
@@ -1915,51 +1915,69 @@ function guiTelegramDen(text, groupId, topicId, nhan) {
   }
 }
 
+// Tin Dạy Bù thông thường dùng token cũ của luồng Dạy Bù.
+function guiTelegramDen(text, groupId, topicId, nhan) {
+  var token = PropertiesService.getScriptProperties().getProperty('TELEGRAM_BOT_TOKEN');
+  return guiTelegramDenBangToken(text, groupId, topicId, nhan, token);
+}
+
 // Tin vận hành Dạy Bù: giữ nguyên nhóm/topic Học Bù cũ.
 function guiTelegram(text) {
   return guiTelegramDen(text, CFG.GROUP_ID, CFG.TOPIC_ID, 'Telegram Dạy Bù');
 }
 
 // Chỉ SOTW đi sang topic riêng trong nhóm Office - Joy.
-function layDichSOTW() {
+function layDichSOTW(canLayTopic) {
   var p = PropertiesService.getScriptProperties();
-  var groupId = String(p.getProperty('SOTW_CHAT_ID') || CFG.SOTW_GROUP_ID || '').trim();
-  var topicId = String(p.getProperty('SOTW_THREAD_ID') || CFG.SOTW_TOPIC_ID || '').trim();
-  if (!groupId || !topicId || !/^-?\d+$/.test(groupId) || !/^\d+$/.test(topicId)) {
-    baoXong('Chưa cài nơi nhận SOTW. Vào Thuộc tính tập lệnh, thêm SOTW_CHAT_ID và SOTW_THREAD_ID rồi chạy lại nút Gửi thử.');
+  // SOTW bắt buộc dùng token RIÊNG. Tuyệt đối không rơi về TELEGRAM_BOT_TOKEN
+  // vì property đó từng là bot chấm công và sẽ đọc/gửi nhầm luồng.
+  var token = String(p.getProperty('SOTW_BOT_TOKEN') || '').trim();
+  var groupId = String(p.getProperty('SOTW_CHAT_ID') || '').trim();
+  var topicId = String(p.getProperty('SOTW_THREAD_ID') || '').trim();
+  if (!token) {
+    baoXong('Chưa có SOTW_BOT_TOKEN. Anh vào Thuộc tính tập lệnh và dán token của @joy_lichlam_sotw_daybu_bot.');
     return null;
   }
-  return { groupId: groupId, topicId: Number(topicId) };
+  if (!groupId || !/^-?\d+$/.test(groupId)) {
+    baoXong('Chưa có SOTW_CHAT_ID. Anh cần cài mã nhóm Office - Joy trước.');
+    return null;
+  }
+  if (!canLayTopic && (!topicId || !/^\d+$/.test(topicId))) {
+    baoXong('Chưa có SOTW_THREAD_ID. Hãy gửi “test SOTW” trong Topic SOTW_3 rồi bấm nút 🔎 Lấy Topic SOTW_3 từ tin test.');
+    return null;
+  }
+  return { token: token, groupId: groupId, topicId: topicId ? Number(topicId) : null };
 }
 
 function guiTelegramSOTW(text) {
-  var dich = layDichSOTW();
+  var dich = layDichSOTW(false);
   if (!dich) return false;
-  return guiTelegramDen(text, dich.groupId, dich.topicId, 'Telegram SOTW');
+  return guiTelegramDenBangToken(text, dich.groupId, dich.topicId, 'Telegram SOTW', dich.token);
 }
 
 function testGuiTelegram() {
   if (guiTelegram('✅ Bot Dạy Bù đã vào nhóm thành công!')) baoXong('Gửi thử Dạy Bù thành công ✅');
 }
 
-// Kiểm tra bot nào đang nằm trong TELEGRAM_BOT_TOKEN, rồi gửi thử đúng topic SOTW.
-// Dùng khi vừa đổi group/topic để tránh nhầm bot khác trong cùng group.
+// Chỉ kiểm tra bot SOTW riêng, không đụng token bot Dạy Bù/chấm công.
+// Dùng khi vừa đổi group/topic để xác nhận đúng @joy_lichlam_sotw_daybu_bot.
 function kiemTraBotVaTopicSOTW() {
-  var token = PropertiesService.getScriptProperties().getProperty('TELEGRAM_BOT_TOKEN');
-  if (!token) {
-    baoXong('Chưa có TELEGRAM_BOT_TOKEN trong Thuộc tính tập lệnh.');
-    return false;
-  }
+  var dich = layDichSOTW(false);
+  if (!dich) return false;
   try {
-    var me = UrlFetchApp.fetch('https://api.telegram.org/bot' + token + '/getMe', { muteHttpExceptions: true });
+    var me = UrlFetchApp.fetch('https://api.telegram.org/bot' + dich.token + '/getMe', { muteHttpExceptions: true });
     if (me.getResponseCode() !== 200) {
       baoXong('Không đọc được bot đang dùng: ' + me.getContentText());
       return false;
     }
     var bot = JSON.parse(me.getContentText()).result || {};
     var tenBot = bot.username ? '@' + bot.username : '(không rõ tên bot)';
-    var text = '🧪 Kiểm tra Dạy Bù\nBot đang dùng: ' + tenBot
-      + '\nĐích: Office - Joy → topic SOTW\nNếu anh thấy tin này đúng topic thì đã xong ✅';
+    if (bot.username !== 'joy_lichlam_sotw_daybu_bot') {
+      baoXong('DỪNG: SOTW_BOT_TOKEN hiện thuộc ' + tenBot + ', không phải @joy_lichlam_sotw_daybu_bot. Anh dán lại đúng token vào SOTW_BOT_TOKEN; không sửa TELEGRAM_BOT_TOKEN.');
+      return false;
+    }
+    var text = '🧪 Kiểm tra SOTW_3\nBot đang dùng: ' + tenBot
+      + '\nĐích: Office - Joy → Topic SOTW_3\nNếu anh thấy tin này đúng topic thì đã xong ✅';
     if (guiTelegramSOTW(text)) {
       baoXong('Đã gửi thử bằng ' + tenBot + '. Kiểm tra topic SOTW trong Office - Joy.');
       return true;
@@ -1979,22 +1997,17 @@ function testGuiTelegramSOTW() {
 // Chỉ dùng khi Telegram báo "message thread not found" sau khi đổi topic.
 function layMaTopicSOTW() {
   var p = PropertiesService.getScriptProperties();
-  var token = p.getProperty('TELEGRAM_BOT_TOKEN');
-  var groupId = String(p.getProperty('SOTW_CHAT_ID') || CFG.SOTW_GROUP_ID || '').trim();
-  if (!token) { baoXong('Chưa có TELEGRAM_BOT_TOKEN trong Thuộc tính tập lệnh.'); return false; }
-  if (!groupId || !/^-?\d+$/.test(groupId)) {
-    baoXong('Chưa có SOTW_CHAT_ID. Anh cần cài mã nhóm Office - Joy trước khi lấy mã Topic.');
-    return false;
-  }
+  var dich = layDichSOTW(true); // lúc dò topic chưa cần SOTW_THREAD_ID
+  if (!dich) return false;
   try {
-    var url = 'https://api.telegram.org/bot' + token + '/getUpdates?limit=100&allowed_updates=%5B%22message%22%5D';
+    var url = 'https://api.telegram.org/bot' + dich.token + '/getUpdates?limit=100&allowed_updates=%5B%22message%22%5D';
     var res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
     if (res.getResponseCode() !== 200) { baoXong('Không đọc được tin Telegram: ' + res.getContentText()); return false; }
     var data = JSON.parse(res.getContentText());
     var ds = data.result || [];
     for (var i = ds.length - 1; i >= 0; i--) {
       var msg = ds[i].message;
-      if (!msg || !msg.chat || String(msg.chat.id) !== groupId) continue;
+      if (!msg || !msg.chat || String(msg.chat.id) !== dich.groupId) continue;
       if (String(msg.text || '').trim().toLowerCase().indexOf('test sotw') < 0) continue;
       if (!msg.message_thread_id) {
         baoXong('Bot đã thấy tin test SOTW, nhưng tin này không nằm trong Topic. Anh mở đúng Topic SOTW rồi gửi lại “test SOTW”.');
@@ -2004,7 +2017,7 @@ function layMaTopicSOTW() {
       baoXong('Đã lấy được mã Topic SOTW_3: ' + msg.message_thread_id + '. Đã tự lưu; giờ anh chạy nút Gửi thử topic SOTW.');
       return msg.message_thread_id;
     }
-    baoXong('Bot chưa thấy tin “test SOTW”. Anh kiểm tra bot joychamcong vẫn là quản trị viên, rồi gửi lại đúng câu đó trong Topic SOTW và chạy lại hàm này.');
+    baoXong('Bot @joy_lichlam_sotw_daybu_bot chưa thấy tin “test SOTW”. Kiểm tra đúng bot này đã ở group Office - Joy, rồi gửi lại đúng câu đó trong Topic SOTW_3 và chạy lại nút này.');
     return false;
   } catch (err) {
     baoXong('Không lấy được mã Topic SOTW: ' + err);

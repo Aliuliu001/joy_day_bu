@@ -10,9 +10,11 @@ Tin Dạy Bù thông thường vẫn giữ nguyên nơi gửi cũ.
 
 SOTW dùng ba mục riêng trong **Thuộc tính tập lệnh**:
 
-- `TELEGRAM_BOT_TOKEN` — token của bot `@joy_lichlam_sotw_daybu_bot`
-- `SOTW_CHAT_ID` — mã group Office - Joy
-- `SOTW_THREAD_ID` — mã Topic SOTW_3
+- `SOTW_BOT_TOKEN` — token của bot `@joy_lichlam_sotw_daybu_bot`.
+- `SOTW_CHAT_ID` — mã group Office - Joy.
+- `SOTW_THREAD_ID` — mã Topic SOTW_3.
+
+`TELEGRAM_BOT_TOKEN` là token của luồng Dạy Bù cũ và **không được dùng cho SOTW**.
 
 Không ghi token hoặc mã topic cũ trực tiếp trong code. Nhờ vậy khi đổi Topic chỉ cần đổi đúng một ô cài đặt, không làm ảnh hưởng các tin Dạy Bù khác.
 
@@ -22,7 +24,7 @@ Không ghi token hoặc mã topic cũ trực tiếp trong code. Nhờ vậy khi 
 2. Mở **Cài đặt dự án** (hình bánh răng ở thanh bên trái).
 3. Kéo xuống **Thuộc tính tập lệnh** → bấm **Thêm thuộc tính tập lệnh**.
 4. Nhập lần lượt ba dòng sau:
-   - `TELEGRAM_BOT_TOKEN` → dán token của bot `@joy_lichlam_sotw_daybu_bot`.
+   - `SOTW_BOT_TOKEN` → dán token của bot `@joy_lichlam_sotw_daybu_bot`.
    - `SOTW_CHAT_ID` → mã group Office - Joy.
    - `SOTW_THREAD_ID` → mã Topic SOTW_3.
 5. Bấm **Lưu thuộc tính tập lệnh**.
