@@ -196,6 +196,7 @@ function onOpen() {
         .addItem('🔍 Kiểm tra / sửa thứ tự cột BAO_BU', 'kiemTraThuTuCot')
         .addItem('🔄 Đồng bộ DS học sinh — khi có HS mới vào/ra (chỉ đọc file chính)', 'menuDongBoDS')
         .addItem('🖼️ Gắn link ảnh SOTW — khi thêm/thay ảnh (theo tên file)', 'ganLinkAnhTuFolder')
+        .addItem('🔎 Lấy Topic SOTW_3 từ tin test', 'layMaTopicSOTW')
         .addItem('🧪 Gửi thử topic SOTW', 'testGuiTelegramSOTW')
         .addItem('🗜️ Ẩn / hiện tab LOP', 'anTabLop')
         .addSeparator()
