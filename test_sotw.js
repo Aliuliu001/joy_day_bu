@@ -248,7 +248,13 @@ const cfrBuilder = {
 const sandbox = {
   SpreadsheetApp, Utilities, DriveApp,
   Logger: { log: (m) => STATE.logs.push(String(m)) },
-  PropertiesService: { getScriptProperties: () => ({ getProperty: () => 'TEST_TOKEN' }) },
+  PropertiesService: { getScriptProperties: () => ({
+    getProperty: (key) => ({
+      TELEGRAM_BOT_TOKEN: 'TEST_TOKEN',
+      SOTW_CHAT_ID: '-1003955550981',
+      SOTW_THREAD_ID: '22',
+    })[key] || ''
+  }) },
   UrlFetchApp: {
     fetch(url, opts) {
       STATE.fetches.push({ url, text: opts.payload.text, payload: opts.payload });
@@ -605,17 +611,17 @@ console.log('\n=== T14: Nhắc GV báo bù + gửi tin GV + trigger ===');
 
 console.log('\n=== T15: Tràn sức chứa → bé dư "Tuần sau" ===');
 {
-  // 20 bé chưa xếp, sức chứa = 4 ca × 4 = 16
+  // 25 bé chưa xếp, sức chứa = 6 ca × 4 = 24 (Bé A đã chiếm 1 chỗ)
   const bao = sheet('BAO_BU');
-  for (let i = 1; i <= 20; i++) {
+  for (let i = 1; i <= 25; i++) {
     bao.appendRow([new Date(), 'Ms. Vân', 'S1.005 - Peach', 'Tràn Bé ' + i, 'SP1', '', '', '', '']);
   }
   sandbox.gomNhom();
   const lich = rows('LICH_BU');
   const xep = lich.filter(r => r[4] && String(r[4]).startsWith('Tràn Bé')).length;
   const du = bao.rows.filter(r => String(r[6] || '') === 'Tuần sau').length;
-  eq(xep, 15, 'Xếp tối đa 15 (16 trừ bé A đã có)'); // bé A đã chiếm 1 chỗ
-  eq(du, 5, 'Bé dư = Tuần sau (20+1 - 16)');
+  eq(xep, 23, 'Xếp tối đa 23 (24 trừ bé A đã có)'); // bé A đã chiếm 1 chỗ
+  eq(du, 2, 'Bé dư = Tuần sau (25+1 - 24)');
   // SOTW chưa tick (sheet mới) → không gửi, không lỗi
   ok(lastAlert().includes('SOTW'), 'Gom nhóm vẫn báo phần SOTW');
 }
@@ -632,7 +638,7 @@ console.log('\n=== T16: Làm mới tuần mới — TỰ BACKUP + GIỮ bé chư
   sandbox.lamMoiTuanMoi();
   const last = lastAlert();
   ok(last.includes('Đã backup thêm'), 'TỰ backup trước khi xoá (không còn cảnh quên backup)');
-  ok(last.includes('Chuyển 15'), 'Thông báo chuyển 15 bé chưa chốt về BAO_BU');
+  ok(last.includes('Chuyển 23'), 'Thông báo chuyển 23 bé chưa chốt về BAO_BU');
   // Backup có bé ✅
   const bkName = sheet(tenBk);
   ok(!!bkName && bkName.rows.some(r => r[5] === 'Bé A'), 'Backup chứa bé đã ✅ (Bé A)');
