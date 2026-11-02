@@ -1675,3 +1675,34 @@ function kiemTraBotVaTopicSOTW() {
 function testGuiTelegramSOTW() {
   return kiemTraBotVaTopicSOTW();
 }
+
+// Đọc tin "test SOTW" mới nhất mà chính bot nhận được để lấy mã topic thật.
+// Chỉ dùng khi Telegram báo "message thread not found" sau khi đổi topic.
+function layMaTopicSOTW() {
+  var token = PropertiesService.getScriptProperties().getProperty('TELEGRAM_BOT_TOKEN');
+  if (!token) { baoXong('Chưa có TELEGRAM_BOT_TOKEN trong Thuộc tính tập lệnh.'); return false; }
+  try {
+    var url = 'https://api.telegram.org/bot' + token + '/getUpdates?limit=100&allowed_updates=%5B%22message%22%5D';
+    var res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    if (res.getResponseCode() !== 200) { baoXong('Không đọc được tin Telegram: ' + res.getContentText()); return false; }
+    var data = JSON.parse(res.getContentText());
+    var ds = data.result || [];
+    for (var i = ds.length - 1; i >= 0; i--) {
+      var msg = ds[i].message;
+      if (!msg || !msg.chat || msg.chat.id != CFG.SOTW_GROUP_ID) continue;
+      if (String(msg.text || '').trim().toLowerCase().indexOf('test sotw') < 0) continue;
+      if (!msg.message_thread_id) {
+        baoXong('Bot đã thấy tin test SOTW, nhưng tin này không nằm trong Topic. Anh mở đúng Topic SOTW rồi gửi lại “test SOTW”.');
+        return false;
+      }
+      CFG.SOTW_TOPIC_ID = msg.message_thread_id;
+      baoXong('Đã lấy được mã Topic SOTW: ' + msg.message_thread_id + '. Gửi ảnh popup này cho em để em lưu cố định vào code.');
+      return msg.message_thread_id;
+    }
+    baoXong('Bot chưa thấy tin “test SOTW”. Anh kiểm tra bot joychamcong vẫn là quản trị viên, rồi gửi lại đúng câu đó trong Topic SOTW và chạy lại hàm này.');
+    return false;
+  } catch (err) {
+    baoXong('Không lấy được mã Topic SOTW: ' + err);
+    return false;
+  }
+}
