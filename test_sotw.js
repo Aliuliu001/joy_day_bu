@@ -546,7 +546,7 @@ console.log('\n=== T11: Gom nhóm sau Làm mới tuần mới — SOTW gửi đ�
   eq(STATE.fetches.length, before + 1, 'Tuần mới → gửi SOTW mới (mốc đã xoá)');
 }
 
-console.log('\n=== T12: menu onOpen — 4 nút chính + 3 menu con ===');
+console.log('\n=== T12: menu onOpen — 4 nút chính + 4 menu con rõ việc ===');
 {
   STATE.menuEntries.length = 0;
   STATE.logs.length = 0;
@@ -557,10 +557,11 @@ console.log('\n=== T12: menu onOpen — 4 nút chính + 3 menu con ===');
   ['gomNhom', 'xuLyCaseDacBiet', 'guiTinChoGV', 'lamMoiTuanMoi'].forEach(fn => {
     ok(items.some(e => e.fn === fn), 'Nút chính có: ' + fn);
   });
-  eq(subs.length, 3, 'Đúng 3 menu con');
-  ok(subs.some(s => s.name.includes('Gửi / Nhắc lẻ')), 'Menu con: Gửi / Nhắc lẻ');
-  ok(subs.some(s => s.name.includes('Báo cáo')), 'Menu con: Báo cáo');
-  ok(subs.some(s => s.name.includes('Cài đặt')), 'Menu con: Cài đặt');
+  eq(subs.length, 4, 'Đúng 4 menu con');
+  ok(subs.some(s => s.name.includes('Gửi tin / Nhắc việc')), 'Menu con: Gửi tin / Nhắc việc');
+  ok(subs.some(s => s.name.includes('Xem báo cáo / Lưu dữ liệu')), 'Menu con: Xem báo cáo / Lưu dữ liệu');
+  ok(subs.some(s => s.name.includes('Cập nhật danh sách / dữ liệu')), 'Menu con: Cập nhật danh sách / dữ liệu');
+  ok(subs.some(s => s.name.includes('Cài đặt kỹ thuật')), 'Menu con: Cài đặt kỹ thuật');
   // Mọi hàm menu trỏ tới phải tồn tại
   const missing = items.filter(e => typeof sandbox[e.fn] !== 'function').map(e => e.fn);
   eq(missing.length, 0, 'Đủ hàm cho mọi nút menu');

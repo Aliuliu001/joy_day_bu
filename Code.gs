@@ -175,33 +175,34 @@ function onOpen() {
   try {
     var ui = SpreadsheetApp.getUi();
     ui.createMenu('⚙️ Quản lý Dạy Bù')
-      .addItem('1️⃣ Gom nhóm + gửi SOTW (T2 chiều)', 'gomNhom')
-      .addItem('2️⃣ Xử lý Xin đổi / Quá hạn (T4)', 'xuLyCaseDacBiet')
-      .addItem('3️⃣ Gửi tin cho GV (T5-T6)', 'guiTinChoGV')
-      .addItem('4️⃣ Làm mới tuần mới (cuối tuần)', 'lamMoiTuanMoi')
+      // 4 nút anh dùng tuần nào cũng cần — đặt thẳng ở trên cùng theo thứ tự công việc.
+      .addItem('1️⃣ Gom lịch + gửi SOTW (T2 chiều)', 'gomNhom')
+      .addItem('2️⃣ Xử lý PH xin đổi / quá hạn (T4)', 'xuLyCaseDacBiet')
+      .addItem('3️⃣ Gửi lịch đã chốt cho GV (T5-T6)', 'guiTinChoGV')
+      .addItem('4️⃣ Bắt đầu tuần mới — có backup trước (T7-CN)', 'lamMoiTuanMoi')
       .addSeparator()
-      .addSubMenu(ui.createMenu('🔁 Gửi / Nhắc lẻ')
+      .addSubMenu(ui.createMenu('📨 Gửi tin / Nhắc việc')
         .addItem('🧪 Gửi thử Topic Dạy Bù', 'testGuiTelegram')
-        .addItem('🏆 Gửi lại SOTW', 'guiSOTWMenu')
-        .addItem('📨 Gửi lại tin GV đã chốt', 'guiLaiTinChoGV')
-        .addItem('🔔 Nhắc GV báo bù (T2 sáng)', 'nhacGVBaoBu')
-        .addItem('💾 Backup thủ công', 'backupThuCong'))
-      .addSubMenu(ui.createMenu('📊 Báo cáo')
-        .addItem('📌 Hôm nay cần làm gì?', 'tongQuanCongViec')
-        .addItem('📊 Làm mới thống kê tháng này', 'lamMoiThongKe')
-        .addItem('📅 Chọn tháng để xem thống kê', 'lamMoiThongKeChonThang'))
-      .addSubMenu(ui.createMenu('⚙️ Cài đặt')
-        .addItem('📖 Khi nào dùng lệnh nào (đọc trước)', 'huongDanCacLenh')
+        .addItem('🔔 Nhắc GV báo Dạy Bù (T2 sáng)', 'nhacGVBaoBu')
+        .addItem('📨 Gửi lại lịch đã chốt cho GV', 'guiLaiTinChoGV')
+        .addItem('🏆 Gửi lại SOTW', 'guiSOTWMenu'))
+      .addSubMenu(ui.createMenu('📊 Xem báo cáo / Lưu dữ liệu')
+        .addItem('📌 Xem việc cần làm hôm nay', 'tongQuanCongViec')
+        .addItem('📊 Xem thống kê tháng này', 'lamMoiThongKe')
+        .addItem('📅 Chọn tháng để xem thống kê', 'lamMoiThongKeChonThang')
+        .addItem('💾 Lưu backup ngay', 'backupThuCong'))
+      .addSubMenu(ui.createMenu('🗂️ Cập nhật danh sách / dữ liệu')
+        .addItem('🔄 Đồng bộ danh sách học sinh', 'menuDongBoDS')
+        .addItem('🖼️ Gắn ảnh SOTW từ folder', 'ganLinkAnhTuFolder')
+        .addItem('🔍 Kiểm tra và sửa cột Lớp / Tên bé', 'kiemTraThuTuCot')
+        .addItem('🗜️ Ẩn / hiện bảng lớp tham khảo', 'anTabLop'))
+      .addSubMenu(ui.createMenu('🛠️ Cài đặt kỹ thuật')
+        .addItem('📖 Xem hướng dẫn dùng từng lệnh', 'huongDanCacLenh')
+        .addItem('🧪 Gửi thử Topic SOTW', 'testGuiTelegramSOTW')
+        .addItem('🔎 Lấy mã Topic SOTW_3 từ tin test', 'layMaTopicSOTW')
+        .addItem('🔧 Nâng cấp sheet sau khi copy code mới', 'nangCapSheetSotw')
         .addSeparator()
-        .addItem('🔧 Nâng cấp sheet SOTW — chạy 1 lần sau khi copy code mới', 'nangCapSheetSotw')
-        .addItem('🔍 Kiểm tra / sửa thứ tự cột BAO_BU', 'kiemTraThuTuCot')
-        .addItem('🔄 Đồng bộ DS học sinh — khi có HS mới vào/ra (chỉ đọc file chính)', 'menuDongBoDS')
-        .addItem('🖼️ Gắn link ảnh SOTW — khi thêm/thay ảnh (theo tên file)', 'ganLinkAnhTuFolder')
-        .addItem('🔎 Lấy Topic SOTW_3 từ tin test', 'layMaTopicSOTW')
-        .addItem('🧪 Gửi thử topic SOTW', 'testGuiTelegramSOTW')
-        .addItem('🗜️ Ẩn / hiện tab LOP', 'anTabLop')
-        .addSeparator()
-        .addItem('🔨 Tạo sheet mới — ⚠️ XOÁ HẾT DATA, chỉ dùng khi sheet trống', 'setupDayBu'))
+        .addItem('🔨 Tạo lại sheet trống — ⚠️ XOÁ TOÀN BỘ DỮ LIỆU', 'setupDayBu'))
       .addToUi();
   } catch (e) {
     Logger.log('LỖI TẠO MENU: ' + e);
@@ -480,29 +481,6 @@ function setupDayBu() {
   baoXong('Xong! Đã tạo: BAO_BU (kèm 2 dòng mẫu + cột SOTW), LICH_BU, DS HỌC SINH (tab LOP đã ẩn).');
 }
 
-function setupNhe() {
-  var ss = laySS();
-  var sh1 = layHoacTaoSheet(ss, 'BAO_BU');
-  chuyenCotMoiBAOBU(sh1); // sheet cũ → thứ tự cột mới
-  if (!sh1.getRange(1, 1).getValue()) {
-    sh1.getRange(1, 1, 1, 11).setValues([['Ngày báo', 'GV báo', 'Lớp', 'Tên bé', 'Trình độ', 'Link Canva', 'Trạng thái', 'Ca xếp', 'Ghi chú', 'SOTW', 'Ca đặc biệt']]);
-    sh1.getRange(1, 1, 1, 11).setFontWeight('bold').setBackground('#F6F3EE');
-  }
-  var sh2n = layHoacTaoSheet(ss, 'LICH_BU');
-  if (!sh2n.getRange(1, 1).getValue()) {
-    sh2n.getRange(1, 1, 1, 15).setValues([['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú', 'Ngày học', 'Đã gửi GV lúc']]);
-    sh2n.getRange(1, 1, 1, 15).setFontWeight('bold').setBackground('#F6F3EE');
-  }
-  datDropdown(sh2n, 9, 200, PH_TRANG_THAI);
-  datDropdown(sh2n, 12, 200, DA_DAY);
-  layHoacTaoSheet(ss, 'LOP');
-  var sotw = taoBangSotw(ss);
-  themLinkSotw(sh1, sotw.getSheetId());
-  datDropdownBaoBu(ss, sh1);
-  khoaCotQuanLy();
-  baoXong('Xong bản nhẹ! Không mất dữ liệu cũ.');
-}
-
 // ===== QUYỀN SỬA =====
 function khoaCotQuanLy() {
   var ss = laySS();
@@ -721,19 +699,15 @@ function laySheetBaoBu(ss) {
 // ===== 📖 HƯỚNG DẪN CÁC LỆNH (popup trong menu Cài đặt) =====
 function huongDanCacLenh() {
   var txt = '📖 MỖI TUẦN BẤM THEO THỨ TỰ NÀY:\n'
-    + '1️⃣ Gom nhóm + gửi SOTW (T2 chiều) — bấm lại bao nhiêu lần cũng được, không mất\n'
-    + '2️⃣ Xử lý Xin đổi / Quá hạn (T4) — bé PH chưa xác nhận / xin đổi\n'
-    + '3️⃣ Gửi tin cho GV (T5-T6) — chỉ gửi ca PH đã chốt ✅\n'
-    + '4️⃣ Làm mới tuần mới (T7-CN) — tự backup trước khi xoá\n\n'
-    + '⚙️ CÀI ĐẶT — lệnh nào dùng khi nào:\n'
-    + '🔧 Nâng cấp sheet SOTW: chạy 1 lần sau khi em gửi code mới. An toàn — không mất data\n'
-    + '🔍 Kiểm tra / sửa cột BAO_BU: bấm khi nghi ngờ cột Lớp/Tên bé bị ngược (tự dò + tự sửa)\n'
-    + '🔄 Đồng bộ DS HS: bấm khi có HS mới vào / nghỉ (hoặc trước khi Gom nhóm)\n'
-    + '🖼️ Gắn link ảnh: bấm sau khi thêm ảnh vào folder (cần dán link folder vào ô H1 DS HỌC SINH)\n'
-    + '🗜️ Ẩn / hiện tab LOP: xem bảng lớp cũ\n'
-    + '⚠️ LƯU Ý:\n• Menu này CHỈ DÀNH CHO QUẢN LÝ — GV không cần vào đây\n• 🔨 Tạo sheet mới = RESET TOÀN BỘ (xoá hết data) — chỉ dùng lần đầu setup\n\n'
-    + '📊 THỐNG KÊ (menu Báo cáo): cần tab "Backup tháng …" đã có data\n'
-    + '(tự tạo khi backup / Làm mới tuần mới). Xem số ca, số giờ của từng GV.';
+    + '1️⃣ Gom lịch + gửi SOTW (T2 chiều) — bấm lại không làm mất dữ liệu\n'
+    + '2️⃣ Xử lý PH xin đổi / quá hạn (T4)\n'
+    + '3️⃣ Gửi lịch đã chốt cho GV (T5-T6) — chỉ ca PH đã chốt ✅\n'
+    + '4️⃣ Bắt đầu tuần mới (T7-CN) — hệ thống backup trước khi dọn\n\n'
+    + '📨 GỬI TIN / NHẮC VIỆC: gửi thử bot, nhắc GV, gửi lại lịch/SOTW khi cần.\n'
+    + '📊 BÁO CÁO / LƯU DỮ LIỆU: xem việc cần làm, thống kê tháng hoặc lưu backup ngay.\n'
+    + '🗂️ CẬP NHẬT DANH SÁCH / DỮ LIỆU: đồng bộ DS học sinh, gắn ảnh SOTW, sửa cột bị ngược.\n'
+    + '🛠️ CÀI ĐẶT KỸ THUẬT: chỉ dùng khi em hướng dẫn (test SOTW, nâng cấp sheet, tạo sheet trống).\n\n'
+    + '⚠️ LƯU Ý: “Tạo lại sheet trống” sẽ XOÁ TOÀN BỘ dữ liệu — chỉ dùng khi bắt đầu file mới.';
   try { SpreadsheetApp.getUi().alert('JOY DẠY BÙ — hướng dẫn', txt, SpreadsheetApp.getUi().ButtonSet.OK); }
   catch (e) { Logger.log(txt); }
 }
