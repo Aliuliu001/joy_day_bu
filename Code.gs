@@ -1960,7 +1960,7 @@ function testGuiTelegram() {
 }
 
 // Chỉ kiểm tra bot SOTW riêng, không đụng token bot Dạy Bù/chấm công.
-// Dùng khi vừa đổi group/topic để xác nhận đúng @joy_lichlam_sotw_daybu_bot.
+// Tên hiển thị của bot có thể đổi, còn @username Telegram có thể vẫn là tên cũ.
 function kiemTraBotVaTopicSOTW() {
   var dich = layDichSOTW(false);
   if (!dich) return false;
@@ -1972,11 +1972,9 @@ function kiemTraBotVaTopicSOTW() {
     }
     var bot = JSON.parse(me.getContentText()).result || {};
     var tenBot = bot.username ? '@' + bot.username : '(không rõ tên bot)';
-    if (bot.username !== 'joy_lichlam_sotw_daybu_bot') {
-      baoXong('DỪNG: SOTW_BOT_TOKEN hiện thuộc ' + tenBot + ', không phải @joy_lichlam_sotw_daybu_bot. Anh dán lại đúng token vào SOTW_BOT_TOKEN; không sửa TELEGRAM_BOT_TOKEN.');
-      return false;
-    }
-    var text = '🧪 Kiểm tra SOTW_3\nBot đang dùng: ' + tenBot
+    // Token đã tách riêng ở SOTW_BOT_TOKEN. Không khóa cứng @username vì BotFather
+    // có thể đổi tên hiển thị/username sau khi code đã được triển khai.
+    var text = '🧪 Kiểm tra SOTW_3\nBot SOTW đang dùng: ' + tenBot
       + '\nĐích: Office - Joy → Topic SOTW_3\nNếu anh thấy tin này đúng topic thì đã xong ✅';
     if (guiTelegramSOTW(text)) {
       baoXong('Đã gửi thử bằng ' + tenBot + '. Kiểm tra topic SOTW trong Office - Joy.');
