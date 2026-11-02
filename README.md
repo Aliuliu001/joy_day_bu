@@ -19,14 +19,16 @@ File này là hướng dẫn DUY NHẤT cần đọc — mọi bản plan/audit 
 
 **Menu ⚙️ Quản lý Dạy Bù: (chỉ dành quản lý — GV không cần vào)**
 ```
-├─ 1️⃣ Gom nhóm + gửi SOTW (T2 chiều)     ← nút chính
-├─ 2️⃣ Xử lý Xin đổi / Quá hạn (T4)
-├─ 3️⃣ Gửi tin cho GV (T5-T6)
-├─ 4️⃣ Làm mới tuần mới (cuối tuần)       ← TỰ backup trước khi xoá
-├─ 🔁 Gửi / Nhắc lẻ      ▸ Gửi lại SOTW · Nhắc GV · Backup thủ công
-├─ 📊 Báo cáo            ▸ Làm mới thống kê
-└─ ⚙️ Cài đặt           ▸ 📖 Hướng dẫn · 🔧 Nâng cấp sheet · 🔍 Kiểm tra/sửa cột BAO_BU
-                        ▸ 🔄 Đồng bộ DS · 🖼️ Gắn link ảnh · 🗜️ Ẩn/hiện LOP · 🔨 Tạo sheet mới (⚠️ xoá data)
+├─ 1️⃣ Cập nhật danh sách HS đầu tuần
+├─ 2️⃣ Gom lịch + gửi SOTW (T2 chiều)
+├─ 3️⃣ Xử lý PH xin đổi / quá hạn (T4)
+├─ 4️⃣ Gửi lịch đã chốt cho GV (T5-T6)
+├─ 5️⃣ Kết tuần mới — tự backup trước (T7-CN)
+├─ 📨 Gửi tin / Nhắc việc               ▸ Nhắc GV · Gửi lại lịch/SOTW · Gửi thử bot
+├─ 📦 Backup / Thống kê / Chốt tháng     ▸ Backup · Thống kê · Việc cần làm
+├─ 🗂️ Cập nhật dữ liệu phụ               ▸ Ảnh SOTW · Sửa cột · Bảng lớp
+└─ 🛠️ Cài đặt kỹ thuật                   ▸ Hướng dẫn quy trình/chốt tháng · test SOTW
+                                        ▸ Nâng cấp sheet · Tạo lại sheet trống (⚠️ xoá data)
 ```
 
 **6 ca cố định mỗi tuần:**
@@ -47,17 +49,20 @@ File này là hướng dẫn DUY NHẤT cần đọc — mọi bản plan/audit 
 ## 📅 QUY TRÌNH MỖI TUẦN
 
 ### 1. T2 SÁNG — Nhắc GV báo bù
-Menu 🔁 → **🔔 Nhắc GV báo bù** → tin vào nhóm Học Bù (kèm hướng dẫn tick SOTW).
+Menu **📨 Gửi tin / Nhắc việc** → **🔔 Nhắc GV báo Dạy Bù** → tin vào Topic Dạy Bù.
 
-### 2. CẢ TUẦN — GV nhập liệu (chỉ click & gõ theo mẫu)
+### 2. ĐẦU TUẦN — bấm **1️⃣ Cập nhật danh sách HS đầu tuần**
+Hệ thống chỉ đọc danh sách gốc, cập nhật HS mới/lớp mới vào DS HỌC SINH và giữ nguyên link ảnh/tick SOTW cũ.
+
+### 3. CẢ TUẦN — GV nhập liệu (chỉ click & gõ theo mẫu)
 - **Báo bù:** vào BAO_BU → **chọn GV** (ô B) → **chọn Lớp** (ô C, chỉ hiện lớp của GV đó) → **chọn Tên bé** (ô D, chỉ hiện bé lớp đó) → gõ trình độ + link Canva. **Đảo chiều cũng được:** chọn TÊN BÉ trước → tự điền Lớp + GV báo, 2 ô còn lại tự lọc (tên bé chỉ ở 1 lớp; trùng tên 2 lớp → tự hiện 2 lớp cho anh chọn). Lớp đi đủ → gõ `Không bù` ở cột Tên bé. GV cần dặn dò → ghi thêm ô **Ghi chú** (ô I). *Xem 2 dòng mẫu đầu sheet.*
 - **Ca đặc biệt (cột K):** dùng khi xếp ca riêng vào bất kỳ ngày nào, theo đúng mẫu: `T2 08h00-09h30 Ms. Vân` hoặc `T4 14h00-15h30 Mr. Ngọc`. Dùng `T2` đến `T7` hoặc `CN`, sau đó là giờ bắt đầu-kết thúc và tên GV. Hệ thống ưu tiên xếp đúng ngày/giờ này, không đưa vào 4 ca cố định.
 - **SOTW:** vào **DS HỌC SINH** → chọn tên mình ở ô "GV đang chọn" → **tick ☑** bé SOTW (1-2 phút/tuần).
 
-### 3. T2 CHIỀU — bấm **1️⃣ Gom nhóm + gửi SOTW** (1 nút làm 2 việc)
+### 4. T2 CHIỀU — bấm **2️⃣ Gom lịch + gửi SOTW** (1 nút làm 2 việc)
 - Xếp bé vào 4 ca
 - Tạo sẵn **Tin nhắn PH** → copy cột J gửi Zalo cho PH
-- **Gửi SOTW cho Mr. Khôi** vào topic Học Bù (kèm link ảnh nếu có)
+- **Gửi SOTW** vào Topic SOTW_3 (kèm link ảnh nếu có)
 - *Gom lại bao nhiêu lần trong tuần cũng được — không mất bé, không gửi trùng SOTW (có mốc theo tuần)*
 
 **Ghi chú đi đâu?** Ô Ghi chú GV viết ở BAO_BU được mang theo bé vào LICH_BU (cột Ghi chú) và **đính kèm tin nhắn cho GV** (dòng 📌). Nếu 2 bé cùng lớp cùng ghi chú → **tin nhắn gộp 1 dòng ghi chú chung** (không lặp). Ghi chú này cũng được backup + làm mới tuần mới giữ nguyên.
@@ -78,6 +83,16 @@ Menu 🔁 → **🔔 Nhắc GV báo bù** → tin vào nhóm Học Bù (kèm hư
 
 ---
 
+## 📦 CUỐI THÁNG — CHỐT VÀ LƯU GÌ?
+
+1. Vào **📦 Backup / Thống kê / Chốt tháng → 📅 Chọn tháng để xem thống kê** → nhập `MM-yyyy` (ví dụ `11-2026`).
+2. Đọc tab **THỐNG KÊ**: chỉ ca có kết quả **Đã học** mới tính giờ; **Vắng/Nghỉ** được tách riêng để đối chiếu.
+3. **Giữ nguyên tab `Backup tháng MM-yyyy`**. Đây là hồ sơ gốc của tháng; không xóa, không sửa tay, không cần nhân bản BAO_BU hoặc LICH_BU.
+4. Tab **THỐNG KÊ** là màn hình xem lại: khi xem tháng khác, nội dung tab này thay đổi; dữ liệu lịch sử vẫn nằm an toàn ở từng tab **Backup tháng**.
+5. Nếu cần một bản lưu ngoài hệ thống: Google Sheet → **Tệp → Tạo bản sao** → đặt tên `Dạy Bù - chốt MM-yyyy`. Không cần tạo bản sao mỗi tuần.
+
+---
+
 ## 🚀 LẮP ĐẶT / CẬP NHẬT (chạy 1 lần)
 
 1. Mở Sheet → **Tiện ích mở rộng → Apps Script** → xoá hết code cũ → dán toàn bộ [Code.gs](Code.gs) → **Lưu** (Ctrl+S)
@@ -90,7 +105,7 @@ Menu 🔁 → **🔔 Nhắc GV báo bù** → tin vào nhóm Học Bù (kèm hư
 
 > ⚠️ **KHÔNG** bấm "🔨 Tạo sheet mới" khi sheet đã có dữ liệu — nó xoá hết.
 
-**Chưa có token Telegram?** (tin gửi thất bại mới cần) Apps Script → Cài đặt dự án → Thuộc tính tập lệnh → thêm `TELEGRAM_BOT_TOKEN`. Thử: chạy hàm `testGuiTelegram`.
+**Tin Dạy Bù không gửi?** Apps Script → Cài đặt dự án → Thuộc tính tập lệnh → kiểm tra `DAY_BU_BOT_TOKEN`. Thử: **📨 Gửi tin / Nhắc việc → 🧪 Gửi thử Topic Dạy Bù**.
 
 ---
 
@@ -137,13 +152,13 @@ Nếu anh thấy cột Lớp/Tên bé có dòng bị ngược (vd 2 dòng mẫu 
 | Không hiện menu 📚 Dạy Bù | F5 / Ctrl+Shift+R refresh Sheet |
 | Gom nhóm báo "Chưa có sheet" | Bấm 🔧 Nâng cấp sheet SOTW |
 | SOTW báo "chưa bé nào tick" | Bình thường nếu GV chưa tick |
-| Gửi Telegram lỗi | Kiểm tra `TELEGRAM_BOT_TOKEN` trong Thuộc tính tập lệnh |
-- **Gửi thử topic SOTW** | ⚙️ Cài đặt → 🧪 Gửi thử topic SOTW; phải thấy tin `🏆 Bot Dạy Bù...` trong topic SOTW trước khi gửi SOTW thật |
-- **Gửi lại SOTW** | 🔁 → 🏆 Gửi lại SOTW (hỏi trước) |
-| Xem tab LOP | ⚙️ Cài đặt → 🗜️ Ẩn / hiện tab LOP |
-| Cột Lớp/Tên bé bị ngược | ⚙️ Cài đặt → 🔍 Kiểm tra / sửa thứ tự cột BAO_BU |
-| Không nhớ lệnh nào dùng lúc nào | ⚙️ Cài đặt → 📖 Hướng dẫn (đọc trước 1 lần) |
-| Thống kê báo "Chưa có sheet Backup" | 🔁 → 💾 Backup thủ công (hoặc Làm mới tuần mới sẽ tự backup) |
+| Tin Dạy Bù không gửi | Kiểm tra `DAY_BU_BOT_TOKEN`; vào 📨 Gửi tin / Nhắc việc → 🧪 Gửi thử Topic Dạy Bù |
+| SOTW không gửi | Kiểm tra `SOTW_BOT_TOKEN`, `SOTW_CHAT_ID`, `SOTW_THREAD_ID`; thử trong 🛠️ Cài đặt kỹ thuật |
+| Gửi lại SOTW | 📨 Gửi tin / Nhắc việc → 🏆 Gửi lại SOTW (hỏi trước) |
+| Xem bảng lớp LOP | 🗂️ Cập nhật dữ liệu phụ → 🗜️ Ẩn / hiện bảng lớp tham khảo |
+| Cột Lớp/Tên bé bị ngược | 🗂️ Cập nhật dữ liệu phụ → 🔍 Kiểm tra và sửa cột Lớp / Tên bé |
+| Không nhớ lệnh nào dùng lúc nào | 🛠️ Cài đặt kỹ thuật → 📖 Hướng dẫn quy trình tuần + chốt tháng |
+| Thống kê báo "Chưa có sheet Backup" | 📦 Backup / Thống kê / Chốt tháng → 💾 Lưu backup ngay (hoặc Kết tuần mới sẽ tự backup) |
 
 ---
 

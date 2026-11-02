@@ -546,7 +546,7 @@ console.log('\n=== T11: Gom nhóm sau Làm mới tuần mới — SOTW gửi đ�
   eq(STATE.fetches.length, before + 1, 'Tuần mới → gửi SOTW mới (mốc đã xoá)');
 }
 
-console.log('\n=== T12: menu onOpen — 4 nút chính + 4 menu con rõ việc ===');
+console.log('\n=== T12: menu onOpen — workflow tuần + 4 menu con rõ việc ===');
 {
   STATE.menuEntries.length = 0;
   STATE.logs.length = 0;
@@ -554,14 +554,18 @@ console.log('\n=== T12: menu onOpen — 4 nút chính + 4 menu con rõ việc ==
   catch (e) { ok(false, 'onOpen lỗi: ' + e.message); }
   const items = STATE.menuEntries.filter(e => e.type === 'item');
   const subs = STATE.menuEntries.filter(e => e.type === 'sub');
-  ['gomNhom', 'xuLyCaseDacBiet', 'guiTinChoGV', 'lamMoiTuanMoi'].forEach(fn => {
-    ok(items.some(e => e.fn === fn), 'Nút chính có: ' + fn);
+  ['menuDongBoDS', 'gomNhom', 'xuLyCaseDacBiet', 'guiTinChoGV', 'lamMoiTuanMoi'].forEach(fn => {
+    ok(items.some(e => e.fn === fn), 'Nút chính workflow có: ' + fn);
   });
+  eq(items.slice(0, 5).map(e => e.fn),
+    ['menuDongBoDS', 'gomNhom', 'xuLyCaseDacBiet', 'guiTinChoGV', 'lamMoiTuanMoi'],
+    '5 nút đầu theo đúng workflow: danh sách → lịch → xử lý → gửi → kết tuần');
   eq(subs.length, 4, 'Đúng 4 menu con');
   ok(subs.some(s => s.name.includes('Gửi tin / Nhắc việc')), 'Menu con: Gửi tin / Nhắc việc');
-  ok(subs.some(s => s.name.includes('Xem báo cáo / Lưu dữ liệu')), 'Menu con: Xem báo cáo / Lưu dữ liệu');
-  ok(subs.some(s => s.name.includes('Cập nhật danh sách / dữ liệu')), 'Menu con: Cập nhật danh sách / dữ liệu');
+  ok(subs.some(s => s.name.includes('Backup / Thống kê / Chốt tháng')), 'Menu con: Backup / Thống kê / Chốt tháng');
+  ok(subs.some(s => s.name.includes('Cập nhật dữ liệu phụ')), 'Menu con: Cập nhật dữ liệu phụ');
   ok(subs.some(s => s.name.includes('Cài đặt kỹ thuật')), 'Menu con: Cài đặt kỹ thuật');
+  ok(items.some(e => e.fn === 'huongDanQuyTrinhDayBu'), 'Có hướng dẫn quy trình tuần + chốt tháng');
   // Mọi hàm menu trỏ tới phải tồn tại
   const missing = items.filter(e => typeof sandbox[e.fn] !== 'function').map(e => e.fn);
   eq(missing.length, 0, 'Đủ hàm cho mọi nút menu');
