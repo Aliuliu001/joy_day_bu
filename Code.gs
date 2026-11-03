@@ -637,17 +637,34 @@ function chuyenCotMoiBAOBU(bao) {
   return true;
 }
 
-// Nguồn cho cascade GV → Lớp → Tên bé: lấy từ tab DS HỌC SINH (đã đồng bộ từ file chính)
+// Tab LOP là nơi quản lý có thể đổi GV chủ nhiệm/dạy thay theo LỚP.
+// Danh sách bé vẫn lấy từ DS HỌC SINH; chỉ quan hệ GV → Lớp lấy LOP ưu tiên hơn.
+function layGvTheoLopTuLOP(ss) {
+  var out = {}, lopSh = ss && ss.getSheetByName('LOP');
+  if (!lopSh) return out;
+  var data = lopSh.getDataRange().getValues();
+  for (var i = 1; i < data.length; i++) {
+    var lop = String(data[i][0] || '').trim();
+    var gv = String(data[i][1] || '').trim();
+    if (lop && gv) out[lop] = gv;
+  }
+  return out;
+}
+
+// Nguồn cho cascade GV → Lớp → Tên bé:
+// tên bé lấy DS HỌC SINH, còn GV của lớp ưu tiên lấy tab LOP để thay GV không bị lỗi dropdown.
 function nguonBAOBU(ss) {
   var out = { gvs: [], lops: [], tenAll: [], theoGv: {}, tenTheoLop: {}, theoTen: {} };
   var ds = ss.getSheetByName(SOTW_SHEET);
   if (!ds) return out;
+  var gvTheoLop = layGvTheoLopTuLOP(ss);
   var data = ds.getDataRange().getValues();
   for (var r = 2; r < data.length; r++) {
     var ten = String(data[r][0] === undefined || data[r][0] === null ? '' : data[r][0]).trim();
     if (!ten) continue;
     var lop = String(data[r][1] === undefined || data[r][1] === null ? '' : data[r][1]).trim();
-    var gv = String(data[r][2] === undefined || data[r][2] === null ? '' : data[r][2]).trim();
+    var gvTrongDS = String(data[r][2] === undefined || data[r][2] === null ? '' : data[r][2]).trim();
+    var gv = gvTheoLop[lop] || gvTrongDS; // LOP sửa tay = nguồn ưu tiên cho dropdown BAO_BU.
     if (out.tenAll.indexOf(ten) < 0) out.tenAll.push(ten);
     if (lop && out.lops.indexOf(lop) < 0) out.lops.push(lop);
     if (gv && out.gvs.indexOf(gv) < 0) out.gvs.push(gv);

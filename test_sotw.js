@@ -929,8 +929,9 @@ console.log('\n=== T24: BAO_BU chọn nhanh GV → Lớp → Tên bé (cascade t
   bao.getRange(4, 2).setValue('Ms. Nhung');
   sandbox.apCascading(bao, 4);
   const dv3 = bao.validations.filter(v => v.r === 4 && v.c === 3).pop();
-  ok(dv3 && dv3.rule.list && dv3.rule.list.indexOf('S2.006 - Avocado') >= 0 && dv3.rule.list.indexOf('S1.005 - Peach') >= 0,
-    'Chọn GV → dropdown Lớp = lớp của Ms. Nhung');
+  ok(dv3 && dv3.rule.list && dv3.rule.list.indexOf('S2.006 - Avocado') >= 0,
+    'Chọn GV → dropdown Lớp theo thiết lập LOP của Ms. Nhung');
+  ok(dv3.rule.list.indexOf('S1.005 - Peach') < 0, 'LOP ưu tiên hơn GV cũ trong DS khi có khác biệt');
   ok(dv3.rule.list.indexOf('C2.001 - Strawberry') < 0, 'Không lẫn lớp của GV khác');
   // Chọn lớp → dropdown Tên bé = bé lớp đó
   bao.getRange(4, 3).setValue('S1.005 - Peach');
@@ -973,6 +974,19 @@ console.log('\n=== T24: BAO_BU chọn nhanh GV → Lớp → Tên bé (cascade t
   eq(bao4.getRange(dTrung, 3).getValue(), '', 'Tên trùng 2 lớp → KHÔNG tự điền Lớp');
   const dvTrung = bao4.validations.filter(v => v.r === dTrung && v.c === 3).pop();
   eq(dvTrung.rule.list.length, 2, 'Dropdown Lớp hiện 2 lớp của bé trùng tên');
+
+  // Quản lý đổi GV của lớp trong tab LOP: BAO_BU phải lấy theo LOP ngay,
+  // dù cột GV cũ trong DS HỌC SINH chưa kịp đồng bộ.
+  const lopSh = sheet('LOP');
+  const dCarrot = lopSh.rows.findIndex(r => r[0] === 'T2.002 - Carrot') + 1;
+  const dsForOverride = sheet('DS HỌC SINH');
+  dsForOverride.appendRow(['Bé Carrot Test', 'T2.002 - Carrot', '', '', '', '']);
+  lopSh.getRange(dCarrot, 2).setValue('Ms. Uyên Vi');
+  const dUy = bao.getLastRow() + 1;
+  bao.appendRow([new Date(), 'Ms. Uyên Vi', '', '', 'SP1', '', '', '', '']);
+  sandbox.apCascading(bao, dUy);
+  const dvUy = bao.validations.filter(v => v.r === dUy && v.c === 3).pop();
+  ok(dvUy.rule.list.indexOf('T2.002 - Carrot') >= 0, 'Đổi GV trong LOP → BAO_BU hiện đúng lớp của GV mới');
 }
 
 console.log('\n=== T27: 🔍 Kiểm tra / sửa thứ tự cột BAO_BU ===');

@@ -54,6 +54,8 @@ Menu **📨 Gửi tin / Nhắc việc** → **🔔 Nhắc GV báo Dạy Bù** �
 ### 2. ĐẦU TUẦN — bấm **1️⃣ Cập nhật danh sách HS đầu tuần**
 Hệ thống chỉ đọc danh sách gốc, cập nhật HS mới/lớp mới vào DS HỌC SINH và giữ nguyên link ảnh/tick SOTW cũ.
 
+**Nếu có đổi GV dạy thay:** mở tab **LOP** (🗂️ Cập nhật dữ liệu phụ → 🗜️ Hiện bảng lớp tham khảo), sửa cột **GV chính** của lớp đó. Khi nhập ở BAO_BU, chọn GV mới thì dropdown sẽ hiện đúng lớp và học sinh của lớp đó; không cần sửa từng bé.
+
 ### 3. CẢ TUẦN — GV nhập liệu (chỉ click & gõ theo mẫu)
 - **Báo bù:** vào BAO_BU → **chọn GV** (ô B) → **chọn Lớp** (ô C) → **chọn Tên bé** (ô D) → gõ trình độ + link Canva. Chọn TÊN BÉ trước cũng được: hệ thống tự điền Lớp + GV báo. Lớp đi đủ → gõ `Không bù` ở cột Tên bé. GV cần dặn dò → ghi ô **Ghi chú** (I).
 - **Ca đặc biệt (cột K):** chỉ dùng cho một ca riêng/đổi giờ một lần. Xem luôn 2 dòng mẫu đầu bảng: `T2 08h00-09h30 Ms. Vân` hoặc `CN 09h00-10h30 Mr. Đức Anh`. Không tạo thêm dòng mẫu.
