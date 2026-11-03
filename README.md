@@ -55,25 +55,35 @@ Menu **📨 Gửi tin / Nhắc việc** → **🔔 Nhắc GV báo Dạy Bù** �
 Hệ thống chỉ đọc danh sách gốc, cập nhật HS mới/lớp mới vào DS HỌC SINH và giữ nguyên link ảnh/tick SOTW cũ.
 
 ### 3. CẢ TUẦN — GV nhập liệu (chỉ click & gõ theo mẫu)
-- **Báo bù:** vào BAO_BU → **chọn GV** (ô B) → **chọn Lớp** (ô C, chỉ hiện lớp của GV đó) → **chọn Tên bé** (ô D, chỉ hiện bé lớp đó) → gõ trình độ + link Canva. **Đảo chiều cũng được:** chọn TÊN BÉ trước → tự điền Lớp + GV báo, 2 ô còn lại tự lọc (tên bé chỉ ở 1 lớp; trùng tên 2 lớp → tự hiện 2 lớp cho anh chọn). Lớp đi đủ → gõ `Không bù` ở cột Tên bé. GV cần dặn dò → ghi thêm ô **Ghi chú** (ô I). *Xem 2 dòng mẫu đầu sheet.*
-- **Ca đặc biệt (cột K):** dùng khi xếp ca riêng vào bất kỳ ngày nào, theo đúng mẫu: `T2 08h00-09h30 Ms. Vân` hoặc `T4 14h00-15h30 Mr. Ngọc`. Dùng `T2` đến `T7` hoặc `CN`, sau đó là giờ bắt đầu-kết thúc và tên GV. Hệ thống ưu tiên xếp đúng ngày/giờ này, không đưa vào 4 ca cố định.
-- **SOTW:** vào **DS HỌC SINH** → chọn tên mình ở ô "GV đang chọn" → **tick ☑** bé SOTW (1-2 phút/tuần).
+- **Báo bù:** vào BAO_BU → **chọn GV** (ô B) → **chọn Lớp** (ô C) → **chọn Tên bé** (ô D) → gõ trình độ + link Canva. Chọn TÊN BÉ trước cũng được: hệ thống tự điền Lớp + GV báo. Lớp đi đủ → gõ `Không bù` ở cột Tên bé. GV cần dặn dò → ghi ô **Ghi chú** (I).
+- **Ca đặc biệt (cột K):** chỉ dùng cho một ca riêng/đổi giờ một lần. Xem luôn 2 dòng mẫu đầu bảng: `T2 08h00-09h30 Ms. Vân` hoặc `CN 09h00-10h30 Mr. Đức Anh`. Không tạo thêm dòng mẫu.
+- **GV dạy bù ưu tiên (cột L):** chỉ chọn khi muốn đổi RIÊNG một bé sang Ms. Vân hoặc Mr. Đức Anh. Để trống = dùng ưu tiên của cả lớp trong sheet CÀI ĐẶT CA DẠY BÙ, nên không cần nhập lặp cho từng bé.
+- **SOTW:** vào **DS HỌC SINH** → chọn tên mình ở ô "GV đang chọn" → **tick ☑** bé SOTW.
 
-### 4. T2 CHIỀU — bấm **2️⃣ Gom lịch + gửi SOTW** (1 nút làm 2 việc)
-- Xếp bé vào 4 ca
-- Tạo sẵn **Tin nhắn PH** → copy cột J gửi Zalo cho PH
+### 4. Khi đổi giờ/GV chung — sửa một chỗ
+Vào tab **CÀI ĐẶT CA DẠY BÙ**:
+- Bên trái: 6 ca Dạy Bù. Muốn đổi giờ hoặc đổi GV, sửa trực tiếp dòng ca đó; chỉ Ms. Vân và Mr. Đức Anh nhận xếp tự động.
+- Bên phải: mỗi lớp có một ô **GV dạy bù ưu tiên**. Chỉ chọn Ms. Vân/Mr. Đức Anh cho lớp cần gom về đúng giáo viên dạy thay; để trống nếu không có yêu cầu.
+- Đây là cài đặt dùng lâu dài. **Ca đặc biệt** ở BAO_BU chỉ dành cho ngoại lệ một lần.
+
+### 5. T2 CHIỀU — bấm **2️⃣ Gom lịch + gửi SOTW**
+Máy chỉ tạo lịch tạm trong LICH_BU; **chưa tạo tin PH/GV** để anh còn đổi ca, giờ hoặc giáo viên.
+- Xếp bé vào các ca đang bật trong **CÀI ĐẶT CA DẠY BÙ**
 - **Gửi SOTW** vào Topic SOTW_3 (kèm link ảnh nếu có)
 - *Gom lại bao nhiêu lần trong tuần cũng được — không mất bé, không gửi trùng SOTW (có mốc theo tuần)*
 
+### 6. Sau khi anh sửa lịch xong — bấm **4️⃣ Chốt lịch → tạo tin PH / GV**
+Hệ thống đọc đúng giờ/GV/ca cuối cùng trong LICH_BU rồi tạo lại **Tin nhắn PH (cột J)** và **Tin nhắn GV (cột K)**. Nếu anh đổi lịch sau khi đã gửi, bấm Chốt lịch lại; hệ thống bỏ mốc gửi cũ để tin mới được gửi đúng.
+
 **Ghi chú đi đâu?** Ô Ghi chú GV viết ở BAO_BU được mang theo bé vào LICH_BU (cột Ghi chú) và **đính kèm tin nhắn cho GV** (dòng 📌). Nếu 2 bé cùng lớp cùng ghi chú → **tin nhắn gộp 1 dòng ghi chú chung** (không lặp). Ghi chú này cũng được backup + làm mới tuần mới giữ nguyên.
 
-### 4. T3–T4 — tick "PH xác nhận" trong LICH_BU
+### 7. T3–T4 — tick "PH xác nhận" trong LICH_BU
 - ✅ Đi được → giữ nguyên
-- 🔄 Xin đổi / không trả lời → bấm **2️⃣ Xử lý Xin đổi / Quá hạn**: chuyển về BAO_BU xếp lại + báo Telegram
+- 🔄 Xin đổi / không trả lời → bấm **3️⃣ Xử lý PH xin đổi / quá hạn**: chuyển về BAO_BU xếp lại + báo Telegram
 
-### 5. T5–T6 — bấm **3️⃣ Gửi tin cho GV** (chỉ ca chốt ✅) → sau giờ học tick "Đã dạy"/"Vắng"
+### 8. T5–T6 — bấm **5️⃣ Gửi lịch đã chốt cho GV** (chỉ ca PH đã chốt ✅ và đã bấm Chốt lịch) → sau giờ học tick "Đã học"/"Vắng"
 
-### 6. CUỐI TUẦN — bấm **4️⃣ Làm mới tuần mới** (1 nút làm 4 việc)
+### 9. CUỐI TUẦN — bấm **6️⃣ Kết tuần mới** (1 nút làm 4 việc)
 1. **TỰ backup** (đã backup rồi tự bỏ qua — không trùng; chống trùng theo từng dòng nên chạy bao nhiêu lần cũng an toàn)
 2. Chuyển bé **chưa chốt** (Chờ/Xin đổi) về BAO_BU → **giữ lại** tuần sau
 3. Xoá BAO_BU + LICH_BU (giữ dòng mẫu + bé chưa xếp)

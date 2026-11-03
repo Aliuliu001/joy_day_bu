@@ -324,10 +324,12 @@ console.log('\n=== T1: Nâng cấp sheet SOTW ===');
   const r2 = bao.getRange(2, 9).getValue(), r3 = bao.getRange(3, 9).getValue();
   ok(String(r2).includes('(DÒNG MẪU)'), 'Dòng mẫu 1 tại row2');
   ok(String(r3).includes('(DÒNG MẪU)'), 'Dòng mẫu 2 tại row3');
+  eq(bao.getRange(2, 11).getValue(), 'T2 08h00-09h30 Ms. Vân', 'Dòng mẫu 1 có ví dụ Ca đặc biệt');
+  eq(bao.getRange(3, 11).getValue(), 'CN 09h00-10h30 Mr. Đức Anh', 'Dòng mẫu 2 có ví dụ Ca đặc biệt');
   eq(findRow(bao, 3, 'Bé Một'), 4, 'Data cũ trượt xuống row4 (không mất)');
   const pMau = bao.protectedRanges.find(pp => (pp.desc || '').indexOf('Dòng mẫu') >= 0);
   const pQl = bao.protectedRanges.find(pp => (pp.desc || '').indexOf('Chỉ quản lý sửa') >= 0);
-  ok(!!pMau && pMau.editors.length === 3, 'Bảo vệ 2 dòng mẫu (3 quản lý sửa)');
+  ok(!!pMau && pMau.editors.length === 3 && pMau.w === 12, 'Bảo vệ đủ 2 dòng mẫu gồm Ca đặc biệt/GV ưu tiên');
   ok(!!pQl && pQl.w === 2, 'Khóa đúng 2 cột Trạng thái/Ca xếp — Ghi chú GV được sửa');
 
   // chạy lại lần 2 → không thêm dòng mẫu trùng
@@ -385,10 +387,13 @@ console.log('\n=== T3: Nhập DS HS + tick + Gom nhóm (gộp SOTW) ===');
   // KHÔNG xoá tick (bổ sung mới)
   eq(sotw.getRange(3, 6).getValue(), true, 'Tick GIỮ NGUYÊN sau khi gửi (check lại được)');
 
-  // Tin nhắn PH: không có GV/Lớp
+  // Gom lịch chưa tạo tin — quản lý có thể đổi ca/GV/giờ trước khi chốt.
+  ok(!lich.some(r => String(r[9] || '').includes('thông báo lịch học bù')), 'Gom lịch tạm chưa tạo tin PH');
+  sandbox.chotLichTaoTin();
   const phRows = lich.filter(r => String(r[9] || '').includes('thông báo lịch học bù'));
-  ok(phRows.length > 0, 'Có tin nhắn PH');
+  ok(phRows.length > 0, 'Chốt lịch mới tạo tin PH');
   ok(phRows.every(r => !String(r[9]).includes('• GV:') && !String(r[9]).includes('• Lớp:')), 'Tin PH bỏ dòng GV và Lớp');
+  ok(lich.filter(r => r[4]).every(r => !!r[15]), 'Chốt lịch ghi mốc để biết tin đã theo lịch cuối');
 }
 
 console.log('\n=== T4: Gom nhóm lần 2 — không gửi trùng SOTW, không mất bé ===');
@@ -554,12 +559,12 @@ console.log('\n=== T12: menu onOpen — workflow tuần + 4 menu con rõ việc 
   catch (e) { ok(false, 'onOpen lỗi: ' + e.message); }
   const items = STATE.menuEntries.filter(e => e.type === 'item');
   const subs = STATE.menuEntries.filter(e => e.type === 'sub');
-  ['menuDongBoDS', 'gomNhom', 'xuLyCaseDacBiet', 'guiTinChoGV', 'lamMoiTuanMoi'].forEach(fn => {
+  ['menuDongBoDS', 'gomNhom', 'xuLyCaseDacBiet', 'chotLichTaoTin', 'guiTinChoGV', 'lamMoiTuanMoi'].forEach(fn => {
     ok(items.some(e => e.fn === fn), 'Nút chính workflow có: ' + fn);
   });
-  eq(items.slice(0, 5).map(e => e.fn),
-    ['menuDongBoDS', 'gomNhom', 'xuLyCaseDacBiet', 'guiTinChoGV', 'lamMoiTuanMoi'],
-    '5 nút đầu theo đúng workflow: danh sách → lịch → xử lý → gửi → kết tuần');
+  eq(items.slice(0, 6).map(e => e.fn),
+    ['menuDongBoDS', 'gomNhom', 'xuLyCaseDacBiet', 'chotLichTaoTin', 'guiTinChoGV', 'lamMoiTuanMoi'],
+    '6 nút đầu theo workflow: danh sách → lịch → xử lý → chốt tin → gửi → kết tuần');
   eq(subs.length, 4, 'Đúng 4 menu con');
   ok(subs.some(s => s.name.includes('Gửi tin / Nhắc việc')), 'Menu con: Gửi tin / Nhắc việc');
   ok(subs.some(s => s.name.includes('Backup / Thống kê / Chốt tháng')), 'Menu con: Backup / Thống kê / Chốt tháng');
@@ -607,6 +612,7 @@ console.log('\n=== T14: Nhắc GV báo bù + gửi tin GV + trigger ===');
   // LICH có ca ✅
   const lich = sheet('LICH_BU');
   lich.appendRow(['T5-1', 'Thứ 5', '17h00 - 18h30', 'Ms. Vân', 'Bé A', 'S1.005 - Peach', 'SP1', 'https://slide', '✅ Đi được', '', '', '✅ Đã học']);
+  sandbox.chotLichTaoTin();
   const f1 = STATE.fetches.length;
   sandbox.guiTinChoGV();
   eq(STATE.fetches.length, f1 + 1, 'Gửi tin cho GV: 1 tin');
@@ -1006,7 +1012,9 @@ console.log('\n=== T25: Ghi chú GV — vào LICH + tin nhắn, gộp 2 bé cùn
   const dGC = findRow('LICH_BU', 4, 'Bé GhiChu');
   ok(dGC > 0, 'Bé có ghi chú được xếp vào lịch');
   eq(lich.getRange(dGC, 13).getValue(), 'Ôn unit 4 + 10 câu đọc lại', 'LICH có cột Ghi chú (13) chứa nội dung');
-  ok(String(lich.getRange(dGC, 11).getValue()).indexOf('📌 Ghi chú: Ôn unit 4') >= 0, 'Tin nhắn GV kèm 📌 Ghi chú');
+  ok(!String(lich.getRange(dGC, 11).getValue()), 'Gom lịch tạm chưa tạo tin GV');
+  sandbox.chotLichTaoTin();
+  ok(String(lich.getRange(dGC, 11).getValue()).indexOf('📌 Ghi chú: Ôn unit 4') >= 0, 'Chốt lịch tạo tin GV kèm 📌 Ghi chú');
   const dBao = findRow(bao, 3, 'Bé GhiChu');
   ok(dBao > 0 && bao.getRange(dBao, 7).getValue() === 'Đã xếp', 'Dánh dấu Đã xếp');
 
@@ -1016,6 +1024,8 @@ console.log('\n=== T25: Ghi chú GV — vào LICH + tin nhắn, gộp 2 bé cùn
   lich.appendRow(['T9-1', 'Thứ 9', '10h00', 'Ms. Vân', 'Bé G1', 'S1.002 - Almond', 'SP1', 'https://s/1', '✅ Đi được', '', '', '', 'Ôn unit 4, đọc từ vựng']);
   lich.appendRow(['T9-1', 'Thứ 9', '10h00', 'Ms. Vân', 'Bé G2', 'S1.002 - Almond', 'SP1', 'https://s/2', '✅ Đi được', '', '', '', 'Ôn unit 4, đọc từ vựng']);
   lich.appendRow(['T9-2', 'Thứ 9', '12h00', 'Ms. Vân', 'Bé G3', 'S1.003 - Hazelnut', 'SP1', '', '✅ Đi được', '', '', '', 'Ôn unit 5']);
+  STATE.fetches.length = 0;
+  sandbox.chotLichTaoTin();
   STATE.fetches.length = 0;
   sandbox.guiTinChoGV();
   const texts = STATE.fetches.map(f => f.text);
@@ -1114,6 +1124,10 @@ console.log('\n=== T30: Gửi tin GV có kiểm soát + dashboard ===');
   lich.appendRow(['T5-1', 'Thứ 5', '17h00-18h30', 'Ms. Vân', 'Bé Đã Học', 'L1', 'SP1', '', '✅ Đi được', '', '', '✅ Đã học', '', '']);
   lich.appendRow(['T6-1', 'Thứ 6', '15h00-16h30', 'Ms. Vân', 'Bé Chờ', 'L1', 'SP1', '', 'Chờ Ms. Vân Anh', '', '', '', '', '']);
   lich.appendRow(['T6-2', 'Thứ 6', '17h00-18h30', 'Mr. Ngọc', 'Bé Đổi', 'L2', 'SP2', '', '🔄 Xin đổi', '', '', '', '', '']);
+  // Chốt lịch xong, đổi lại 2 dòng dưới để chúng tiếp tục đại diện cho trạng thái chờ/xin đổi.
+  sandbox.chotLichTaoTin();
+  lich.getRange(3, 9).setValue('Chờ Ms. Vân Anh');
+  lich.getRange(4, 9).setValue('🔄 Xin đổi');
   sandbox.guiTinChoGV();
   eq(STATE.fetches.length, 1, 'Lần đầu chỉ gửi ca đã chốt');
   eq(lich.getRange(1, 15).getValue(), 'Đã gửi GV lúc', 'Tự thêm cột đánh dấu gửi an toàn');
@@ -1222,6 +1236,32 @@ console.log('\n=== T34: Ca đặc biệt cảnh báo rõ trước khi ghi lịch
   eq(rows('LICH_BU').length, 5, 'Không xác nhận cảnh báo → không ghi ca đặc biệt');
   ok(msg.includes('Đã dừng gom lịch'), 'Không xác nhận cảnh báo → dừng gom lịch');
   ok(lastAlert().includes('trùng giờ') && lastAlert().includes('quá 4 bé'), 'Cảnh báo nêu trùng giờ và quá sức chứa');
+}
+
+console.log('\n=== T37: Chốt lịch tạo tin theo ca/GV đã sửa ===');
+{
+  STATE.ss = new MockSS(); STATE.alerts.length = 0; STATE.fetches.length = 0;
+  const lich = STATE.ss.insertSheet('LICH_BU');
+  lich.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú', 'Ngày học', 'Đã gửi GV lúc', 'Đã chốt lịch lúc']);
+  lich.appendRow(['T6-2', 'Thứ 6', '15h00-16h30', 'Mr. Đức Anh', 'Bé Chốt Lịch', 'L1', 'SP1', 'https://slide', '✅ Đi được', '', '', '', 'Ôn đọc', '07/11/2026', 'đã gửi cũ', '']);
+  sandbox.chotLichTaoTin();
+  ok(String(lich.getRange(2, 10).getValue()).includes('15h00-16h30'), 'Tin PH lấy giờ cuối cùng trong LICH_BU');
+  ok(String(lich.getRange(2, 11).getValue()).includes('Mr. Đức Anh'), 'Tin GV lấy GV cuối cùng trong LICH_BU');
+  eq(lich.getRange(2, 15).getValue(), '', 'Chốt lại xoá mốc gửi cũ để gửi thông tin mới');
+  ok(!!lich.getRange(2, 16).getValue(), 'Chốt lại ghi mốc chốt lịch');
+}
+
+console.log('\n=== T38: Cài đặt ca tạo đủ 6 ca và ưu tiên theo lớp ===');
+{
+  const ss = new MockSS();
+  const cd = sandbox.taoCaiDatCaDayBu(ss);
+  eq(cd.getRange(1, 1).getValue(), 'Mã ca', 'Có bảng cài đặt ca');
+  eq(cd.getRange(2, 1, 6, 1).getValues().filter(r => r[0]).length, 6, 'Tạo sẵn 6 ca Dạy Bù');
+  const ca = sandbox.layDanhSachCa(ss);
+  eq(ca.length, 6, 'Đọc 6 ca từ sheet cài đặt');
+  cd.getRange(2, 11).setValue('Ms. Vân');
+  const uuTien = sandbox.layGvBuUuTienTheoLop(ss);
+  eq(uuTien[cd.getRange(2, 9).getValue()], 'Ms. Vân', 'Ưu tiên GV theo lớp đọc từ sheet cài đặt');
 }
 
 console.log('\n============================');
