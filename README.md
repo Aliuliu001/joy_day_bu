@@ -10,8 +10,9 @@ File này là hướng dẫn DUY NHẤT cần đọc — mọi bản plan/audit 
 **Các tab làm việc (4 tab):**
 | Tab | Ai dùng | Việc gì |
 |-----|---------|---------|
-| **BAO_BU** | GV (báo bé nghỉ) + quản lý | GV báo bé nghỉ; quản lý chọn/đổi **Ca xếp** (nhãn gộp `Mã ca | Thứ | Giờ`) từ các ca đang bật trong CÀI ĐẶT CA DẠY BÙ. Đây là lịch **tạm**, chưa tạo LICH_BU hay tin nhắn. |
-| **LICH_BU** | quản lý | Lịch đã chốt từ BAO_BU. Chỉ dùng một cột **Ca xếp (chọn)**; chọn ca sẽ tự cập nhật mã, thứ, giờ và GV. Các cột dữ liệu chi tiết vẫn giữ để backup/báo cáo. |
+| **BAO_BU** | GV (báo bé nghỉ) + quản lý | Nơi báo bù và **lịch tạm**. Quản lý chọn/đổi **Ca xếp** (`Mã ca | Thứ | Giờ | GV`) từ các ca đang bật. Sau khi gửi GV thành công, dòng này tự hiện lại **ca cuối** và trạng thái `Đã báo GV`. |
+| **LICH_BU** | quản lý | Lịch dùng để hỏi PH và chốt lịch cuối. Cột **Ca xếp (chọn)** tự cập nhật mã, thứ, giờ, GV, ngày học; đổi ca sau khi hỏi PH sẽ bắt xác nhận lại. Khi PH `✅ Đi được`, lịch được chốt rồi mới gửi GV. |
+| **CÀI ĐẶT CA DẠY BÙ** | quản lý | Danh mục ca dùng chung: mã, thứ, giờ, GV, trạng thái và sức chứa. Cột **Ca hiển thị** chỉ để xem; sửa ca chung ở đây, không sửa theo từng bé. |
 | **DS HỌC SINH** | GV + quản lý | Danh sách HS + **tick SOTW** ☑; ô **"GV đang chọn" → ẨN hết lớp khác**, chọn thêm **"Lớp cần chọn" → lọc tới bé lớp đó**; xóa 2 ô → hiện lại toàn bộ (dropdown GV/Lớp lấy từ dữ liệu thật, tự chạy lại sau mỗi lần Đồng bộ) |
 | **Backup tháng MM-YYYY** | tự động | Lưu lịch sử (không ai sửa tay) |
 
@@ -20,10 +21,12 @@ File này là hướng dẫn DUY NHẤT cần đọc — mọi bản plan/audit 
 **Menu ⚙️ Quản lý Dạy Bù: (chỉ dành quản lý — GV không cần vào)**
 ```
 ├─ 1️⃣ Cập nhật danh sách HS đầu tuần
-├─ 2️⃣ Gom lịch + gửi SOTW (T2 chiều)
-├─ 3️⃣ Xử lý PH xin đổi / quá hạn (T4)
-├─ 4️⃣ Gửi lịch đã chốt cho GV (T5-T6)
-├─ 5️⃣ Kết tuần mới — tự backup trước (T7-CN)
+├─ 2️⃣ Gom nhóm tạm + gửi SOTW (T2 chiều)
+├─ 3️⃣ Chốt BAO_BU → tạo LICH_BU + Tin PH
+├─ 4️⃣ Xử lý PH xin đổi / quá hạn (khi có)
+├─ 5️⃣ Chốt LICH_BU → tạo tin GV
+├─ 6️⃣ Gửi lịch đã chốt cho GV (T5-T6)
+├─ 7️⃣ Kết tuần mới — tự backup trước (T7-CN)
 ├─ 📨 Gửi tin / Nhắc việc               ▸ Nhắc GV · Gửi lại lịch/SOTW · Gửi thử bot
 ├─ 📦 Backup / Thống kê / Chốt tháng     ▸ Backup · Thống kê · Việc cần làm
 ├─ 🗂️ Cập nhật dữ liệu phụ               ▸ Ảnh SOTW · Sửa cột · Bảng lớp
@@ -69,19 +72,18 @@ Vào tab **CÀI ĐẶT CA DẠY BÙ**:
 - Đây là cài đặt dùng lâu dài. **Ca đặc biệt** ở BAO_BU chỉ dành cho ngoại lệ một lần.
 
 ### 5. T2 CHIỀU — bấm **2️⃣ Gom nhóm tạm + gửi SOTW**
-Máy chỉ gán **Ca xếp tạm** trong BAO_BU từ các ca **Dùng** ở tab **CÀI ĐẶT CA DẠY BÙ**. Quản lý có thể chọn lại ca ở cột Ca xếp; không có LICH_BU, tin PH hay tin GV nào được tạo ở bước này.
+Máy chỉ gán **Ca xếp tạm** trong BAO_BU từ các ca **Dùng** ở tab **CÀI ĐẶT CA DẠY BÙ**. Quản lý có thể chọn lại ca; chưa tạo LICH_BU, tin PH hay tin GV.
 
-### 6. Quản lý kiểm tra xong — bấm **4️⃣ Chốt BAO_BU → tạo LICH_BU + Tin PH**
-Hệ thống tạo/cập nhật LICH_BU đúng theo Ca xếp cuối cùng và tạo **tin PH**. PH trả lời tại cột **PH xác nhận** của LICH_BU. Có thể chọn lại một nhãn ca trong cột **Ca xếp (chọn)**; mã ca, thứ, giờ và GV sẽ cập nhật cùng lúc.
+### 6. Hỏi PH — bấm **3️⃣ Chốt BAO_BU → tạo LICH_BU + Tin PH**
+Hệ thống tạo lịch hỏi PH. Khi chốt, ca bị tắt, quá chỗ, quá số trình độ hoặc trùng giờ GV sẽ bị chặn và nêu rõ để sửa trước. PH trả lời tại cột **PH xác nhận** trong LICH_BU.
 
-### 7. Khi PH xác nhận ✅ — bấm **5️⃣ Chốt LICH_BU → tạo tin GV**
-Bước này mới tạo tin GV theo LICH_BU cuối cùng. Sau đó bấm **6️⃣ Gửi lịch đã chốt cho GV**: chỉ các bé `✅ Đi được` và đã chốt LICH_BU mới được gửi. Không có tự động đổi hoặc bịa GV thay thế.
+### 7. Có đổi lịch — chỉ khi PH xin đổi/quá hạn
+Bấm **4️⃣ Xử lý PH xin đổi / quá hạn**, rồi bấm **2️⃣ Gom nhóm tạm** lại cho các bé đó và hỏi PH lại. Nếu đổi trực tiếp **Ca xếp (chọn)** ở LICH_BU, hệ thống tự đổi mã/thứ/giờ/GV/ngày học, xoá xác nhận cũ và yêu cầu PH xác nhận lại.
 
-### 8. T3–T4 — tick "PH xác nhận" trong LICH_BU
-- ✅ Đi được → giữ nguyên
-- 🔄 Xin đổi / không trả lời → bấm **3️⃣ Xử lý PH xin đổi / quá hạn**: chuyển về BAO_BU xếp lại + báo Telegram
+### 8. PH xác nhận ✅ — bấm **5️⃣ Chốt LICH_BU → tạo tin GV**, rồi **6️⃣ Gửi lịch đã chốt cho GV**
+Chỉ bé `✅ Đi được` mới được tạo/gửi tin GV. Telegram gửi thành công thì BAO_BU tự cập nhật **ca cuối** và trạng thái `Đã báo GV`. Nếu gửi lỗi, chưa được xem là đã báo GV; không bấm Gửi lại chỉ để đồng bộ.
 
-### 9. CUỐI TUẦN — bấm **6️⃣ Kết tuần mới** (1 nút làm 4 việc)
+### 9. CUỐI TUẦN — bấm **7️⃣ Kết tuần mới** (1 nút làm 4 việc)
 1. **TỰ backup** (đã backup rồi tự bỏ qua — không trùng; chống trùng theo từng dòng nên chạy bao nhiêu lần cũng an toàn)
 2. Chuyển bé **chưa chốt** (Chờ/Xin đổi) về BAO_BU → **giữ lại** tuần sau
 3. Xoá BAO_BU + LICH_BU (giữ dòng mẫu + bé chưa xếp)
@@ -104,12 +106,12 @@ Bước này mới tạo tin GV theo LICH_BU cuối cùng. Sau đó bấm **6️
 ## 🚀 LẮP ĐẶT / CẬP NHẬT (chạy 1 lần)
 
 1. Mở Sheet → **Tiện ích mở rộng → Apps Script** → xoá hết code cũ → dán toàn bộ [Code.gs](Code.gs) → **Lưu** (Ctrl+S)
-2. Về Sheet → **📚 Dạy Bù → ⚙️ Cài đặt → 🔧 Nâng cấp sheet SOTW**
+2. Về Sheet → **⚙️ Quản lý Dạy Bù → 🛠️ Cài đặt kỹ thuật → 🔧 Nâng cấp sheet sau khi copy code mới**
    - Tự tạo DS HỌC SINH, cột SOTW, 2 dòng mẫu (không mất data), ẩn tab LOP
    - Hỏi 1 lần: cài backup tự động tối T7 → trả lời **Có**
 3. **Nhập danh sách học sinh** vào DS HỌC SINH từ ô **A3**: copy từ Excel **Tên | Lớp | GV** → paste
    - Giới tính + Link ảnh: **để trống cũng được** (tin SOTW tự bỏ phần thiếu)
-4. Bấm lại 🔧 Nâng cấp sheet SOTW (điền GV chính cho danh sách mới)
+4. Bấm lại **🔧 Nâng cấp sheet sau khi copy code mới** (điền GV chính cho danh sách mới)
 
 > ⚠️ **KHÔNG** bấm "🔨 Tạo sheet mới" khi sheet đã có dữ liệu — nó xoá hết.
 
@@ -122,7 +124,7 @@ Bước này mới tạo tin GV theo LICH_BU cuối cùng. Sau đó bấm **6️
 1. Tạo folder Drive **`ẢNH HỌC SINH SOTW`** → thả ảnh vô — đặt tên theo **`MSHS-Họ tên.png`** (VD: `HV152-Phạm Gia Khải.png`). Hệ thống ưu tiên khớp MSHS nên không lẫn bé trùng tên; ảnh cũ chỉ có họ tên (vd `Nguyen Van A.jpg`) vẫn ghép được nhờ tự bỏ dấu khi so.
 2. Chuột phải folder → **Chia sẻ** → "Bất kỳ ai có đường liên kết" → Người xem → Xong *(share 1 lần)*
 3. Copy **link folder** (dạng `https://drive.google.com/drive/folders/xxxx`) → dán vào **ô H1 tab DS HỌC SINH**
-4. Bấm **⚙️ Cài đặt → 🖼️ Gắn link ảnh SOTW (theo tên file)** → cột Link ảnh tự điền hết (tin SOTW kèm sẵn link 🔗 cho Mr. Khôi)
+4. Bấm **⚙️ Quản lý Dạy Bù → 🗂️ Cập nhật dữ liệu phụ → 🖼️ Gắn ảnh SOTW từ folder** → cột Link ảnh tự điền hết (tin SOTW kèm sẵn link 🔗 cho Mr. Khôi)
    - Ưu tiên khớp **MSHS**; nếu file ảnh cũ không có MSHS thì khớp theo **họ tên**.
    - Nếu MSHS khớp nhưng tên trong file khác tên danh sách, ảnh vẫn được gắn theo MSHS và popup sẽ báo rõ từng trường hợp để anh kiểm tra lại tên file.
    - Bé chưa có file ảnh → báo tên bé thiếu, thêm ảnh vào folder rồi bấm lại.
@@ -134,8 +136,8 @@ Bước này mới tạo tin GV theo LICH_BU cuối cùng. Sau đó bấm **6️
 ## 🔁 ĐỒNG BỘ TỪ FILE CHÍNH (chỉ đọc — KHÔNG bao giờ ghi vào file gốc)
 
 Danh sách HS trong **DS HỌC SINH** lấy tự động từ file chính của anh:
-- **Nút:** ⚙️ Cài đặt → **🔄 Đồng bộ DS học sinh (chỉ đọc file chính)**
-- **Tự chạy** khi bấm **1️⃣ Gom nhóm** và khi **🔧 Nâng cấp sheet**
+- **Nút:** ⚙️ Quản lý Dạy Bù → **1️⃣ Cập nhật danh sách HS đầu tuần**
+- **Tự chạy** khi bấm **2️⃣ Gom nhóm tạm** và khi **🔧 Nâng cấp sheet sau khi copy code mới**
 - **Lần đầu Google xin quyền đọc** → hiện trang cảnh báo → bấm *Advanced → Go to ... → Allow (Cho phép)* → chạy lại
 - Cách lấy: A:B:C (Tên/Lớp/GV) ← file chính; **D:E:F (Giới tính/Link ảnh/Tick SOTW) giữ nguyên theo tên bé**
 - Bé có trong DS nhưng **không có trong file chính** → giữ lại cuối bảng + báo anh quyết (không tự xoá)
@@ -149,7 +151,7 @@ Nếu anh thấy cột Lớp/Tên bé có dòng bị ngược (vd 2 dòng mẫu 
 
 ## 📊 THỐNG KÊ (menu 📊 → Làm mới thống kê)
 
-- **Cần data gì?** Tab `Backup tháng MM-YYYY` — tự tạo khi anh bấm Backup thủ công (🔁) hoặc **4️⃣ Làm mới tuần mới** (tự backup trước khi xoá). Tháng nào chưa backup lần nào → báo "Chưa có sheet Backup tháng …".
+- **Cần data gì?** Tab `Backup tháng MM-YYYY` — tự tạo khi anh bấm **💾 Lưu backup ngay** hoặc **7️⃣ Kết tuần mới** (tự backup trước khi xoá). Tháng nào chưa backup lần nào → báo "Chưa có sheet Backup tháng …".
 - Nội dung: số ca dạy + tổng giờ (1.5h/ca) từng GV (**lấy GV từ data backup thật** — GV mới tự có dòng), tổng bé, tổng ca, tổng giờ cả tháng.
 - Bấm lại Làm mới thống kê bất cứ lúc nào — công thức tự cập nhật khi backup thêm dòng.
 
@@ -172,7 +174,7 @@ Nếu anh thấy cột Lớp/Tên bé có dòng bị ngược (vd 2 dòng mẫu 
 
 ## 📊 THỐNG KÊ VÀ KIỂM SOÁT GỬI TIN
 
-- **Gửi tin cho GV** chỉ gửi ca chốt `✅` chưa có mốc **Đã gửi GV lúc**. Telegram gửi lỗi thì không ghi mốc. Cần gửi lại: menu **🔁 Gửi / Nhắc lẻ → 📨 Gửi lại tin GV đã chốt**, rồi xác nhận.
+- **Gửi tin cho GV** chỉ gửi ca chốt `✅` chưa có mốc **Đã gửi GV lúc**. Telegram gửi lỗi thì không ghi mốc. Cần gửi lại: **⚙️ Quản lý Dạy Bù → 📨 Gửi tin / Nhắc việc → 📨 Gửi lại lịch đã chốt cho GV**, rồi xác nhận.
 - **📌 Hôm nay cần làm gì?** trong menu Báo cáo cho biết bé chờ, xin đổi, ca chưa gửi GV và bé chưa chấm kết quả.
 - Khi **Gom nhóm**, hệ thống cảnh báo thiếu tên/lớp/trình độ hoặc link Canva trước khi ghi lịch; quản lý có thể dừng để sửa hoặc xác nhận tiếp tục. Cảnh báo ca quá 4 bé, quá 2 trình độ và cùng GV trùng giờ được hỗ trợ bởi kiểm tra nghiệp vụ.
 - **Báo cáo**: chọn “Làm mới thống kê tháng này” hoặc “Chọn tháng để xem thống kê” (dạng `MM-yyyy`, ví dụ `11-2026`). Chỉ **Đã học** được tính ca/giờ; **Vắng** và **Nghỉ** được liệt kê riêng, không tính giờ dạy.

@@ -109,10 +109,52 @@
 - [x] README là hướng dẫn chính, plan/task đánh dấu hoàn thành.
 - [x] `node test_sotw.js`: **250 PASS / 0 FAIL**.
 
+## Đợt 6 — Thống nhất Ca xếp BAO_BU ↔ LICH_BU (đang thực hiện)
+
+> Quy tắc đã duyệt: Sau khi PH `✅ Đi được`, lịch được chốt và **gửi GV thành công**, `LICH_BU` là ca cuối của buổi. Hệ thống phản ánh ca cuối đó về dòng đúng trong `BAO_BU`; `CÀI ĐẶT CA DẠY BÙ` vẫn là danh mục ca chung, không bị sửa theo từng bé.
+
+### TASK 1 — Nhãn ca và Cài đặt ca ✅
+
+- [x] Nhãn chung đổi thành `Mã ca | Thứ | Giờ | GV`, phân biệt ca trùng giờ khác GV.
+- [x] Cột `Ca hiển thị` tự cập nhật khi sửa Mã/Thứ/Giờ/GV trong tab Cài đặt.
+- [x] Dropdown luôn dựng nhãn từ dữ liệu ca hiện hành, không dùng nhãn cũ lưu lại.
+- [x] Gom lần hai giữ ca tạm đã có, không tạo LICH_BU.
+- [x] Test đỏ rồi xanh: `node test_sotw.js` = **213 PASS / 0 FAIL**.
+
+### TASK 2 — Chặn sai khi sửa ca tạm BAO_BU ✅
+
+- [x] Chặn chốt nếu ca đã tắt/không tồn tại, quá chỗ, quá số trình độ hoặc GV trùng giờ.
+- [x] Không tự dời hoặc ghi đè lựa chọn tay của quản lý; popup nêu ca/dòng cần sửa.
+
+### TASK 3 — Chốt BAO_BU sang LICH_BU an toàn ✅
+
+- [x] Không âm thầm bỏ qua ca sai; không chốt đè lịch đã có PH/GV.
+- [x] Thêm `Mã buổi` ở cuối BAO_BU và LICH_BU để liên kết đúng một buổi, kể cả cùng bé học bù nhiều lần.
+
+### TASK 4 — Đổi lịch cuối và gửi GV ✅
+
+- [x] Đổi ca LICH_BU cập nhật đủ ngày, xoá xác nhận/tin/marker cũ và yêu cầu PH xác nhận lại.
+- [x] Chỉ bé PH `✅ Đi được` và đã chốt nội dung mới tạo/gửi tin GV.
+
+### TASK 5 — Đồng bộ ngược sau khi gửi GV ✅
+
+- [x] Telegram gửi thành công mới phản ánh ca cuối về đúng dòng BAO_BU và đặt trạng thái `Đã báo GV`.
+- [x] Nếu đồng bộ BAO_BU lỗi sau gửi: giữ mốc đã gửi, báo rõ lỗi; không gửi lại tin chỉ để đồng bộ.
+
+### TASK 6 — Hướng dẫn ngay trong Cài đặt kỹ thuật ✅
+
+- [x] Cập nhật popup hướng dẫn + README theo đúng thứ tự làm thực tế, có ví dụ đổi T6-1 → T6-2.
+- [x] Đổi thứ tự 7 nút menu để bước xử lý PH xin đổi nằm sau bước hỏi PH.
+
+### TASK 7 — Nghiệm thu, push ⏳
+
+- [x] Rà luồng cũ, chạy toàn bộ test và kiểm tra định dạng diff.
+- [x] Review độc lập đã tìm 3 lỗi luồng cao/trung bình: lịch cuối chưa kiểm lại, alias cũ có thể bỏ qua PH, hướng dẫn còn đường dẫn cũ. Đã sửa và bổ sung test hồi quy.
+- [x] Đã commit `7537f2f`; push GitHub đang bị chặn vì PAT trên máy trả 401. Sau khi push được, cần dán `Code.gs` vào Apps Script của Sheet thật và chạy `🔧 Nâng cấp sheet sau khi copy code mới`.
+
 ## Checklist trước khi đẩy GitHub
 
-- [x] Code test PASS 100%: **250 PASS / 0 FAIL**.
-- [x] Không còn thay đổi chưa kiểm tra.
-- [x] README, `plan.md`, `task.md` đã cập nhật.
-- [x] Đã commit/push đợt 1B: `e636d8c`.
-- [x] Đã kiểm tra lại commit mới trên nhánh `main`.
+- [x] Code test PASS 100%: **225 PASS / 0 FAIL**.
+- [x] `git diff --check` sạch.
+- [x] README, plan và task.md đã cập nhật.
+- [ ] Đã commit/push Đợt 6 và kiểm tra lại commit mới trên nhánh `main`.
