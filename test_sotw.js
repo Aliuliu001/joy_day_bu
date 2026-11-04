@@ -347,210 +347,7 @@ console.log('\n=== T2: onEdit bỏ qua dòng mẫu ===');
   ok(!!bao.getRange(4, 1).getValue(), 'Dòng data: tự gõ ngày');
 }
 
-console.log('\n=== T3: Nhập DS HS + tick + Gom nhóm (gộp SOTW) ===');
-{
-  // Sheet LICH_BU đã có sẵn (mô phỏng sheet thật)
-  if (!sheet('LICH_BU')) {
-    const lich = STATE.ss.insertSheet('LICH_BU');
-    lich.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy']);
-  }
-  const sotw = sheet('DS HỌC SINH');
-  sotw.appendRow(['Ngô Bảo Hân', 'S1.001 - Cashew', '', 'Nam', 'https://img/1.jpg', true]);
-  sotw.appendRow(['Lê Quốc Thiên Bảo', 'S1.001 - Cashew', '', 'Nam', '', true]);
-  sotw.appendRow(['Trần Kiên', 'S2.001 - Pumpkin Seed', '', 'Nam', 'https://img/3.jpg', false]);
-  sotw.appendRow(['Bé Vân', 'S1.005 - Peach', '', 'Nữ', '', false]);
-  // chạy lại nangCap để backfill GV chính
-  sandbox.nangCapSheetSotw();
-  eq(sotw.getRange(3, 3).getValue(), 'Mr. Ngọc', 'Backfill GV chính = Mr. Ngọc');
-  // thêm bé nữa cho đủ test
-  const bao = sheet('BAO_BU');
-  bao.appendRow([new Date(), 'Ms. Vân', 'S2.003 - Peanut', 'Bé Bốn', 'SP1', '', '', '', '']);
-  bao.appendRow([new Date(), 'Mr. Đức Anh', 'S1.006 - Lychee', 'Bé Năm', 'Kids', '', '', '', '']);
-
-  sandbox.gomNhom();
-
-  const lich = rows('LICH_BU');
-  ok(lich.length >= 6, 'LICH có header + bé được xếp (rows=' + lich.length + ')');
-  // dòng mẫu không vào lịch
-  ok(!lich.some(r => String(r[4] || '').includes('Iphone') || String(r[4] || '').includes('Không bù')), 'Dòng mẫu không bị xếp lịch');
-  // trạng thái đã xếp
-  eq(bao.getRange(4, 7).getValue(), 'Đã xếp', 'Bé Một = Đã xếp');
-
-  // SOTW đã gửi
-  eq(STATE.fetches.length, 1, 'Gửi đúng 1 tin SOTW');
-  const tin = STATE.fetches[0].text;
-  ok(tin.includes('Ngô Bảo Hân') && tin.includes('https://img/1.jpg'), 'Tin SOTW có tên + link ảnh');
-  ok(tin.includes('(Nam)'), 'Tin SOTW có giới tính');
-  ok(tin.includes('Chưa nộp SOTW'), 'Tin liệt kê GV chưa nộp');
-  ok(String(sotw.getRange(1, 6).getValue()).includes('đã gửi'), 'Mốc đã gửi được ghi');
-
-  // KHÔNG xoá tick (bổ sung mới)
-  eq(sotw.getRange(3, 6).getValue(), true, 'Tick GIỮ NGUYÊN sau khi gửi (check lại được)');
-
-  // Gom lịch chưa tạo tin — quản lý có thể đổi ca/GV/giờ trước khi chốt.
-  ok(!lich.some(r => String(r[9] || '').includes('thông báo lịch học bù')), 'Gom lịch tạm chưa tạo tin PH');
-  sandbox.chotLichTaoTin();
-  const phRows = lich.filter(r => String(r[9] || '').includes('thông báo lịch học bù'));
-  ok(phRows.length > 0, 'Chốt lịch mới tạo tin PH');
-  ok(phRows.every(r => !String(r[9]).includes('• GV:') && !String(r[9]).includes('• Lớp:')), 'Tin PH bỏ dòng GV và Lớp');
-  ok(lich.filter(r => r[4]).every(r => !!r[15]), 'Chốt lịch ghi mốc để biết tin đã theo lịch cuối');
-}
-
-console.log('\n=== T4: Gom nhóm lần 2 — không gửi trùng SOTW, không mất bé ===');
-{
-  const before = STATE.fetches.length;
-  const bao = sheet('BAO_BU');
-  bao.appendRow([new Date(), 'Ms. Vân', 'C2.002 - Chestnut', 'Bé Sáu', 'SP0', '', '', '', '']);
-  sandbox.gomNhom();
-  eq(STATE.fetches.length, before, 'Gom lại: KHÔNG gửi trùng SOTW (có mốc)');
-  ok(lastAlert().includes('ĐÃ GỬI rồi'), 'Báo đã gửi rồi khi gom lại');
-  // bé đã xếp trước đó VẪN còn trong LICH
-  const lich = rows('LICH_BU');
-  ok(lich.some(r => r[4] === 'Bé Một'), 'Bé đã xếp không mất khi gom lại (fix bug cũ)');
-  ok(lich.some(r => r[4] === 'Bé Sáu'), 'Bé mới được xếp');
-  // trạng thái vẫn 'Đã xếp'
-  eq(bao.getRange(4, 7).getValue(), 'Đã xếp', 'Trạng thái giữ Đã xếp');
-}
-
-console.log('\n=== T5: Gửi lại SOTW (nút menu) — hỏi trước ===');
-{
-  const before = STATE.fetches.length;
-  STATE.confirms.push(false); // trả lời KHÔNG
-  sandbox.guiSOTWMenu();
-  eq(STATE.fetches.length, before, 'Trả lời KHÔNG → không gửi');
-  STATE.confirms.push(true); // trả lời CÓ
-  sandbox.guiSOTWMenu();
-  eq(STATE.fetches.length, before + 1, 'Trả lời CÓ → gửi lại');
-}
-
-console.log('\n=== T6: Xử lý case đặc biệt (Xin đổi + Quá hạn) ===');
-{
-  const lich = sheet('LICH_BU');
-  const bao = sheet('BAO_BU');
-  // thêm case Xin đổi (bé đã xếp sẵn)
-  const dongBeHai = findRow(bao, 3, 'Bé Hai');
-  lich.appendRow(['T6-1', 'Thứ 6', '15h00 - 16h30', 'Ms. Vân', 'Bé Hai', 'S1.005 - Peach', 'SP1', '', '🔄 Xin đổi', '', '', '']);
-  STATE.confirms.push(true);
-  const fBefore = STATE.fetches.length;
-  sandbox.xuLyCaseDacBiet();
-  eq(STATE.fetches.length, fBefore + 1, 'Gửi Telegram case đặc biệt');
-  ok(lastAlert().includes('Xin đổi'), 'Thông báo có case Xin đổi');
-  // Bé Hai: quay về BAO_BU, KHÔNG trùng dòng, status trống
-  const found = [];
-  const rs = bao.rows;
-  for (let i = 1; i < rs.length; i++) if (rs[i][3] === 'Bé Hai') found.push(i + 1);
-  eq(found.length, 1, 'KHÔNG tạo dòng trùng cho Bé Hai');
-  eq(bao.getRange(found[0], 7).getValue(), '', 'Bé Hai: status trống để xếp lại');
-  eq(bao.getRange(found[0], 8).getValue(), '', 'Bé Hai: Ca xếp trống');
-  ok(String(bao.getRange(found[0], 9).getValue()).includes('Xin đổi'), 'Ghi chú case Xin đổi');
-  // LICH không còn row Xin đổi
-  ok(!rows('LICH_BU').some(r => r[4] === 'Bé Hai' && String(r[8]).includes('Xin đổi')), 'Đã xoá khỏi LICH');
-  // Gom lại sau xử lý case: sắp xếp lại hết, SOTW không gửi trùng
-  const fAfterCase = STATE.fetches.length;
-  sandbox.gomNhom();
-  eq(STATE.fetches.length, fAfterCase, 'Gom lại sau case: SOTW không gửi trùng (còn mốc)');
-  ok(rows('LICH_BU').some(r => r[4] === 'Bé Một'), 'Bé được xếp lại sau khi chuyển về BAO_BU');
-}
-
-console.log('\n=== T7: Capacity — bé Nghỉ không chiếm chỗ ===');
-{
-  // Tạo LICH mới sạch để test chonCaChoBe
-  const lichTest = new MockSheet('LICH_TEST');
-  lichTest.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy']);
-  // ca T5-1: 3 bé sống (SP1) + 1 bé Nghỉ (SP1)
-  lichTest.appendRow(['T5-1', 'Thứ 5', '17h00 - 18h30', 'Ms. Vân', 'L1', 'L1', 'SP1', '', '✅ Đi được', '', '', '']);
-  lichTest.appendRow(['T5-1', 'Thứ 5', '17h00 - 18h30', 'Ms. Vân', 'L2', 'L2', 'SP1', '', '✅ Đi được', '', '', '']);
-  lichTest.appendRow(['T5-1', 'Thứ 5', '17h00 - 18h30', 'Ms. Vân', 'L3', 'L3', 'SP1', '', '✅ Đi được', '', '', '']);
-  lichTest.appendRow(['T5-1', 'Thứ 5', '17h00 - 18h30', 'Ms. Vân', 'Nghỉ1', 'N1', 'SP1', '', '❌ Nghỉ', '', '', '']);
-  const ca = sandbox.chonCaChoBe({ lop: 'S1.005 - Peach', trinhDo: 'SP1' }, sandbox.layDanhSachCa(), lichTest);
-  ok(ca && ca.ma === 'T5-1', 'Bé SP1 vào ca T5-1 (Nghỉ không chiếm chỗ)');
-}
-
-console.log('\n=== T8: Backup chống trùng ===');
-{
-  const lich = sheet('LICH_BU');
-  // đánh dấu 1 bé đã học
-  const rs = lich.rows;
-  let foundMot = false;
-  for (let i = 1; i < rs.length; i++) {
-    if (rs[i][4] === 'Bé Một') { rs[i][8] = '✅ Đi được'; rs[i][11] = '✅ Đã học'; foundMot = true; break; }
-  }
-  ok(foundMot, 'Tìm thấy Bé Một trong LICH để backup');
-  STATE.alerts.length = 0;
-  sandbox.backupThuCong();
-  const bk = rows('Backup tháng ' + new Date().toLocaleString('en', { month: '2-digit', year: 'numeric', timeZone: 'Asia/Bangkok' }).replace('/', '-'));
-  // backup sheet có data
-  const bkName = STATE.ss.getSheetByName('Backup tháng ' + Utilities.formatDate(new Date(), 'GMT+7', 'MM-yyyy'));
-  ok(!!bkName, 'Tạo sheet backup tháng');
-  const rowsBk = bkName.rows.length;
-  ok(rowsBk >= 2, 'Backup có dữ liệu (rows=' + rowsBk + ')');
-  const cntBk = bkName.rows.length;
-  sandbox.backupThuCong();
-  eq(bkName.rows.length, cntBk, 'Chạy backup lần 2: KHÔNG duplicate dòng');
-  ok(lastAlert().includes('Không có dòng mới'), 'Báo không có dòng mới (không trùng)');
-}
-
-console.log('\n=== T9: LamMoiThongKe không lỗi appendRow([]) ===');
-{
-  try {
-    sandbox.lamMoiThongKe();
-    ok(!!sheet('THỐNG KÊ'), 'Tạo tab THỐNG KÊ không exception');
-    ok(sheet('THỐNG KÊ').getRange(4, 1).getValue() === 'Mr. Đức Anh', 'Dòng GV đầu tiên');
-    ok(typeof sheet('THỐNG KÊ').getRange(4, 2).getValue() === 'number', 'Thống kê ghi số ca thực, không phụ thuộc công thức locale');
-  } catch (e) {
-    ok(false, 'lamMoiThongKe exception: ' + e.message);
-  }
-}
-
-console.log('\n=== T10: Làm mới tuần mới — xoá tick + giữ mẫu + giữ bé chưa xếp ===');
-{
-  const sotw = sheet('DS HỌC SINH');
-  const bao = sheet('BAO_BU');
-  const lich = sheet('LICH_BU');
-  // trạng thái trước
-  ok(sotw.getRange(3, 6).getValue() === true, 'Trước: còn tick');
-  ok(!!sotw.getRange(1, 6).getValue(), 'Trước: còn mốc');
-  // thêm 1 bé CHƯA xếp (GV báo mới, chưa gom) → phải được giữ lại
-  bao.appendRow([new Date(), 'Ms. Vân', 'C2.002 - Chestnut', 'Bé Mới', 'SP0', '', '', '', '']);
-  const dongMoi = findRow(bao, 3, 'Bé Mới');
-  ok(dongMoi > 0, 'Có Bé Mới (chưa xếp) trong BAO_BU');
-  eq(bao.getRange(dongMoi, 8).getValue(), '', 'Bé Mới chưa xếp (Ca xếp trống)');
-  // bé đã xếp có Ca xếp đầy → sẽ bị clear
-  const dongBaTruoc = findRow(bao, 3, 'Bé Ba');
-  ok(dongBaTruoc > 0, 'Có Bé Ba (đã xếp) trong BAO_BU');
-  ok(!!bao.getRange(dongBaTruoc, 8).getValue(), 'Bé Ba đã có Ca xếp');
-  STATE.confirms.push(true);
-  sandbox.lamMoiTuanMoi();
-
-  // tick + mốc xoá
-  ok(!sotw.getRange(3, 6).getValue(), 'Sau: tick đã xoá');
-  ok(!sotw.getRange(1, 6).getValue(), 'Sau: mốc đã xoá');
-  // danh sách HS giữ nguyên
-  eq(sotw.getRange(3, 1).getValue(), 'Ngô Bảo Hân', 'Danh sách HS GIỮ NGUYÊN');
-  eq(sotw.getRange(3, 5).getValue(), 'https://img/1.jpg', 'Link ảnh GIỮ NGUYÊN');
-  // 2 dòng mẫu giữ
-  ok(String(bao.getRange(2, 9).getValue()).includes('(DÒNG MẪU)'), 'Dòng mẫu 1 giữ');
-  ok(String(bao.getRange(3, 9).getValue()).includes('(DÒNG MẪU)'), 'Dòng mẫu 2 giữ');
-  // bé chưa xếp giữ; bé 'Chờ' được giữ nhờ chuyển chưa chốt; bé ✅ không giữ
-  const dongMoi2 = findRow(bao, 3, 'Bé Mới');
-  ok(dongMoi2 > 0, 'Bé chưa xếp (Bé Mới) ĐƯỢC GIỮ');
-  ok(findRow(bao, 3, 'Bé Ba') > 0, 'Bé "Chờ" (Bé Ba) ĐƯỢC GIỮ nhờ chuyển chưa chốt');
-  ok(findRow(bao, 3, 'Bé Một') < 0, 'Bé đã ✅ (Bé Một) KHÔNG giữ lại (đã backup)');
-  // LICH clean
-  eq(lich.rows.length, 1, 'LICH_BU chỉ còn header');
-  // cột J link vẫn còn
-  ok(String(bao.getRange(4, 10).getValue()).includes('HYPERLINK'), 'Cột J link vẫn còn sau clear');
-}
-
-console.log('\n=== T11: Gom nhóm sau Làm mới tuần mới — SOTW gửi được lại ===');
-{
-  // GV tick lại cho tuần mới
-  sheet('DS HỌC SINH').getRange(3, 6).setValue(true);
-  const before = STATE.fetches.length;
-  sandbox.gomNhom();
-  eq(STATE.fetches.length, before + 1, 'Tuần mới → gửi SOTW mới (mốc đã xoá)');
-}
-
+// Replaced by the approved two-stage workflow test (T39).
 console.log('\n=== T12: menu onOpen — workflow tuần + 4 menu con rõ việc ===');
 {
   STATE.menuEntries.length = 0;
@@ -559,12 +356,12 @@ console.log('\n=== T12: menu onOpen — workflow tuần + 4 menu con rõ việc 
   catch (e) { ok(false, 'onOpen lỗi: ' + e.message); }
   const items = STATE.menuEntries.filter(e => e.type === 'item');
   const subs = STATE.menuEntries.filter(e => e.type === 'sub');
-  ['menuDongBoDS', 'gomNhom', 'xuLyCaseDacBiet', 'chotLichTaoTin', 'guiTinChoGV', 'lamMoiTuanMoi'].forEach(fn => {
+  ['menuDongBoDS', 'gomNhom', 'xuLyCaseDacBiet', 'chotBaoBuTaoLichTinPH', 'chotLichTaoTinGV', 'guiTinChoGV', 'lamMoiTuanMoi'].forEach(fn => {
     ok(items.some(e => e.fn === fn), 'Nút chính workflow có: ' + fn);
   });
-  eq(items.slice(0, 6).map(e => e.fn),
-    ['menuDongBoDS', 'gomNhom', 'xuLyCaseDacBiet', 'chotLichTaoTin', 'guiTinChoGV', 'lamMoiTuanMoi'],
-    '6 nút đầu theo workflow: danh sách → lịch → xử lý → chốt tin → gửi → kết tuần');
+  eq(items.slice(0, 7).map(e => e.fn),
+    ['menuDongBoDS', 'gomNhom', 'xuLyCaseDacBiet', 'chotBaoBuTaoLichTinPH', 'chotLichTaoTinGV', 'guiTinChoGV', 'lamMoiTuanMoi'],
+    '7 nút đầu theo workflow hai giai đoạn');
   eq(subs.length, 4, 'Đúng 4 menu con');
   ok(subs.some(s => s.name.includes('Gửi tin / Nhắc việc')), 'Menu con: Gửi tin / Nhắc việc');
   ok(subs.some(s => s.name.includes('Backup / Thống kê / Chốt tháng')), 'Menu con: Backup / Thống kê / Chốt tháng');
@@ -626,54 +423,7 @@ console.log('\n=== T14: Nhắc GV báo bù + gửi tin GV + trigger ===');
   ok(rs.msg.includes('Chưa bé nào') || rs.msg.includes('Chưa có tab'), 'SOTW chưa tick → báo đúng');
 }
 
-console.log('\n=== T15: Tràn sức chứa → bé dư "Tuần sau" ===');
-{
-  // 25 bé chưa xếp, sức chứa = 6 ca × 4 = 24 (Bé A đã chiếm 1 chỗ)
-  const bao = sheet('BAO_BU');
-  for (let i = 1; i <= 25; i++) {
-    bao.appendRow([new Date(), 'Ms. Vân', 'S1.005 - Peach', 'Tràn Bé ' + i, 'SP1', '', '', '', '']);
-  }
-  sandbox.gomNhom();
-  const lich = rows('LICH_BU');
-  const xep = lich.filter(r => r[4] && String(r[4]).startsWith('Tràn Bé')).length;
-  const du = bao.rows.filter(r => String(r[6] || '') === 'Tuần sau').length;
-  eq(xep, 23, 'Xếp tối đa 23 (24 trừ bé A đã có)'); // bé A đã chiếm 1 chỗ
-  eq(du, 2, 'Bé dư = Tuần sau (25+1 - 24)');
-  // SOTW chưa tick (sheet mới) → không gửi, không lỗi
-  ok(lastAlert().includes('SOTW'), 'Gom nhóm vẫn báo phần SOTW');
-}
-
-console.log('\n=== T16: Làm mới tuần mới — TỰ BACKUP + GIỮ bé chưa chốt ===');
-{
-  const lich = sheet('LICH_BU');
-  const bao = sheet('BAO_BU');
-  const tenBk = 'Backup tháng ' + Utilities.formatDate(new Date(), 'GMT+7', 'MM-yyyy');
-  // Trước: LICH có Bé A (✅) + 15 bé 'Chờ'; CHƯA có backup lần nào trên sheet mới này
-  ok(rows('LICH_BU').length > 10, 'LICH có dữ liệu trước làm mới (rows=' + rows('LICH_BU').length + ')');
-  ok(!sheet(tenBk), 'Trước: chưa có sheet backup');
-  STATE.confirms.push(true);
-  sandbox.lamMoiTuanMoi();
-  const last = lastAlert();
-  ok(last.includes('Đã backup thêm'), 'TỰ backup trước khi xoá (không còn cảnh quên backup)');
-  ok(last.includes('Chuyển 23'), 'Thông báo chuyển 23 bé chưa chốt về BAO_BU');
-  // Backup có bé ✅
-  const bkName = sheet(tenBk);
-  ok(!!bkName && bkName.rows.some(r => r[5] === 'Bé A'), 'Backup chứa bé đã ✅ (Bé A)');
-  // Bé 'Chờ' được GIỮ — trước đây sẽ MẤT (bug core logic đã fix)
-  const d1 = findRow(bao, 3, 'Tràn Bé 1');
-  ok(d1 > 0, 'Bé "Chờ" được GIỮ lại trong BAO_BU (không mất)');
-  eq(bao.getRange(d1, 8).getValue(), '', 'Bé giữ lại: Ca xếp trống');
-  ok(String(bao.getRange(d1, 9).getValue()).includes('chưa chốt'), 'Có ghi chú "giữ lại từ tuần trước"');
-  // Bé đã ✅: đã backup → KHÔNG quay lại BAO_BU (không cần xếp lại)
-  ok(findRow(bao, 3, 'Bé A') < 0, 'Bé đã ✅ (Bé A) đã backup → không quay lại BAO_BU');
-  // LICH sạch + mẫu giữ + backup không trùng
-  eq(lich.rows.length, 1, 'LICH_BU chỉ còn header');
-  ok(String(bao.getRange(2, 9).getValue()).includes('(DÒNG MẪU)'), 'Dòng mẫu giữ nguyên');
-  const cntBk = bkName.rows.length;
-  sandbox.backupThuCong();
-  eq(bkName.rows.length, cntBk, 'Backup sau làm mới: không thêm dòng trùng');
-}
-
+// Replaced by the approved two-stage workflow test (T39).
 console.log('\n=== T17: Nâng cấp — hỏi cài trigger 1 lần + ẩn/hiện LOP ===');
 {
   STATE.triggers.length = 0; // xoá để test nhánh "chưa có trigger"
@@ -1014,43 +764,7 @@ console.log('\n=== T27: 🔍 Kiểm tra / sửa thứ tự cột BAO_BU ===');
   bao.deleteRow(dLa);
 }
 
-console.log('\n=== T25: Ghi chú GV — vào LICH + tin nhắn, gộp 2 bé cùng lớp ===');
-{
-  // a) Bé có ghi chú trong BAO_BU → khi gom vào lịch: cột Ghi chú + trong tin GV
-  const lich = sheet('LICH_BU');
-  lich.clear();
-  lich.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú']);
-  const bao = sheet('BAO_BU');
-  bao.appendRow([new Date(), 'Ms. Vân', 'S1.005 - Peach', 'Bé GhiChu', 'SP1', 'https://s/slide', '', '', 'Ôn unit 4 + 10 câu đọc lại']);
-  sandbox.gomNhom();
-  const dGC = findRow('LICH_BU', 4, 'Bé GhiChu');
-  ok(dGC > 0, 'Bé có ghi chú được xếp vào lịch');
-  eq(lich.getRange(dGC, 13).getValue(), 'Ôn unit 4 + 10 câu đọc lại', 'LICH có cột Ghi chú (13) chứa nội dung');
-  ok(!String(lich.getRange(dGC, 11).getValue()), 'Gom lịch tạm chưa tạo tin GV');
-  sandbox.chotLichTaoTin();
-  ok(String(lich.getRange(dGC, 11).getValue()).indexOf('📌 Ghi chú: Ôn unit 4') >= 0, 'Chốt lịch tạo tin GV kèm 📌 Ghi chú');
-  const dBao = findRow(bao, 3, 'Bé GhiChu');
-  ok(dBao > 0 && bao.getRange(dBao, 7).getValue() === 'Đã xếp', 'Dánh dấu Đã xếp');
-
-  // b) 2 bé cùng lớp + cùng ghi chú → guiTinChoGV gộp 1 dòng ghi chú
-  lich.clear();
-  lich.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú']);
-  lich.appendRow(['T9-1', 'Thứ 9', '10h00', 'Ms. Vân', 'Bé G1', 'S1.002 - Almond', 'SP1', 'https://s/1', '✅ Đi được', '', '', '', 'Ôn unit 4, đọc từ vựng']);
-  lich.appendRow(['T9-1', 'Thứ 9', '10h00', 'Ms. Vân', 'Bé G2', 'S1.002 - Almond', 'SP1', 'https://s/2', '✅ Đi được', '', '', '', 'Ôn unit 4, đọc từ vựng']);
-  lich.appendRow(['T9-2', 'Thứ 9', '12h00', 'Ms. Vân', 'Bé G3', 'S1.003 - Hazelnut', 'SP1', '', '✅ Đi được', '', '', '', 'Ôn unit 5']);
-  STATE.fetches.length = 0;
-  sandbox.chotLichTaoTin();
-  STATE.fetches.length = 0;
-  sandbox.guiTinChoGV();
-  const texts = STATE.fetches.map(f => f.text);
-  const t91 = texts.find(t => t.indexOf('10h00') >= 0) || '';
-  const t92 = texts.find(t => t.indexOf('12h00') >= 0) || '';
-  const demNote = (t91.match(/Ôn unit 4, đọc từ vựng/g) || []).length;
-  eq(demNote, 1, '2 bé cùng lớp cùng ghi chú → GỘP 1 dòng (không lặp)');
-  ok(t91.indexOf('📌 Ghi chú (S1.002 - Almond)') >= 0, 'Ghi chú gộp nêu rõ lớp');
-  ok(t92.indexOf('📌 Ghi chú (S1.003 - Hazelnut): Ôn unit 5') >= 0, 'Ghi chú khác → dòng riêng');
-}
-
+// Replaced by the approved two-stage workflow test (T39).
 console.log('\n=== T26: 🖼️ Gắn link ảnh từ folder Drive (khớp tên file) ===');
 {
   const ds = sheet('DS HỌC SINH');
@@ -1108,8 +822,9 @@ console.log('\n=== T28: Ca đặc biệt — thứ tiếng Việt T2 đến CN =
   eq(sandbox.thuVietSangSo('CN'), 0, 'CN được hiểu là Chủ nhật');
   const caT2 = sandbox.parseCaDacBiet('T2 08h00-09h30 Ms. Vân');
   eq([caT2.thu, caT2.gio, caT2.gv], ['Thứ 2', '08:00-09:30', 'Ms. Vân'], 'Ca riêng T2 giữ đúng ngày, giờ, GV');
-  const caCN = sandbox.parseCaDacBiet('CN 14h00-15h30 Mr. Ngọc');
-  eq([caCN.thu, caCN.gio, caCN.gv], ['Chủ nhật', '14:00-15:30', 'Mr. Ngọc'], 'Ca riêng CN được xếp như mọi ngày khác');
+  const caCN = sandbox.parseCaDacBiet('CN 14h00-15h30 Mr. Đức Anh');
+  eq([caCN.thu, caCN.gio, caCN.gv], ['Chủ nhật', '14:00-15:30', 'Mr. Đức Anh'], 'Ca riêng CN chỉ dùng GV dạy bù hợp lệ');
+  eq(sandbox.parseCaDacBiet('CN 14h00-15h30 Ms. Hồng Anh'), null, 'Ca riêng không nhận GV đã rời cơ sở');
 }
 
 console.log('\n=== T29: Backup — cùng bé/cùng ca ở hai ngày vẫn lưu đủ ===');
@@ -1276,6 +991,32 @@ console.log('\n=== T38: Cài đặt ca tạo đủ 6 ca và ưu tiên theo lớp
   cd.getRange(2, 11).setValue('Ms. Vân');
   const uuTien = sandbox.layGvBuUuTienTheoLop(ss);
   eq(uuTien[cd.getRange(2, 9).getValue()], 'Ms. Vân', 'Ưu tiên GV theo lớp đọc từ sheet cài đặt');
+}
+
+
+console.log('\n=== T39: Workflow BAO_BU tạm → PH → GV theo ca chuẩn ===');
+{
+  STATE.ss = new MockSS(); STATE.alerts.length = 0; STATE.fetches.length = 0;
+  const bao = STATE.ss.insertSheet('BAO_BU');
+  bao.appendRow(['Ngày báo', 'GV báo', 'Lớp', 'Tên bé', 'Trình độ', 'Link Canva', 'Trạng thái', 'Ca xếp', 'Ghi chú', 'SOTW', 'Ca đặc biệt', 'GV dạy bù ưu tiên']);
+  bao.appendRow(['01/11/2026', 'Ms. Vân', 'L1', 'Bé Workflow', 'SP1', 'https://slide', '', '', '', '', '', '']);
+  const lich = STATE.ss.insertSheet('LICH_BU');
+  lich.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú', 'Ngày học', 'Đã gửi GV lúc', 'Đã chốt lịch lúc']);
+  const cd = sandbox.taoCaiDatCaDayBu(STATE.ss), active = sandbox.layDanhSachCa(STATE.ss);
+  eq(active[3].nhan, 'T6-2 | Thứ 6 | 15h00 - 16h30', 'Ca chuẩn có nhãn gộp mã | thứ | giờ');
+  sandbox.xepLichTam(STATE.ss, bao, lich, true);
+  eq(rows('LICH_BU').length, 1, 'Gom chỉ ghi lịch tạm BAO_BU, không tạo LICH_BU');
+  ok(String(bao.getRange(2, 8).getValue()).includes(' | ') && bao.getRange(2, 7).getValue() === 'Đã xếp tạm', 'BAO_BU có dropdown ca chuẩn và trạng thái tạm');
+  sandbox.chotBaoBuTaoLichTinPH();
+  eq(rows('LICH_BU').length, 2, 'Chốt BAO_BU tạo LICH_BU');
+  ok(String(lich.getRange(2,10).getValue()).includes('thông báo lịch học bù'), 'Chốt BAO_BU tạo tin PH');
+  eq(lich.getRange(2,11).getValue(), '', 'Chốt BAO_BU không tạo tin GV');
+  lich.getRange(2,9).setValue('✅ Đi được'); sandbox.guiTinChoGV();
+  eq(STATE.fetches.length, 0, 'Không gửi GV trước chốt LICH_BU');
+  sandbox.chotLichTaoTinGV(); sandbox.guiTinChoGV();
+  eq(STATE.fetches.length, 1, 'Chốt LICH_BU rồi mới gửi GV cho PH xác nhận');
+  lich.getRange(2,17).setValue(active[3].nhan); sandbox.onEdit({range:lich.getRange(2,17)});
+  eq([lich.getRange(2,1).getValue(),lich.getRange(2,2).getValue(),lich.getRange(2,3).getValue(),lich.getRange(2,4).getValue()], [active[3].ma,active[3].thu,active[3].gio,active[3].gv], 'Chọn ca LICH_BU tự cập nhật mã/thứ/giờ/GV');
 }
 
 console.log('\n============================');

@@ -133,13 +133,14 @@ function taoCaiDatCaDayBu(ss) {
 
 function layDanhSachCa(ss) {
   var sh = ss && ss.getSheetByName('CÀI ĐẶT CA DẠY BÙ');
-  if (!sh) return CA_DAY_BU_MAC_DINH.map(function(r) { return { ma:r[0], thu:r[1], gio:r[2], gv:r[3], toiDaBe:Number(r[5]), toiDaTrinhDo:Number(r[6]) }; });
+  if (!sh) return CA_DAY_BU_MAC_DINH.map(function(r) { return { ma:r[0], thu:r[1], gio:r[2], gv:r[3], nhan:nhanCaDayBu(r[0],r[1],r[2]), toiDaBe:Number(r[5]), toiDaTrinhDo:Number(r[6]) }; });
   var data = sh.getDataRange().getValues(), out = [];
   for (var i = 1; i < data.length; i++) {
     var r = data[i];
     if (!String(r[0] || '').trim() || String(r[4] || '').trim() !== 'Dùng') continue;
     if (GV_DAY_BU.indexOf(String(r[3] || '').trim()) < 0) continue;
-    out.push({ ma:String(r[0]).trim(), thu:String(r[1]).trim(), gio:String(r[2]).trim(), gv:String(r[3]).trim(),
+    var ma=String(r[0]).trim(), thu=String(r[1]).trim(), gio=String(r[2]).trim();
+    out.push({ ma:ma, thu:thu, gio:gio, gv:String(r[3]).trim(), nhan:nhanCaDayBu(ma,thu,gio),
       toiDaBe:Number(r[5]) || CFG.TOI_DA_CA, toiDaTrinhDo:Number(r[6]) || CFG.TOI_DA_TRINH_DO });
   }
   return out;
@@ -180,6 +181,7 @@ function parseCaDacBiet(text) {
   
   var gio = m[2].trim().replace(/h/g, ':').replace(/\s+/g, ' ');
   var gv = m[3].trim();
+  if (GV_DAY_BU.indexOf(gv) < 0) return null; // không tự đưa GV cũ/không thuộc nhóm dạy bù vào lịch.
   
   // Tạo mã ca duy nhất: T4-Rieng, T5-Rieng...
   var ma = thu.replace('Thứ ', 'T') + '-Riêng';
@@ -218,11 +220,12 @@ function onOpen() {
     ui.createMenu('⚙️ Quản lý Dạy Bù')
       // Làm từ trên xuống dưới: chuẩn bị → xếp → xử lý → gửi → kết tuần.
       .addItem('1️⃣ Cập nhật danh sách HS đầu tuần', 'menuDongBoDS')
-      .addItem('2️⃣ Gom lịch + gửi SOTW (T2 chiều)', 'gomNhom')
+      .addItem('2️⃣ Gom nhóm tạm + gửi SOTW (T2 chiều)', 'gomNhom')
       .addItem('3️⃣ Xử lý PH xin đổi / quá hạn (T4)', 'xuLyCaseDacBiet')
-      .addItem('4️⃣ Chốt lịch → tạo tin PH / GV', 'chotLichTaoTin')
-      .addItem('5️⃣ Gửi lịch đã chốt cho GV (T5-T6)', 'guiTinChoGV')
-      .addItem('6️⃣ Kết tuần mới — tự backup trước (T7-CN)', 'lamMoiTuanMoi')
+      .addItem('4️⃣ Chốt BAO_BU → tạo LICH_BU + Tin PH', 'chotBaoBuTaoLichTinPH')
+      .addItem('5️⃣ Chốt LICH_BU → tạo tin GV', 'chotLichTaoTinGV')
+      .addItem('6️⃣ Gửi lịch đã chốt cho GV (T5-T6)', 'guiTinChoGV')
+      .addItem('7️⃣ Kết tuần mới — tự backup trước (T7-CN)', 'lamMoiTuanMoi')
       .addSeparator()
       .addSubMenu(ui.createMenu('📨 Gửi tin / Nhắc việc')
         .addItem('🔔 Nhắc GV báo Dạy Bù (T2 sáng)', 'nhacGVBaoBu')
@@ -456,6 +459,10 @@ function nangCapSheetSotw() {
         lichNangCap.getRange(1, 16).setValue('Đã chốt lịch lúc').setFontWeight('bold').setBackground('#F6F3EE');
         msg += '\n• Đã thêm cột "Đã chốt lịch lúc" (bắt buộc tạo tin theo lịch đã kiểm tra)';
       }
+      if (lichNangCap) {
+        damBaoCotCaLich(ss, lichNangCap);
+        msg += '\n• LICH_BU dùng một cột Ca xếp (chọn) để tự cập nhật mã ca, thứ, giờ và GV';
+      }
 
       if (sotw) themLinkSotw(bao, sotw.getSheetId());
       var themMau = false;
@@ -525,8 +532,9 @@ function setupDayBu() {
 
   var sh2 = layHoacTaoSheet(ss, 'LICH_BU');
   sh2.clear();
-  sh2.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú', 'Ngày học', 'Đã gửi GV lúc', 'Đã chốt lịch lúc']);
-  sh2.getRange(1, 1, 1, 16).setFontWeight('bold').setBackground('#F6F3EE');
+  sh2.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú', 'Ngày học', 'Đã gửi GV lúc', 'Đã chốt lịch lúc', 'Ca xếp (chọn)']);
+  sh2.getRange(1, 1, 1, 17).setFontWeight('bold').setBackground('#F6F3EE');
+  datDropdownCaLich(ss, sh2);
   datDropdown(sh2, 9, 200, PH_TRANG_THAI);
   datDropdown(sh2, 12, 200, DA_DAY);
 
@@ -759,6 +767,11 @@ function onEdit(e) {
       apLocDS(sh);
       return;
     }
+    if (sh.getName() === 'LICH_BU' && cot === 17 && dong >= 2) {
+      var caChon = timCaTheoNhan(laySS(), sh.getRange(dong, 17).getValue());
+      if (caChon) sh.getRange(dong, 1, 1, 4).setValues([[caChon.ma, caChon.thu, caChon.gio, caChon.gv]]);
+      return;
+    }
     if (sh.getName() !== 'BAO_BU') return;
     // Sheet cũ (chưa nâng cấp) → tự đổi cột sang thứ tự mới ngay khi GV gõ
     chuyenCotMoiBAOBU(sh);
@@ -783,12 +796,12 @@ function laySheetBaoBu(ss) {
 function huongDanQuyTrinhDayBu() {
   var txt = '📖 QUY TRÌNH MỖI TUẦN\n\n'
     + 'T2 sáng — nếu cần: 📨 Gửi tin / Nhắc việc → Nhắc GV báo Dạy Bù.\n'
-    + 'T2 chiều: 1️⃣ Cập nhật danh sách HS → 2️⃣ Gom lịch + gửi SOTW.\n'
-    + 'Anh kiểm tra/sửa ca, giờ, GV ngay trong LICH_BU.\n'
-    + '4️⃣ Chốt lịch → tạo lại tin PH/GV theo lịch vừa sửa.\n'
-    + 'Sau khi phụ huynh trả lời: cập nhật cột “PH xác nhận” trong LICH_BU.\n'
+    + 'T2 chiều: 1️⃣ Cập nhật danh sách HS → 2️⃣ Gom nhóm TẠM + gửi SOTW.\n'
+    + 'Máy chỉ gán Ca xếp tạm ở BAO_BU; chưa tạo LICH_BU, tin PH hay tin GV.\n'
+    + 'Quản lý kiểm tra/đổi Ca xếp (nhãn Mã | Thứ | Giờ) rồi bấm 4️⃣ Chốt BAO_BU → tạo LICH_BU + Tin PH.\n'
+    + 'PH trả lời: cập nhật cột “PH xác nhận” trong LICH_BU. Chọn lại Ca xếp (chọn) sẽ tự đổi mã, thứ, giờ và GV.\n'
     + 'T4: 3️⃣ Xử lý PH xin đổi / quá hạn. Bé chưa chốt được giữ lại để xếp tuần sau.\n'
-    + 'T5-T6: 5️⃣ Gửi lịch đã chốt cho GV. Sau buổi học, ghi Đã học / Vắng / Nghỉ.\n'
+    + 'Chỉ sau khi PH ✅ Đi được: bấm 5️⃣ Chốt LICH_BU → tạo tin GV, rồi 6️⃣ gửi lịch cho GV.\n'
     + 'T7-CN: 6️⃣ Kết tuần mới. Hệ thống tự backup trước, sau đó dọn LICH_BU; bé chưa chốt vẫn giữ.\n\n'
     + '📋 ĐỔI GIỜ/GV CHUNG: dùng tab CÀI ĐẶT CA DẠY BÙ (6 ca bên trái).\n'
     + '👩‍🏫 ƯU TIÊN GV BÙ: chọn Ms. Vân/Mr. Đức Anh theo LỚP ở bảng bên phải; cột L BAO_BU chỉ dùng để đổi RIÊNG một bé.\n\n'
@@ -1124,7 +1137,7 @@ function gomNhom() {
     baoXong('Chưa có sheet. Bấm menu "🔧 Nâng cấp sheet SOTW" (hoặc "Tạo sheet") trước.');
     return;
   }
-  var msgXep = xepLichChinh(ss, bao, lich);
+  var msgXep = xepLichTam(ss, bao, lich);
   var rs = guiSOTW(false);
   baoXong(msgXep + (rs.skip ? '\n\nℹ️ SOTW: ' + rs.msg : '\n\n🏆 SOTW: ' + rs.msg) + dongBoNote);
 }
@@ -1673,7 +1686,7 @@ function guiTinChoGV(force) {
   for (var i = 1; i < data.length; i++) {
     var st = String(data[i][8] || ''), daGui = String(data[i][14] || '');
     if (st.indexOf('✅') < 0 && st.indexOf('Đi được') < 0) continue;
-    if (!String(data[i][15] || '').trim()) { chuaChot++; continue; }
+    if (String(data[i][15] || '').indexOf('GV:') !== 0) { chuaChot++; continue; }
     if (!force && daGui) continue;
     var ma = data[i][0];
     if (!theoCa[ma]) theoCa[ma] = { thu:data[i][1], gio:data[i][2], gv:data[i][3], bes:[], rows:[] };
@@ -1891,10 +1904,11 @@ function lamMoiTuanMoi() {
 
   // 4. Clear LICH_BU (giữ tiêu đề)
   lich.clear();
-  lich.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú', 'Ngày học', 'Đã gửi GV lúc', 'Đã chốt lịch lúc']);
-  lich.getRange(1, 1, 1, 16).setFontWeight('bold').setBackground('#F6F3EE');
+  lich.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú', 'Ngày học', 'Đã gửi GV lúc', 'Đã chốt lịch lúc', 'Ca xếp (chọn)']);
+  lich.getRange(1, 1, 1, 17).setFontWeight('bold').setBackground('#F6F3EE');
   datDropdown(lich, 9, 200, PH_TRANG_THAI);
   datDropdown(lich, 12, 200, DA_DAY);
+  datDropdownCaLich(ss, lich);
 
   // 5. Clear BAO_BU nội dung (giữ dòng mẫu + CỘT J LINK — chỉ clear A:I)
   if (dataBao.length >= batDau) {
@@ -2140,4 +2154,93 @@ function layMaTopicSOTW() {
     baoXong('Không lấy được mã Topic SOTW: ' + err);
     return false;
   }
+}
+
+
+// ===== WORKFLOW DẠY BÙ 2 GIAI ĐOẠN =====
+// CÀI ĐẶT CA DẠY BÙ là nguồn chuẩn; nhãn giúp quản lý chọn đúng một ca mà vẫn
+// lưu riêng mã/thứ/giờ/GV cho backup, báo cáo và tin nhắn.
+function nhanCaDayBu(ma, thu, gio) { return [ma, thu, gio].join(' | '); }
+function timCaTheoNhan(ss, nhan) {
+  var ds = layDanhSachCa(ss), s = String(nhan || '').trim();
+  for (var i = 0; i < ds.length; i++) if (ds[i].nhan === s) return ds[i];
+  return null;
+}
+function datDropdownCaBaoBu(ss, bao) {
+  if (!bao) return;
+  var nhan = layDanhSachCa(ss).map(function(c) { return c.nhan; });
+  if (nhan.length) datDropdown(bao, 8, Math.max(100, bao.getLastRow() + 20), nhan);
+}
+function damBaoCotCaLich(ss, lich) {
+  if (!lich) return;
+  if (String(lich.getRange(1, 17).getValue() || '').trim() !== 'Ca xếp (chọn)')
+    lich.getRange(1, 17).setValue('Ca xếp (chọn)').setFontWeight('bold').setBackground('#F6F3EE');
+  datDropdownCaLich(ss, lich);
+}
+function datDropdownCaLich(ss, lich) {
+  if (!lich) return;
+  var nhan = layDanhSachCa(ss).map(function(c) { return c.nhan; });
+  if (nhan.length) datDropdown(lich, 17, Math.max(200, lich.getLastRow() + 20), nhan);
+}
+function datDropdownBaoBu(ss, bao) {
+  var src = nguonBAOBU(ss);
+  datDropdown(bao, 2, 100, GV_LIST); datList(bao, 2, 3, src.lops.length ? src.lops : LOP_LIST.slice());
+  datList(bao, 2, 4, src.tenAll); datDropdown(bao, 5, 100, TRINH_DO);
+  if (src.lops.length || src.tenAll.length) {
+    bao.getRange(2, 3, 100, 1).setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(src.lops.length ? src.lops : LOP_LIST, true).setAllowInvalid(true).build());
+    if (src.tenAll.length) datDropdown(bao, 4, 100, src.tenAll);
+  }
+  // H là dropdown chỉ quản lý: chỉ ca đang Dùng từ nguồn chuẩn.
+  datDropdownCaBaoBu(ss, bao);
+}
+function xepLichTam(ss, bao, lich, daKiemTra) {
+  // Giai đoạn nháp: tuyệt đối không ghi LICH_BU hoặc tạo tin. Quản lý sửa H (Ca xếp) trước khi chốt.
+  var data = bao.getDataRange().getValues(), caList = layDanhSachCa(ss), uuTien = layGvBuUuTienTheoLop(ss), demTheoCa = {}, stt = 0, du = 0;
+  for (var i=1;i<data.length;i++) if (String(data[i][6]||'').indexOf('Đã xếp tạm') >= 0 && String(data[i][7]||'')) demTheoCa[data[i][7]] = (demTheoCa[data[i][7]]||0)+1;
+  for (var r=1;r<data.length;r++) {
+    var row=data[r], ten=String(row[3]||'').trim(), st=String(row[6]||'').trim();
+    if (!ten || String(row[8]||'').indexOf(DAU_MAU)>=0 || ten.toLowerCase().indexOf('không bù')===0 || (st && st !== 'Chờ' && st.indexOf('Đã xếp tạm')<0)) continue;
+    var uu=String(row[11]||'').trim() || uuTien[String(row[2]||'').trim()] || '';
+    var ds=caList.filter(function(c){ return !uu || c.gv===uu; }).concat(caList.filter(function(c){ return uu && c.gv!==uu; }));
+    var ca=null;
+    for(var j=0;j<ds.length;j++) if((demTheoCa[ds[j].nhan]||0)<ds[j].toiDaBe){ ca=ds[j]; break; }
+    if (!ca) { bao.getRange(r+1,7).setValue('Tuần sau'); bao.getRange(r+1,9).setValue('Hết chỗ các ca đang bật'); du++; continue; }
+    bao.getRange(r+1,7).setValue('Đã xếp tạm'); bao.getRange(r+1,8).setValue(ca.nhan); demTheoCa[ca.nhan]=(demTheoCa[ca.nhan]||0)+1; stt++;
+  }
+  return 'Đã xếp tạm ' + stt + ' bé trong BAO_BU' + (du ? '; dư '+du+' bé sang tuần sau.' : '.') + '\nQuản lý kiểm tra/đổi cột Ca xếp rồi bấm “Chốt BAO_BU → tạo LICH_BU + Tin PH”.';
+}
+function chotBaoBuTaoLichTinPH() {
+  var ss=laySS(), bao=ss.getSheetByName('BAO_BU'), lich=ss.getSheetByName('LICH_BU');
+  if(!bao || !lich) { baoXong('Chưa có tab BAO_BU hoặc LICH_BU.'); return; }
+  damBaoCotCaLich(ss, lich);
+  var data=bao.getDataRange().getValues(), old=lich.getDataRange().getValues(), byKey={};
+  for(var i=1;i<old.length;i++) byKey[String(old[i][4]||'').trim()+'|'+String(old[i][5]||'').trim()]=i+1;
+  var dem=0, luc=Utilities.formatDate(new Date(),'GMT+7','dd/MM HH:mm');
+  for(var r=1;r<data.length;r++) {
+    var b=data[r], ten=String(b[3]||'').trim(), nhan=String(b[7]||'').trim();
+    if(!ten || String(b[6]||'').indexOf('Đã xếp tạm')<0 || !nhan) continue;
+    var ca=timCaTheoNhan(ss,nhan); if(!ca) continue;
+    var ngay=layNgayThu(ca.thu), key=ten+'|'+String(b[2]||'').trim();
+    var row=[ca.ma,ca.thu,ca.gio,ca.gv,ten,b[2],b[4],b[5],'Chờ Ms. Vân Anh','','','',b[8]||'',ngay,'','',ca.nhan];
+    var pos=byKey[key]; if(pos) lich.getRange(pos,1,1,17).setValues([row]); else lich.appendRow(row);
+    var tin='Dạ em chào chị, em xin thông báo lịch học bù cho bé '+ten+':\n• Thời gian: '+ca.thu+' ngày '+ngay+' lúc '+ca.gio+'\nDạ thời gian này chị có sắp xếp đưa bé đến Trung tâm học bù được không ạ?\nNhờ chị xác nhận giúp em trước '+CFG.HAN_PH_XAC_NHAN+' nhé!\nEm cám ơn chị ạ.';
+    var p=pos || lich.getLastRow(); lich.getRange(p,10).setValue(tin); lich.getRange(p,11).clearContent(); lich.getRange(p,15).clearContent(); lich.getRange(p,16).setValue('PH: '+luc);
+    bao.getRange(r+1,7).setValue('Đã chốt'); dem++;
+  }
+  baoXong('✅ Đã chốt BAO_BU: tạo/cập nhật LICH_BU và tin PH cho '+dem+' bé. Sau khi PH xác nhận ✅, bấm “Chốt LICH_BU → tạo tin GV”.');
+}
+function chotLichTaoTinGV() {
+  var ss=laySS(), lich=ss.getSheetByName('LICH_BU'); if(!lich){baoXong('Chưa có tab LICH_BU.');return;}
+  damBaoCotCaLich(ss,lich); var d=lich.getDataRange().getValues(), dem=0, luc=Utilities.formatDate(new Date(),'GMT+7','dd/MM HH:mm');
+  for(var i=1;i<d.length;i++){var r=d[i]; if(!String(r[4]||'').trim())continue; var note=String(r[12]||'').trim(); var tin='📚 ['+r[1]+' '+r[2]+'] '+r[3]+' dạy bù: bé '+r[4]+' ('+r[5]+' - '+r[6]+'). Slide: '+(r[7]||'(chưa có link)')+(note?'\n📌 Ghi chú: '+note:''); lich.getRange(i+1,11).setValue(tin); lich.getRange(i+1,15).clearContent(); lich.getRange(i+1,16).setValue('GV: '+luc);dem++;}
+  baoXong('✅ Đã chốt LICH_BU và tạo tin GV cho '+dem+' bé. Chỉ bé PH “✅ Đi được” mới được gửi.');
+}
+// Tên cũ giữ cho menu/automation cũ: nay chỉ chốt LICH_BU, không tạo lại tin PH.
+function chotLichTaoTin(){
+  var lich=laySS().getSheetByName('LICH_BU'); if(!lich){baoXong('Chưa có tab LICH_BU.');return;}
+  var d=lich.getDataRange().getValues(), luc=Utilities.formatDate(new Date(),'GMT+7','dd/MM HH:mm'), dem=0;
+  for(var i=1;i<d.length;i++){var r=d[i];if(!String(r[4]||'').trim())continue;var ngay=String(r[13]||'').trim()||layNgayThu(r[1]);var note=String(r[12]||'').trim();
+    lich.getRange(i+1,10).setValue('Dạ em chào chị, em xin thông báo lịch học bù cho bé '+r[4]+':\n• Thời gian: '+r[1]+' ngày '+ngay+' lúc '+r[2]+'\nDạ thời gian này chị có sắp xếp đưa bé đến Trung tâm học bù được không ạ?\nNhờ chị xác nhận giúp em trước '+CFG.HAN_PH_XAC_NHAN+' nhé!\nEm cám ơn chị ạ.');
+    lich.getRange(i+1,11).setValue('📚 ['+r[1]+' '+r[2]+'] '+r[3]+' dạy bù: bé '+r[4]+' ('+r[5]+' - '+r[6]+'). Slide: '+(r[7]||'(chưa có link)')+(note?'\n📌 Ghi chú: '+note:''));lich.getRange(i+1,15).clearContent();lich.getRange(i+1,16).setValue('GV: '+luc);dem++;}
+  baoXong('✅ Đã chốt lịch và tạo lại tin PH/GV cho '+dem+' bé.');
 }

@@ -10,8 +10,8 @@ File này là hướng dẫn DUY NHẤT cần đọc — mọi bản plan/audit 
 **Các tab làm việc (4 tab):**
 | Tab | Ai dùng | Việc gì |
 |-----|---------|---------|
-| **BAO_BU** | GV (báo bé nghỉ) + quản lý | GV báo bé nghỉ (mỗi bé 1 dòng); **cột C = Lớp ngay sau GV** → chọn GV → Lớp → Tên bé đều bằng dropdown (lấy từ DS HỌC SINH); cột G/H khóa (GV sửa ô **Ghi chú** được); cột J = link mở DS HỌC SINH |
-| **LICH_BU** | quản lý | Lịch sau khi gom nhóm: PH xác nhận, tin nhắn PH/GV, Đã dạy |
+| **BAO_BU** | GV (báo bé nghỉ) + quản lý | GV báo bé nghỉ; quản lý chọn/đổi **Ca xếp** (nhãn gộp `Mã ca | Thứ | Giờ`) từ các ca đang bật trong CÀI ĐẶT CA DẠY BÙ. Đây là lịch **tạm**, chưa tạo LICH_BU hay tin nhắn. |
+| **LICH_BU** | quản lý | Lịch đã chốt từ BAO_BU. Chỉ dùng một cột **Ca xếp (chọn)**; chọn ca sẽ tự cập nhật mã, thứ, giờ và GV. Các cột dữ liệu chi tiết vẫn giữ để backup/báo cáo. |
 | **DS HỌC SINH** | GV + quản lý | Danh sách HS + **tick SOTW** ☑; ô **"GV đang chọn" → ẨN hết lớp khác**, chọn thêm **"Lớp cần chọn" → lọc tới bé lớp đó**; xóa 2 ô → hiện lại toàn bộ (dropdown GV/Lớp lấy từ dữ liệu thật, tự chạy lại sau mỗi lần Đồng bộ) |
 | **Backup tháng MM-YYYY** | tự động | Lưu lịch sử (không ai sửa tay) |
 
@@ -68,22 +68,18 @@ Vào tab **CÀI ĐẶT CA DẠY BÙ**:
 - Bên phải: mỗi lớp có một ô **GV dạy bù ưu tiên**. Chỉ chọn Ms. Vân/Mr. Đức Anh cho lớp cần gom về đúng giáo viên dạy thay; để trống nếu không có yêu cầu.
 - Đây là cài đặt dùng lâu dài. **Ca đặc biệt** ở BAO_BU chỉ dành cho ngoại lệ một lần.
 
-### 5. T2 CHIỀU — bấm **2️⃣ Gom lịch + gửi SOTW**
-Máy chỉ tạo lịch tạm trong LICH_BU; **chưa tạo tin PH/GV** để anh còn đổi ca, giờ hoặc giáo viên.
-- Xếp bé vào các ca đang bật trong **CÀI ĐẶT CA DẠY BÙ**
-- **Gửi SOTW** vào Topic SOTW_3 (kèm link ảnh nếu có)
-- *Gom lại bao nhiêu lần trong tuần cũng được — không mất bé, không gửi trùng SOTW (có mốc theo tuần)*
+### 5. T2 CHIỀU — bấm **2️⃣ Gom nhóm tạm + gửi SOTW**
+Máy chỉ gán **Ca xếp tạm** trong BAO_BU từ các ca **Dùng** ở tab **CÀI ĐẶT CA DẠY BÙ**. Quản lý có thể chọn lại ca ở cột Ca xếp; không có LICH_BU, tin PH hay tin GV nào được tạo ở bước này.
 
-### 6. Sau khi anh sửa lịch xong — bấm **4️⃣ Chốt lịch → tạo tin PH / GV**
-Hệ thống đọc đúng giờ/GV/ca cuối cùng trong LICH_BU rồi tạo lại **Tin nhắn PH (cột J)** và **Tin nhắn GV (cột K)**. Nếu anh đổi lịch sau khi đã gửi, bấm Chốt lịch lại; hệ thống bỏ mốc gửi cũ để tin mới được gửi đúng.
+### 6. Quản lý kiểm tra xong — bấm **4️⃣ Chốt BAO_BU → tạo LICH_BU + Tin PH**
+Hệ thống tạo/cập nhật LICH_BU đúng theo Ca xếp cuối cùng và tạo **tin PH**. PH trả lời tại cột **PH xác nhận** của LICH_BU. Có thể chọn lại một nhãn ca trong cột **Ca xếp (chọn)**; mã ca, thứ, giờ và GV sẽ cập nhật cùng lúc.
 
-**Ghi chú đi đâu?** Ô Ghi chú GV viết ở BAO_BU được mang theo bé vào LICH_BU (cột Ghi chú) và **đính kèm tin nhắn cho GV** (dòng 📌). Nếu 2 bé cùng lớp cùng ghi chú → **tin nhắn gộp 1 dòng ghi chú chung** (không lặp). Ghi chú này cũng được backup + làm mới tuần mới giữ nguyên.
+### 7. Khi PH xác nhận ✅ — bấm **5️⃣ Chốt LICH_BU → tạo tin GV**
+Bước này mới tạo tin GV theo LICH_BU cuối cùng. Sau đó bấm **6️⃣ Gửi lịch đã chốt cho GV**: chỉ các bé `✅ Đi được` và đã chốt LICH_BU mới được gửi. Không có tự động đổi hoặc bịa GV thay thế.
 
-### 7. T3–T4 — tick "PH xác nhận" trong LICH_BU
+### 8. T3–T4 — tick "PH xác nhận" trong LICH_BU
 - ✅ Đi được → giữ nguyên
 - 🔄 Xin đổi / không trả lời → bấm **3️⃣ Xử lý PH xin đổi / quá hạn**: chuyển về BAO_BU xếp lại + báo Telegram
-
-### 8. T5–T6 — bấm **5️⃣ Gửi lịch đã chốt cho GV** (chỉ ca PH đã chốt ✅ và đã bấm Chốt lịch) → sau giờ học tick "Đã học"/"Vắng"
 
 ### 9. CUỐI TUẦN — bấm **6️⃣ Kết tuần mới** (1 nút làm 4 việc)
 1. **TỰ backup** (đã backup rồi tự bỏ qua — không trùng; chống trùng theo từng dòng nên chạy bao nhiêu lần cũng an toàn)
@@ -182,4 +178,4 @@ Nếu anh thấy cột Lớp/Tên bé có dòng bị ngược (vd 2 dòng mẫu 
 - **Báo cáo**: chọn “Làm mới thống kê tháng này” hoặc “Chọn tháng để xem thống kê” (dạng `MM-yyyy`, ví dụ `11-2026`). Chỉ **Đã học** được tính ca/giờ; **Vắng** và **Nghỉ** được liệt kê riêng, không tính giờ dạy.
 
 ## 🧪 KIỂM THỬ CODE
-`node test_sotw.js` — **245 PASS / 0 FAIL** (gom nhóm, SOTW, cascade BAO_BU, gửi GV chống trùng/gửi lại, dashboard, validation, báo cáo tháng, Vắng/Nghỉ không tính giờ, backup chống trùng, làm mới tuần dừng an toàn khi backup lỗi, menu, ca đặc biệt T2–CN và cảnh báo trùng giờ/quá tải). Phải PASS toàn bộ trước khi push.
+`node test_sotw.js` — kiểm thử đầy đủ (gồm workflow BAO_BU tạm → LICH_BU/Tin PH → LICH_BU chốt/Tin GV) (gom nhóm, SOTW, cascade BAO_BU, gửi GV chống trùng/gửi lại, dashboard, validation, báo cáo tháng, Vắng/Nghỉ không tính giờ, backup chống trùng, làm mới tuần dừng an toàn khi backup lỗi, menu, ca đặc biệt T2–CN và cảnh báo trùng giờ/quá tải). Phải PASS toàn bộ trước khi push.
