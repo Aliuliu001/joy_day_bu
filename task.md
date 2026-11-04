@@ -146,6 +146,15 @@
 - [x] Cập nhật popup hướng dẫn + README theo đúng thứ tự làm thực tế, có ví dụ đổi T6-1 → T6-2.
 - [x] Đổi thứ tự 7 nút menu để bước xử lý PH xin đổi nằm sau bước hỏi PH.
 
+### TASK 8 — BAO_BU chỉ đến cột L + dropdown ca tự làm mới ✅
+
+- [x] Bỏ Mã buổi khỏi BAO_BU; cột M trở đi không bị tạo, khóa hay dùng cho workflow.
+- [x] Mã liên kết được chuyển sang tab `DỮ LIỆU KỸ THUẬT` tự ẩn; vẫn đồng bộ đúng ca cuối sau khi gửi GV thành công.
+- [x] Sửa/thêm/bật-tắt ca ở `CÀI ĐẶT CA DẠY BÙ` tự làm mới dropdown Ca xếp ở BAO_BU và LICH_BU.
+- [x] Thêm nút dự phòng `🔄 Làm mới danh sách Ca xếp`: chỉ làm mới danh sách chọn, không đổi lịch/không gửi tin.
+- [x] Bỏ lỗi nâng cấp vì lịch cũ ở Q không trùng dropdown: lịch cũ được giữ, chỉ kiểm ca đang Dùng trước lúc tạo/gửi tin GV.
+- [x] `node test_sotw.js`: **227 PASS / 0 FAIL**.
+
 ### TASK 7 — Nghiệm thu, push ⏳
 
 - [x] Rà luồng cũ, chạy toàn bộ test và kiểm tra định dạng diff.

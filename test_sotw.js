@@ -368,6 +368,7 @@ console.log('\n=== T12: menu onOpen — workflow tuần + 4 menu con rõ việc 
   ok(subs.some(s => s.name.includes('Cập nhật dữ liệu phụ')), 'Menu con: Cập nhật dữ liệu phụ');
   ok(subs.some(s => s.name.includes('Cài đặt kỹ thuật')), 'Menu con: Cài đặt kỹ thuật');
   ok(items.some(e => e.fn === 'huongDanQuyTrinhDayBu'), 'Có hướng dẫn quy trình tuần + chốt tháng');
+  ok(items.some(e => e.fn === 'lamMoiDanhSachCaXep'), 'Có nút làm mới danh sách Ca xếp');
   // Mọi hàm menu trỏ tới phải tồn tại
   const missing = items.filter(e => typeof sandbox[e.fn] !== 'function').map(e => e.fn);
   eq(missing.length, 0, 'Đủ hàm cho mọi nút menu');
@@ -849,10 +850,10 @@ console.log('\n=== T30: Gửi tin GV có kiểm soát + dashboard ===');
 {
   STATE.ss = new MockSS(); STATE.fetches.length = 0; STATE.alerts.length = 0;
   const bao = STATE.ss.insertSheet('BAO_BU');
-  bao.appendRow(['Ngày báo', 'GV báo', 'Lớp', 'Tên bé', 'Trình độ', 'Link Canva', 'Trạng thái', 'Ca xếp', 'Ghi chú', 'SOTW', 'Ca đặc biệt', 'GV dạy bù ưu tiên', 'Mã buổi']);
-  bao.appendRow(['', '', 'L1', 'Bé Đã Học', 'SP1', '', 'Đã chốt chờ PH', 'T5-1 | Thứ 5 | 17h00-18h30 | Ms. Vân', '', '', '', '', 'DB-T30-1']);
-  bao.appendRow(['', '', 'L1', 'Bé Chờ', 'SP1', '', 'Đã chốt chờ PH', '', '', '', '', '', 'DB-T30-2']);
-  bao.appendRow(['', '', 'L2', 'Bé Đổi', 'SP2', '', 'Đã chốt chờ PH', '', '', '', '', '', 'DB-T30-3']);
+  bao.appendRow(['Ngày báo', 'GV báo', 'Lớp', 'Tên bé', 'Trình độ', 'Link Canva', 'Trạng thái', 'Ca xếp', 'Ghi chú', 'SOTW', 'Ca đặc biệt', 'GV dạy bù ưu tiên']);
+  bao.appendRow(['', '', 'L1', 'Bé Đã Học', 'SP1', '', 'Đã chốt chờ PH', 'T5-1 | Thứ 5 | 17h00-18h30 | Ms. Vân', '', '', '', '']);
+  bao.appendRow(['', '', 'L1', 'Bé Chờ', 'SP1', '', 'Đã chốt chờ PH', '', '', '', '', '']);
+  bao.appendRow(['', '', 'L2', 'Bé Đổi', 'SP2', '', 'Đã chốt chờ PH', '', '', '', '', '']);
   const lich = STATE.ss.insertSheet('LICH_BU');
   lich.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú', 'Ngày học', 'Đã gửi GV lúc', 'Đã chốt lịch lúc', 'Ca xếp (chọn)', 'Mã buổi']);
   lich.appendRow(['T5-1', 'Thứ 5', '17h00-18h30', 'Ms. Vân', 'Bé Đã Học', 'L1', 'SP1', '', '✅ Đi được', '', '', '✅ Đã học', '', '', '', '', 'T5-1 | Thứ 5 | 17h00-18h30 | Ms. Vân', 'DB-T30-1']);
@@ -1040,13 +1041,15 @@ console.log('\n=== T40: Chốt an toàn + đồng bộ ca cuối về BAO_BU ===
   const bao = STATE.ss.insertSheet('BAO_BU');
   bao.appendRow(['Ngày báo','GV báo','Lớp','Tên bé','Trình độ','Link Canva','Trạng thái','Ca xếp','Ghi chú','SOTW','Ca đặc biệt','GV dạy bù ưu tiên']);
   bao.appendRow(['01/11/2026','Ms. Vân','L1','Bé A','SP1','link','','','','','','']);
+  eq(bao.getRange(1,13).getValue(), '', 'BAO_BU dừng ở cột L, không thêm cột kỹ thuật M');
   const lich = STATE.ss.insertSheet('LICH_BU');
   lich.appendRow(['Ca','Thứ','Giờ','GV dạy','Tên bé','Lớp','Trình độ','Link Canva','PH xác nhận','Tin nhắn PH','Tin nhắn GV','Đã dạy','Ghi chú','Ngày học','Đã gửi GV lúc','Đã chốt lịch lúc','Ca xếp (chọn)']);
   const cd=sandbox.taoCaiDatCaDayBu(STATE.ss), ca=sandbox.layDanhSachCa(STATE.ss)[0];
   bao.getRange(2,7).setValue('Đã xếp tạm'); bao.getRange(2,8).setValue(ca.nhan);
   sandbox.chotBaoBuTaoLichTinPH();
-  ok(String(bao.getRange(2,13).getValue()).startsWith('DB-'), 'Chốt tạo Mã buổi ổn định tại BAO_BU');
-  eq(lich.getRange(2,18).getValue(), bao.getRange(2,13).getValue(), 'LICH_BU liên kết đúng Mã buổi');
+  const kyThuat=STATE.ss.getSheetByName('DỮ LIỆU KỸ THUẬT');
+  ok(!!kyThuat && kyThuat.isSheetHidden(), 'Mã buổi được cất ở tab kỹ thuật ẩn, không ghi BAO_BU');
+  eq(lich.getRange(2,18).getValue(), kyThuat.getRange(2,1).getValue(), 'LICH_BU liên kết đúng Mã buổi kỹ thuật');
   eq(bao.getRange(2,7).getValue(), 'Đã chốt chờ PH', 'Chốt BAO_BU chỉ chờ PH, chưa báo GV');
   lich.getRange(2,9).setValue('✅ Đi được'); sandbox.chotLichTaoTinGV(); sandbox.guiTinChoGV();
   eq(bao.getRange(2,7).getValue(), 'Đã báo GV', 'Telegram thành công mới phản ánh đã báo GV về BAO_BU');
