@@ -155,6 +155,14 @@
 - [x] Bỏ lỗi nâng cấp vì lịch cũ ở Q không trùng dropdown: lịch cũ được giữ, chỉ kiểm ca đang Dùng trước lúc tạo/gửi tin GV.
 - [x] `node test_sotw.js`: **227 PASS / 0 FAIL**.
 
+### TASK 9 — Ca đặc biệt ĐB-01 trong workflow hai giai đoạn ✅
+
+- [x] Chốt form: `ĐB-01 | Thứ 4 | 14h00 - 15h30 | Ms. Vân`; mã luôn `ĐB-01`, chỉ đổi Thứ/Giờ/GV.
+- [x] Ca đặc biệt ưu tiên tuyệt đối ở Gom nhóm tạm, tự ghi nhãn chuẩn sang Ca xếp rồi đi trọn BAO_BU → LICH_BU → PH → GV → đồng bộ về BAO_BU.
+- [x] Ca ĐB không bị loại vì không thuộc Cài đặt ca chung; cú pháp sai hiện `Cần sửa ca đặc biệt`, không tự xếp sang ca thường.
+- [x] Hai dòng mẫu, README và popup hướng dẫn dùng form mới; vẫn đọc form cũ để các dòng đã có không kẹt.
+- [x] `node test_sotw.js`: **234 PASS / 0 FAIL**.
+
 ### TASK 7 — Nghiệm thu, push ⏳
 
 - [x] Rà luồng cũ, chạy toàn bộ test và kiểm tra định dạng diff.

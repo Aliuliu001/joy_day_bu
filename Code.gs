@@ -174,32 +174,23 @@ function layNgayThu(thu) {
   return layNgayThuBatKy(thu);
 }
 
-// Parse cột "Ca đặc biệt": "T4 14h00-15h30 Mr. Ngọc" → {thu, gio, gv, ma}
-// Trả về null nếu rỗng hoặc không đúng format
+// Parse cột "Ca đặc biệt". Form mới: "ĐB-01 | Thứ 4 | 14h00 - 15h30 | Ms. Vân".
+// Vẫn đọc form cũ để các dòng đã nhập không bị kẹt, nhưng chỉ hướng dẫn form mới.
 function parseCaDacBiet(text) {
-  var s = (text || '').toString().trim();
-  if (!s) return null;
-  
-  // Mẫu: T2…T7 hoặc CN, rồi đến giờ và tên GV.
-  // Ví dụ: "T2 08h00-09h30 Ms. Vân", "T4 14h00-15h30 Mr. Ngọc", "CN 09h00-10h30 Ms. Vân".
-  var m = s.match(/^(T[2-7]|CN|Thứ\s*[2-7]|Chủ\s*nhật)\s+([\d:h\-\s]+)\s+(.+)$/i);
-  if (!m) return null;
-  
-  var thuNhap = m[1].trim();
-  var soThu = thuVietSangSo(thuNhap);
-  if (soThu === null) return null;
-  var tenThu = { 1: 'Thứ 2', 2: 'Thứ 3', 3: 'Thứ 4', 4: 'Thứ 5', 5: 'Thứ 6', 6: 'Thứ 7', 0: 'Chủ nhật' };
-  var thu = tenThu[soThu];
-  
-  var gio = m[2].trim().replace(/h/g, ':').replace(/\s+/g, ' ');
-  var gv = m[3].trim();
-  if (GV_DAY_BU.indexOf(gv) < 0) return null; // không tự đưa GV cũ/không thuộc nhóm dạy bù vào lịch.
-  
-  // Tạo mã ca duy nhất: T4-Rieng, T5-Rieng...
-  var ma = thu.replace('Thứ ', 'T') + '-Riêng';
-  
-  return { thu: thu, gio: gio, gv: gv, ma: ma, dacBiet: true };
+  var s=(text||'').toString().trim(); if(!s) return null;
+  var ma='ĐB-01', thuNhap='', gio='', gv='', m=s.match(/^ĐB-01\s*\|\s*([^|]+)\|\s*([^|]+)\|\s*(.+)$/i);
+  if(m){thuNhap=m[1].trim();gio=m[2].trim();gv=m[3].trim();}
+  else {
+    m=s.match(/^(T[2-7]|CN|Thứ\s*[2-7]|Chủ\s*nhật)\s+([\d:h\-\s]+)\s+(.+)$/i);
+    if(!m)return null; thuNhap=m[1].trim();gio=m[2].trim();gv=m[3].trim();
+  }
+  var soThu=thuVietSangSo(thuNhap); if(soThu===null || GV_DAY_BU.indexOf(gv)<0)return null;
+  var tenThu={1:'Thứ 2',2:'Thứ 3',3:'Thứ 4',4:'Thứ 5',5:'Thứ 6',6:'Thứ 7',0:'Chủ nhật'};
+  thuNhap=tenThu[soThu]; gio=gio.replace(/\s+/g,' ').trim();
+  // Form mới giữ giờ kiểu 14h00 cho đồng nhất ca chuẩn; form cũ vẫn được đọc.
+  return {ma:ma,thu:thuNhap,gio:gio,gv:gv,nhan:nhanCaDayBu(ma,thuNhap,gio,gv),dacBiet:true};
 }
+function timCaTheoNhanHoacDacBiet(ss, nhan) { return timCaTheoNhan(ss,nhan) || parseCaDacBiet(nhan); }
 
 // Đổi cách viết thứ tiếng Việt sang số ISO: T2=1 … T7=6, CN=0.
 // Không dùng trực tiếp số 4: “Thứ 4” tiếng Việt là Wednesday (3), không phải Thursday (4).
@@ -384,16 +375,16 @@ function taoDongMau(bao) {
     var mauDaCo = 0;
     for (var m = 1; m < data.length && mauDaCo < 2; m++) {
       if (String(data[m][8] || '').indexOf(DAU_MAU) < 0) continue;
-      bao.getRange(m + 1, 11).setValue(mauDaCo === 0 ? 'T2 08h00-09h30 Ms. Vân' : 'CN 09h00-10h30 Mr. Đức Anh');
+      bao.getRange(m + 1, 11).setValue(mauDaCo === 0 ? '' : 'ĐB-01 | Thứ 4 | 14h00 - 15h30 | Ms. Vân');
       mauDaCo++;
     }
     return false;
   }
   // Chỉ giữ 2 dòng mẫu: mỗi dòng vừa minh họa báo bù, vừa minh họa cột K Ca đặc biệt.
   var mau1 = ['', 'Mr. Ngọc', 'S1.001 - Cashew', 'Không bù', '', '', '', '',
-    DAU_MAU + ' Lớp đi đủ → gõ "Không bù" ở cột Tên bé. Cột K ví dụ ca riêng.', '', 'T2 08h00-09h30 Ms. Vân', ''];
+    DAU_MAU + ' Lớp đi đủ → gõ "Không bù" ở cột Tên bé. Ca đặc biệt để trống.', '', '', ''];
   var mau2 = ['', 'Mr. Ngọc', 'S2.001 - Pumpkin Seed', 'Iphone', 'SP1', '', '', '',
-    DAU_MAU + ' Vắng bạn Iphone → ghi tên bé nghỉ. Cột K ví dụ ca riêng khác ngày/giờ.', '', 'CN 09h00-10h30 Mr. Đức Anh', ''];
+    DAU_MAU + ' Chỉ dùng Ca đặc biệt khi bé phải học đúng ca phát sinh một lần.', '', 'ĐB-01 | Thứ 4 | 14h00 - 15h30 | Ms. Vân', ''];
   var dong2LaMau = false;
   if (data.length >= 2) {
     var dong2 = data[1];
@@ -828,6 +819,7 @@ function huongDanQuyTrinhDayBu() {
     + '📌 NHỚ: CÀI ĐẶT CA DẠY BÙ là danh mục ca chung; BAO_BU là lịch tạm/bảng theo dõi; LICH_BU là lịch cuối của từng bé.\n'
     + 'Ví dụ: T6-1 → PH xin đổi → T6-2 → PH đồng ý → gửi GV thành công = BAO_BU tự đổi sang T6-2.\n'
     + '📋 ĐỔI CA CHUNG: sửa/thêm/bật-tắt tại CÀI ĐẶT CA DẠY BÙ. Dropdown Ca xếp tự làm mới; nếu cần, vào 🗂️ Cập nhật dữ liệu phụ → 🔄 Làm mới danh sách Ca xếp (không đổi lịch).\n'
+    + '⭐ CA ĐẶC BIỆT (cột K): chỉ cho ca phát sinh một lần, ưu tiên cao nhất. Nhập: ĐB-01 | Thứ 4 | 14h00 - 15h30 | Ms. Vân. Mã luôn ĐB-01; chỉ đổi Thứ/Giờ/GV.\n'
     + '👩‍🏫 ƯU TIÊN GV BÙ: chọn Ms. Vân/Mr. Đức Anh theo LỚP ở bảng bên phải; cột L BAO_BU chỉ dùng để đổi RIÊNG một bé.\n\n'
     + '📦 CUỐI THÁNG — KHÔNG XOÁ BACKUP\n'
     + '1. Vào 📦 Backup / Thống kê / Chốt tháng → Chọn tháng để xem thống kê.\n'
@@ -2293,6 +2285,10 @@ function xepLichTam(ss, bao, lich, daKiemTra) {
   for (var r=1;r<data.length;r++) {
     var row=data[r], ten=String(row[3]||'').trim(), st=String(row[6]||'').trim();
     if (!ten || String(row[8]||'').indexOf(DAU_MAU)>=0 || ten.toLowerCase().indexOf('không bù')===0 || (st && st !== 'Chờ' && st.indexOf('Đã xếp tạm')<0)) continue;
+    // K có Ca đặc biệt thì ưu tiên tuyệt đối: không xét ca chuẩn, ghi chính nhãn ĐB sang H.
+    var nhapDacBiet=String(row[10]||'').trim(), caDacBiet=parseCaDacBiet(nhapDacBiet);
+    if(nhapDacBiet && !caDacBiet){ bao.getRange(r+1,7).setValue('Cần sửa ca đặc biệt'); bao.getRange(r+1,8).clearContent(); bao.getRange(r+1,9).setValue('Ca đặc biệt phải theo mẫu: ĐB-01 | Thứ 4 | 14h00 - 15h30 | Ms. Vân'); continue; }
+    if(caDacBiet){ bao.getRange(r+1,7).setValue('Đã xếp tạm'); bao.getRange(r+1,8).setValue(caDacBiet.nhan); stt++; continue; }
     var uu=String(row[11]||'').trim() || uuTien[String(row[2]||'').trim()] || '';
     var ds=caList.filter(function(c){ return !uu || c.gv===uu; }).concat(caList.filter(function(c){ return uu && c.gv!==uu; }));
     var ca=null;
@@ -2307,7 +2303,8 @@ function kiemTraCaTruocKhiChot(ss, bao) {
   ds.forEach(function(c){map[c.nhan]={ca:c,bes:0,td:{}};});
   for(var i=1;i<d.length;i++) {
     if(String(d[i][6]||'').indexOf('Đã xếp tạm')<0) continue;
-    var nhan=String(d[i][7]||'').trim(), x=map[nhan];
+    var nhan=String(d[i][7]||'').trim(), x=map[nhan], db=parseCaDacBiet(nhan);
+    if(db) continue; // Ca đặc biệt là ngoại lệ một lần, không thuộc danh mục ca chuẩn.
     if(!x) {loi.push('Dòng '+(i+1)+' chọn ca không còn Dùng: '+(nhan||'(trống)')); continue;}
     x.bes++; if(d[i][4]) x.td[String(d[i][4])]=1;
   }
@@ -2330,7 +2327,7 @@ function chotBaoBuTaoLichTinPH() {
   for(var r=1;r<data.length;r++) {
     var b=data[r], ten=String(b[3]||'').trim(), nhan=String(b[7]||'').trim();
     if(!ten || String(b[6]||'').indexOf('Đã xếp tạm')<0 || !nhan) continue;
-    var ca=timCaTheoNhan(ss,nhan); if(!ca){baoXong('⚠️ Không tìm được ca ở dòng '+(r+1)+'. Chưa có dữ liệu nào được chốt.');return;}
+    var ca=timCaTheoNhanHoacDacBiet(ss,nhan); if(!ca){baoXong('⚠️ Không tìm được ca ở dòng '+(r+1)+'. Chưa có dữ liệu nào được chốt.');return;}
     var maBuoi=layMaBuoiBao(ss,b);
     var ngay=layNgayThu(ca.thu), pos=byMa[maBuoi], p;
     if(pos){
@@ -2354,6 +2351,7 @@ function kiemTraLichCuoiTruocGui(ss, lich) {
   for(var i=1;i<d.length;i++) {
     var r=d[i], st=String(r[8]||''), nhan=String(r[16]||'').trim();
     if(!String(r[4]||'').trim() || (st.indexOf('✅')<0 && st.indexOf('Đi được')<0)) continue;
+    if(parseCaDacBiet(nhan)) continue; // Ca đặc biệt hợp lệ được phép gửi dù không nằm trong Cài đặt ca chung.
     var x=map[nhan];
     if(!x){loi.push('LICH_BU dòng '+(i+1)+' chọn ca không còn Dùng: '+(nhan||'(trống)'));continue;}
     x.bes++; if(r[6]) x.td[String(r[6])]=1;

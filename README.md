@@ -61,7 +61,7 @@ Hệ thống chỉ đọc danh sách gốc, cập nhật HS mới/lớp mới v�
 
 ### 3. CẢ TUẦN — GV nhập liệu (chỉ click & gõ theo mẫu)
 - **Báo bù:** vào BAO_BU → **chọn GV** (ô B) → **chọn Lớp** (ô C) → **chọn Tên bé** (ô D) → gõ trình độ + link Canva. Chọn TÊN BÉ trước cũng được: hệ thống tự điền Lớp + GV báo. Lớp đi đủ → gõ `Không bù` ở cột Tên bé. GV cần dặn dò → ghi ô **Ghi chú** (I).
-- **Ca đặc biệt (cột K):** chỉ dùng cho một ca riêng/đổi giờ một lần. Xem luôn 2 dòng mẫu đầu bảng: `T2 08h00-09h30 Ms. Vân` hoặc `CN 09h00-10h30 Mr. Đức Anh`. Không tạo thêm dòng mẫu.
+- **Ca đặc biệt (cột K):** chỉ dùng khi một bé phải học ca phát sinh một lần, không thêm vào Cài đặt ca chung. Nhập đúng mẫu: `ĐB-01 | Thứ 4 | 14h00 - 15h30 | Ms. Vân`. Mã luôn là `ĐB-01`; chỉ đổi Thứ, Giờ, GV. Khi Gom nhóm, ca này được ưu tiên trước ca thường.
 - **GV dạy bù ưu tiên (cột L):** chỉ chọn khi muốn đổi RIÊNG một bé sang Ms. Vân hoặc Mr. Đức Anh. Để trống = dùng ưu tiên của cả lớp trong sheet CÀI ĐẶT CA DẠY BÙ, nên không cần nhập lặp cho từng bé.
 - **SOTW:** vào **DS HỌC SINH** → chọn tên mình ở ô "GV đang chọn" → **tick ☑** bé SOTW.
 

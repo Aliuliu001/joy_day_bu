@@ -324,8 +324,8 @@ console.log('\n=== T1: Nâng cấp sheet SOTW ===');
   const r2 = bao.getRange(2, 9).getValue(), r3 = bao.getRange(3, 9).getValue();
   ok(String(r2).includes('(DÒNG MẪU)'), 'Dòng mẫu 1 tại row2');
   ok(String(r3).includes('(DÒNG MẪU)'), 'Dòng mẫu 2 tại row3');
-  eq(bao.getRange(2, 11).getValue(), 'T2 08h00-09h30 Ms. Vân', 'Dòng mẫu 1 có ví dụ Ca đặc biệt');
-  eq(bao.getRange(3, 11).getValue(), 'CN 09h00-10h30 Mr. Đức Anh', 'Dòng mẫu 2 có ví dụ Ca đặc biệt');
+  eq(bao.getRange(2, 11).getValue(), '', 'Dòng mẫu 1 để trống Ca đặc biệt');
+  eq(bao.getRange(3, 11).getValue(), 'ĐB-01 | Thứ 4 | 14h00 - 15h30 | Ms. Vân', 'Dòng mẫu 2 có form Ca đặc biệt mới');
   eq(findRow(bao, 3, 'Bé Một'), 4, 'Data cũ trượt xuống row4 (không mất)');
   const pMau = bao.protectedRanges.find(pp => (pp.desc || '').indexOf('Dòng mẫu') >= 0);
   const pQl = bao.protectedRanges.find(pp => (pp.desc || '').indexOf('Chỉ quản lý sửa') >= 0);
@@ -822,9 +822,9 @@ console.log('\n=== T28: Ca đặc biệt — thứ tiếng Việt T2 đến CN =
   eq(sandbox.thuVietSangSo('T7'), 6, 'T7 được hiểu là Thứ 7');
   eq(sandbox.thuVietSangSo('CN'), 0, 'CN được hiểu là Chủ nhật');
   const caT2 = sandbox.parseCaDacBiet('T2 08h00-09h30 Ms. Vân');
-  eq([caT2.thu, caT2.gio, caT2.gv], ['Thứ 2', '08:00-09:30', 'Ms. Vân'], 'Ca riêng T2 giữ đúng ngày, giờ, GV');
+  eq([caT2.thu, caT2.gio, caT2.gv], ['Thứ 2', '08h00-09h30', 'Ms. Vân'], 'Ca riêng T2 giữ đúng ngày, giờ, GV');
   const caCN = sandbox.parseCaDacBiet('CN 14h00-15h30 Mr. Đức Anh');
-  eq([caCN.thu, caCN.gio, caCN.gv], ['Chủ nhật', '14:00-15:30', 'Mr. Đức Anh'], 'Ca riêng CN chỉ dùng GV dạy bù hợp lệ');
+  eq([caCN.thu, caCN.gio, caCN.gv], ['Chủ nhật', '14h00-15h30', 'Mr. Đức Anh'], 'Ca riêng CN chỉ dùng GV dạy bù hợp lệ');
   eq(sandbox.parseCaDacBiet('CN 14h00-15h30 Ms. Hồng Anh'), null, 'Ca riêng không nhận GV đã rời cơ sở');
 }
 
@@ -1081,6 +1081,27 @@ console.log('\n=== T42: Chặn gửi GV nếu lịch cuối không còn ca hợp
   sandbox.taoCaiDatCaDayBu(STATE.ss); sandbox.chotLichTaoTinGV();
   eq(lich.getRange(2,11).getValue(), '', 'Lịch cuối sai không tạo tin GV');
   ok(lastAlert().includes('lịch cuối cần sửa'), 'Chặn lịch cuối nêu rõ cần sửa');
+}
+
+console.log('\n=== T43: Ca đặc biệt ĐB-01 ưu tiên và đi trọn workflow ===');
+{
+  STATE.ss = new MockSS(); STATE.alerts.length = 0; STATE.fetches.length = 0;
+  const bao=STATE.ss.insertSheet('BAO_BU'), lich=STATE.ss.insertSheet('LICH_BU');
+  bao.appendRow(['Ngày báo','GV báo','Lớp','Tên bé','Trình độ','Link Canva','Trạng thái','Ca xếp','Ghi chú','SOTW','Ca đặc biệt','GV dạy bù ưu tiên']);
+  bao.appendRow(['01/11/2026','Ms. Vân','L1','Bé ĐB','SP1','link','','','', '', 'ĐB-01 | Thứ 4 | 14h00 - 15h30 | Ms. Vân','']);
+  lich.appendRow(['Ca','Thứ','Giờ','GV dạy','Tên bé','Lớp','Trình độ','Link Canva','PH xác nhận','Tin nhắn PH','Tin nhắn GV','Đã dạy','Ghi chú','Ngày học','Đã gửi GV lúc','Đã chốt lịch lúc','Ca xếp (chọn)','Mã buổi']);
+  sandbox.taoCaiDatCaDayBu(STATE.ss);
+  const db=sandbox.parseCaDacBiet('ĐB-01 | Thứ 4 | 14h00 - 15h30 | Ms. Vân');
+  eq([db.ma,db.thu,db.gio,db.gv],['ĐB-01','Thứ 4','14h00 - 15h30','Ms. Vân'],'Đọc đúng form ĐB-01 mới');
+  sandbox.xepLichTam(STATE.ss,bao,lich,true);
+  eq(bao.getRange(2,8).getValue(),'ĐB-01 | Thứ 4 | 14h00 - 15h30 | Ms. Vân','Ca đặc biệt ưu tiên ghi đúng nhãn sang Ca xếp');
+  eq(bao.getRange(2,7).getValue(),'Đã xếp tạm','Ca đặc biệt vào trạng thái xếp tạm');
+  eq(lich.getLastRow(),1,'Gom tạm ca đặc biệt chưa tạo LICH_BU');
+  sandbox.chotBaoBuTaoLichTinPH();
+  eq([lich.getRange(2,1).getValue(),lich.getRange(2,17).getValue()],['ĐB-01','ĐB-01 | Thứ 4 | 14h00 - 15h30 | Ms. Vân'],'Chốt ca đặc biệt sang LICH_BU đúng nhãn');
+  lich.getRange(2,9).setValue('✅ Đi được'); sandbox.chotLichTaoTinGV(); sandbox.guiTinChoGV();
+  eq(bao.getRange(2,7).getValue(),'Đã báo GV','Ca đặc biệt gửi thành công đồng bộ về BAO_BU');
+  ok(!!sandbox.parseCaDacBiet('T4 14h00-15h30 Ms. Vân'),'Vẫn đọc form ca đặc biệt cũ để không kẹt dữ liệu');
 }
 
 console.log('\n============================');
