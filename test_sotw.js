@@ -487,7 +487,7 @@ console.log('\n=== T19: Ngách công thức theo locale + ghi đè ô J đang #E
   STATE.sheetLocale = 'vi_VN';
 }
 
-console.log('\n=== T20: Đồng bộ DS từ file chính — CHỈ ĐỌC, giữ tick/link, bé thiếu giữ lại ===');
+console.log('\n=== T20: Đồng bộ DS từ file chính — CHỈ ĐỌC, chỉ giữ bé trong file chính ===');
 {
   // File chính mock: 2 tab, tab theo gid = 294797681 (đúng gid anh gửi)
   const fc = new MockSS();
@@ -515,7 +515,7 @@ console.log('\n=== T20: Đồng bộ DS từ file chính — CHỈ ĐỌC, giữ
   ok(!kq.loi, 'Đồng bộ không lỗi' + (kq.loi ? ': ' + kq.loi : ''));
   eq(kq.tongNguon, 4, 'Đọc đủ 4 bé từ file chính (tab theo gid)');
   eq(kq.them, 3, '3 bé mới');
-  ok(kq.giuTen.includes('Bé Chỉ Trong DS'), 'Bé thiếu trong file chính → báo giữ lại');
+  ok(kq.boTen.includes('Bé Chỉ Trong DS'), 'Bé thiếu trong file chính → tự bỏ');
   ok(kq.gvLa.includes('Cô Mai'), 'GV lạ trong file chính được cảnh báo');
 
   // GIỮ link/tick/giới tính theo tên bé
@@ -528,10 +528,9 @@ console.log('\n=== T20: Đồng bộ DS từ file chính — CHỈ ĐỌC, giữ
   const dMoi = findRow(ds, 0, 'Bé Mới Tên');
   ok(dMoi > 0, 'Bé mới được thêm');
   eq(ds.getRange(dMoi, 3).getValue(), 'Mr. Ngọc', 'GV chính lấy từ file chính');
-  // Bé chỉ trong DS: giữ lại, KHÔNG mất
-  const dGiu = findRow(ds, 0, 'Bé Chỉ Trong DS');
-  ok(dGiu > 0, 'Bé chỉ trong DS được GIỮ lại');
-  ok(dGiu > dMoi, 'Bé giữ lại chuyển xuống cuối bảng');
+  // Bé chỉ trong DS: file chính là nguồn chuẩn nên tự bỏ.
+  const dBo = findRow(ds, 0, 'Bé Chỉ Trong DS');
+  eq(dBo, -1, 'Bé chỉ trong DS được tự bỏ');
   // Tiêu đề2 hàng đầu không bị đụng
   eq(ds.getRange(1, 1).getValue(), 'GV đang chọn:', 'Hàng tiêu đề/filter nguyên vẹn');
   // NGUYÊN TẮC BẤT DI BẤT DỌNG: file chính 0 lượt ghi
@@ -648,12 +647,20 @@ console.log('\n=== T22: Lọc DS theo GV + lớp — ẩn dòng THẬT, dropdown
   ok(dvGv.rule.list.indexOf('Ms. Nhung') >= 0 && dvGv.rule.list.indexOf('Ms. Uyên Vi') >= 0,
     'Dropdown GV = tên GV có thật trong dữ liệu');
 
-  // 6) Đồng bộ → bộ lọc tự chạy lại, dòng mới không lẫn
-  ds.getRange(1, 2).setValue('Ms. Uyên Vi');
+  // 6) Đồng bộ → bộ lọc tự chạy lại, chỉ giữ đúng danh sách từ file chính.
+  const fcT22 = new MockSS(), srcT22 = fcT22.insertSheet('DANH SACH'); srcT22.id = 294797681;
+  srcT22.getRange(1,1,7,3).setValues([
+    ['Họ và tên','Lớp','GV chính'],
+    ['Bé V1','C2.001 - Strawberry','Ms. Uyên Vi'], ['Bé V2','C2.001 - Strawberry','Ms. Uyên Vi'],
+    ['Bé N1','S2.006 - Avocado','Ms. Nhung'], ['Bé N2','S2.006 - Avocado','Ms. Nhung'],
+    ['Bé N3','S1.005 - Peach','Ms. Nhung'], ['Bé K1','C2.002 - Chestnut','Ms. Vân'],
+    ['Bé Một A','S1.001 - Cashew','Mr. Ngọc']
+  ]);
+  STATE.ssFileChinh = fcT22; ds.getRange(1, 2).setValue('Ms. Uyên Vi');
   const kq = sandbox.dongBoAnToan(STATE.ss);
   ok(!kq.loi, 'Đồng bộ OK' + (kq.loi ? ': ' + kq.loi : ''));
-  ok(ds.isRowHiddenByUser(3), 'Dòng mới từ file (GV khác) bị ẩn theo filter');
-  ok(!ds.isRowHiddenByUser(5) && !ds.isRowHiddenByUser(6), 'Bé Ms. Uyên Vi vẫn hiện sau đồng bộ');
+  ok(!ds.isRowHiddenByUser(3) && !ds.isRowHiddenByUser(4), 'Bé Ms. Uyên Vi vẫn hiện sau đồng bộ');
+  ok(ds.isRowHiddenByUser(5), 'Dòng mới từ GV khác bị ẩn theo filter');
 }
 
 console.log('\n=== T23: Đổi cột BAO_BU — Lớp ngay sau GV báo (sheet cũ tự chuyển) ===');
@@ -1088,19 +1095,19 @@ console.log('\n=== T43: Ca đặc biệt ĐB-01 ưu tiên và đi trọn workflo
   STATE.ss = new MockSS(); STATE.alerts.length = 0; STATE.fetches.length = 0;
   const bao=STATE.ss.insertSheet('BAO_BU'), lich=STATE.ss.insertSheet('LICH_BU');
   bao.appendRow(['Ngày báo','GV báo','Lớp','Tên bé','Trình độ','Link Canva','Trạng thái','Ca xếp','Ghi chú','SOTW','Ca đặc biệt','GV dạy bù ưu tiên']);
-  bao.appendRow(['01/11/2026','Ms. Vân','L1','Bé ĐB','SP1','link','','','', '', 'ĐB-01 | Thứ 4 | 14h00 - 15h30 | Ms. Vân','']);
+  bao.appendRow(['01/11/2026','Ms. Vân','L1','Bé ĐB','SP1','link','','','', '', 'ĐB-01 | Thứ 5 | 17h00 - 18h30 | Mr. Ngọc','']);
   lich.appendRow(['Ca','Thứ','Giờ','GV dạy','Tên bé','Lớp','Trình độ','Link Canva','PH xác nhận','Tin nhắn PH','Tin nhắn GV','Đã dạy','Ghi chú','Ngày học','Đã gửi GV lúc','Đã chốt lịch lúc','Ca xếp (chọn)','Mã buổi']);
   sandbox.taoCaiDatCaDayBu(STATE.ss);
-  const db=sandbox.parseCaDacBiet('ĐB-01 | Thứ 4 | 14h00 - 15h30 | Ms. Vân');
-  eq([db.ma,db.thu,db.gio,db.gv],['ĐB-01','Thứ 4','14h00 - 15h30','Ms. Vân'],'Đọc đúng form ĐB-01 mới');
+  const db=sandbox.parseCaDacBiet('ĐB-01 | Thứ 5 | 17h00 - 18h30 | Mr. Ngọc');
+  eq([db.ma,db.thu,db.gio,db.gv],['ĐB-01','Thứ 5','17h00 - 18h30','Mr. Ngọc'],'Ca đặc biệt nhận đúng form ĐB-01 với Mr. Ngọc');
   // Mô phỏng copy dòng mẫu: đã mang trạng thái tạm nhưng Ca xếp H còn trống.
   bao.getRange(2,7).setValue('Đã xếp tạm');
   sandbox.xepLichTam(STATE.ss,bao,lich,true);
-  eq(bao.getRange(2,8).getValue(),'ĐB-01 | Thứ 4 | 14h00 - 15h30 | Ms. Vân','Ca đặc biệt tự sửa Ca xếp dù dòng copy đã có trạng thái tạm');
+  eq(bao.getRange(2,8).getValue(),'ĐB-01 | Thứ 5 | 17h00 - 18h30 | Mr. Ngọc','Ca đặc biệt tự sửa Ca xếp dù dòng copy đã có trạng thái tạm');
   eq(bao.getRange(2,7).getValue(),'Đã xếp tạm','Ca đặc biệt vào trạng thái xếp tạm');
   eq(lich.getLastRow(),1,'Gom tạm ca đặc biệt chưa tạo LICH_BU');
   sandbox.chotBaoBuTaoLichTinPH();
-  eq([lich.getRange(2,1).getValue(),lich.getRange(2,17).getValue()],['ĐB-01','ĐB-01 | Thứ 4 | 14h00 - 15h30 | Ms. Vân'],'Chốt ca đặc biệt sang LICH_BU đúng nhãn');
+  eq([lich.getRange(2,1).getValue(),lich.getRange(2,17).getValue()],['ĐB-01','ĐB-01 | Thứ 5 | 17h00 - 18h30 | Mr. Ngọc'],'Chốt ca đặc biệt sang LICH_BU đúng nhãn');
   lich.getRange(2,9).setValue('✅ Đi được'); sandbox.chotLichTaoTinGV(); sandbox.guiTinChoGV();
   eq(bao.getRange(2,7).getValue(),'Đã báo GV','Ca đặc biệt gửi thành công đồng bộ về BAO_BU');
   ok(!!sandbox.parseCaDacBiet('T4 14h00-15h30 Ms. Vân'),'Vẫn đọc form ca đặc biệt cũ để không kẹt dữ liệu');

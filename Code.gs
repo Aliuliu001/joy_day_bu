@@ -184,7 +184,8 @@ function parseCaDacBiet(text) {
     m=s.match(/^(T[2-7]|CN|Thứ\s*[2-7]|Chủ\s*nhật)\s+([\d:h\-\s]+)\s+(.+)$/i);
     if(!m)return null; thuNhap=m[1].trim();gio=m[2].trim();gv=m[3].trim();
   }
-  var soThu=thuVietSangSo(thuNhap); if(soThu===null || GV_DAY_BU.indexOf(gv)<0)return null;
+  // Ca đặc biệt là ngoại lệ một lần: nhận mọi GV đang hoạt động, không chỉ 2 GV xếp tự động.
+  var soThu=thuVietSangSo(thuNhap); if(soThu===null || GV_LIST.indexOf(gv)<0)return null;
   var tenThu={1:'Thứ 2',2:'Thứ 3',3:'Thứ 4',4:'Thứ 5',5:'Thứ 6',6:'Thứ 7',0:'Chủ nhật'};
   thuNhap=tenThu[soThu]; gio=gio.replace(/\s+/g,' ').trim();
   // Form mới giữ giờ kiểu 14h00 cho đồng nhất ca chuẩn; form cũ vẫn được đọc.
@@ -819,7 +820,7 @@ function huongDanQuyTrinhDayBu() {
     + '📌 NHỚ: CÀI ĐẶT CA DẠY BÙ là danh mục ca chung; BAO_BU là lịch tạm/bảng theo dõi; LICH_BU là lịch cuối của từng bé.\n'
     + 'Ví dụ: T6-1 → PH xin đổi → T6-2 → PH đồng ý → gửi GV thành công = BAO_BU tự đổi sang T6-2.\n'
     + '📋 ĐỔI CA CHUNG: sửa/thêm/bật-tắt tại CÀI ĐẶT CA DẠY BÙ. Dropdown Ca xếp tự làm mới; nếu cần, vào 🗂️ Cập nhật dữ liệu phụ → 🔄 Làm mới danh sách Ca xếp (không đổi lịch).\n'
-    + '⭐ CA ĐẶC BIỆT (cột K): chỉ cho ca phát sinh một lần, ưu tiên cao nhất. Nhập: ĐB-01 | Thứ 4 | 14h00 - 15h30 | Ms. Vân. Mã luôn ĐB-01; chỉ đổi Thứ/Giờ/GV.\n'
+    + '⭐ CA ĐẶC BIỆT (cột K): chỉ cho ca phát sinh một lần, ưu tiên cao nhất. Nhập: ĐB-01 | Thứ 4 | 14h00 - 15h30 | Ms. Vân. Mã luôn ĐB-01; chỉ đổi Thứ/Giờ/GV, dùng mọi GV đang hoạt động (kể cả Mr. Ngọc).\n'
     + '👩‍🏫 ƯU TIÊN GV BÙ: chọn Ms. Vân/Mr. Đức Anh theo LỚP ở bảng bên phải; cột L BAO_BU chỉ dùng để đổi RIÊNG một bé.\n\n'
     + '📦 CUỐI THÁNG — KHÔNG XOÁ BACKUP\n'
     + '1. Vào 📦 Backup / Thống kê / Chốt tháng → Chọn tháng để xem thống kê.\n'
@@ -972,7 +973,7 @@ function docFileChinh() {
 // Đồng bộ vào DS HỌC SINH:
 //  • A:B:C (Tên/Lớp/GV chính) ← lấy từ file chính
 //  • D:E:F (Giới tính/Link ảnh/Tick SOTW) ← GIỮ NGUYÊN theo tên bé, không bao giờ mất
-//  • Bé có trong DS nhưng KHÔNG có trong file chính → GIỮ LẠI cuối bảng + báo anh quyết
+//  • File chính là nguồn chuẩn: bé không còn trong file chính tự bỏ khỏi DS HỌC SINH.
 function dongBoDSHocSinh(ss) {
   var ds = ss.getSheetByName(SOTW_SHEET);
   if (!ds) ds = taoBangSotw(ss);
@@ -1010,19 +1011,13 @@ function dongBoDSHocSinh(ss) {
     }
     if (x.gv && GV_LIST.indexOf(x.gv) < 0) gvLa[x.gv] = 1;
   });
-  var giu = [], giuTen = [];
-  for (var k = 0; k < dongCu.length; k++) {
-    if (daDung[k]) continue;
-    var c2 = dongCu[k];
-    giu.push([c2.ten, c2.lop, c2.gv, c2.gt, c2.link, c2.tick, c2.mshs]);
-    giuTen.push(c2.ten);
-  }
-  var ca = out.concat(giu);
-  var soDong = Math.max(cu.length - 2, ca.length, 1);
+  var boTen = [];
+  for (var k = 0; k < dongCu.length; k++) if (!daDung[k]) boTen.push(dongCu[k].ten);
+  var soDong = Math.max(cu.length - 2, out.length, 1);
   ds.getRange(3, 1, soDong, 7).clearContent();
-  if (ca.length) ds.getRange(3, 1, ca.length, 7).setValues(ca);
+  if (out.length) ds.getRange(3, 1, out.length, 7).setValues(out);
   apLocDS(ds); // chạy lại bộ lọc → dòng mới không lẫn khi GV đang lọc
-  return { them: them, tongNguon: nguon.length, giuTen: giuTen, gvLa: Object.keys(gvLa) };
+  return { them: them, tongNguon: nguon.length, boTen: boTen, gvLa: Object.keys(gvLa) };
 }
 
 // Bọc an toàn: thiếu quyền / file đổi cấu trúc → {loi}, không ném lỗi làm dừng lệnh chính
@@ -1048,10 +1043,9 @@ function menuDongBoDS() {
   var msg = '✅ Đồng bộ DS HỌC SINH từ file chính:\n• File có ' + kq.tongNguon + ' bé'
     + (kq.them ? '\n• Thêm mới ' + kq.them + ' bé' : '\n• Không có bé mới')
     + '\n• Link ảnh / tick SOTW / giới tính của bé cũ GIỮ NGUYÊN';
-  if (kq.giuTen.length) {
-    msg += '\n⚠️ ' + kq.giuTen.length + ' bé có trong DS nhưng KHÔNG có trong file chính → GIỮ LẠI: '
-      + kq.giuTen.slice(0, 6).join(', ') + (kq.giuTen.length > 6 ? ' …' : '')
-      + '\n(Nếu bé thật sự nghỉ học, anh xoá dòng tay giúp em)';
+  if (kq.boTen.length) {
+    msg += '\n• Đã bỏ ' + kq.boTen.length + ' bé không còn trong file chính: '
+      + kq.boTen.slice(0, 6).join(', ') + (kq.boTen.length > 6 ? ' …' : '');
   }
   if (kq.gvLa.length) msg += '\n⚠️ Cột GV trong file chính có tên lạ: ' + kq.gvLa.join(', ');
   baoXong(msg);
@@ -1145,7 +1139,7 @@ function gomNhom() {
     if (kqDB.loi) dongBoNote = '\n\n⚠️ DS HS chưa đọc được file chính — bấm 🔄 Đồng bộ trong Cài đặt để Google hỏi quyền → Cho phép.';
     else dongBoNote = '\n\n🔄 DS HS: ' + kqDB.tongNguon + ' bé từ file chính'
       + (kqDB.them ? ', +' + kqDB.them + ' bé mới' : '')
-      + (kqDB.giuTen.length ? ', ' + kqDB.giuTen.length + ' bé thiếu trong file → giữ lại' : '');
+      + (kqDB.boTen.length ? ', đã bỏ ' + kqDB.boTen.length + ' bé không còn trong file' : '');
   } catch (e) {}
   var bao = laySheetBaoBu(ss);
   var lich = ss.getSheetByName('LICH_BU');

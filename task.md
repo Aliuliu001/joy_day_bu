@@ -163,6 +163,12 @@
 - [x] Hai dòng mẫu, README và popup hướng dẫn dùng form mới; vẫn đọc form cũ để các dòng đã có không kẹt.
 - [x] `node test_sotw.js`: **234 PASS / 0 FAIL**.
 
+### TASK 10 — Đồng bộ DS theo file chính + Ca ĐB mọi GV ✅
+
+- [x] File chính là nguồn chuẩn: đồng bộ tự bỏ bé không còn trong file chính, vẫn giữ ảnh/giới tính/tick của bé còn tồn tại.
+- [x] Ca đặc biệt cho phép mọi GV đang hoạt động, gồm `Mr. Ngọc`; không giới hạn chỉ Ms. Vân/Mr. Đức Anh.
+- [x] `node test_sotw.js`: **233 PASS / 0 FAIL**.
+
 ### TASK 7 — Nghiệm thu, push ⏳
 
 - [x] Rà luồng cũ, chạy toàn bộ test và kiểm tra định dạng diff.
