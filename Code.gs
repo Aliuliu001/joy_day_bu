@@ -112,47 +112,56 @@ var CA_DAY_BU_MAC_DINH = [
   ['T6-4', 'Thứ 6', '15h00 - 16h30', 'Mr. Đức Anh', 'Dùng', 4, 2]
 ];
 
+function capNhatNhanCaDayBu(sh) {
+  if (!sh) return;
+  var last = sh.getLastRow();
+  if (last < 2) return;
+  var rows = sh.getRange(2, 1, last - 1, 3).getValues();
+  var out = rows.map(function(r) { return [r[0] && r[1] && r[2] ? nhanCaDayBu(r[0], r[1], r[2]) : '']; });
+  sh.getRange(2, 4, out.length, 1).setValues(out);
+}
+
 function taoCaiDatCaDayBu(ss) {
   var sh = layHoacTaoSheet(ss, 'CÀI ĐẶT CA DẠY BÙ');
   if (!sh.getRange(1, 1).getValue()) {
-    sh.getRange(1, 1, 1, 7).setValues([['Mã ca', 'Thứ', 'Giờ', 'GV dạy bù', 'Trạng thái', 'Tối đa bé', 'Tối đa trình độ']]);
-    sh.getRange(1, 1, 1, 7).setFontWeight('bold').setBackground('#F6F3EE');
-    sh.getRange(2, 1, CA_DAY_BU_MAC_DINH.length, 7).setValues(CA_DAY_BU_MAC_DINH);
-    sh.getRange(1, 9, 1, 3).setValues([['Lớp', 'GV chính', 'GV dạy bù ưu tiên']]);
-    sh.getRange(1, 9, 1, 3).setFontWeight('bold').setBackground('#F6F3EE');
-    var dongLop = LOP_LIST.map(function(lop) {
-      var gv = LOP_GV_MAP[lop] || '';
-      // Chỉ hai GV bù; lớp của GV khác để trống = máy tự chia ca còn chỗ.
-      return [lop, gv, GV_DAY_BU.indexOf(gv) >= 0 ? gv : ''];
-    });
-    if (dongLop.length) sh.getRange(2, 9, dongLop.length, 3).setValues(dongLop);
-    sh.getRange(9, 1).setValue('Cách dùng: sửa 6 dòng ca bên trái khi đổi giờ/GV. Cột K bên phải chỉ cần chọn khi muốn ưu tiên một lớp vào ca của Ms. Vân hoặc Mr. Đức Anh.');
-  }
+    sh.getRange(1, 1, 1, 8).setValues([['Mã ca', 'Thứ', 'Giờ', 'Ca hiển thị', 'GV dạy bù', 'Trạng thái', 'Tối đa bé', 'Tối đa trình độ']]);
+    sh.getRange(1, 1, 1, 8).setFontWeight('bold').setBackground('#F6F3EE');
+    var caMoi = CA_DAY_BU_MAC_DINH.map(function(r) { return [r[0],r[1],r[2],nhanCaDayBu(r[0],r[1],r[2]),r[3],r[4],r[5],r[6]]; });
+    sh.getRange(2, 1, caMoi.length, 8).setValues(caMoi);
+    sh.getRange(1, 10, 1, 3).setValues([['Lớp', 'GV chính', 'GV dạy bù ưu tiên']]);
+    sh.getRange(1, 10, 1, 3).setFontWeight('bold').setBackground('#F6F3EE');
+    var dongLop = LOP_LIST.map(function(lop) { var gv=LOP_GV_MAP[lop]||''; return [lop,gv,GV_DAY_BU.indexOf(gv)>=0?gv:'']; });
+    if (dongLop.length) sh.getRange(2, 10, dongLop.length, 3).setValues(dongLop);
+    sh.getRange(9, 1).setValue('Cột D chỉ để nhìn nhanh: Mã ca | Thứ | Giờ. Khi đổi ca, sửa cột A-C và E-H; cột D tự cập nhật. Cột M chỉ chọn khi muốn ưu tiên lớp vào ca Ms. Vân hoặc Mr. Đức Anh.');
+  } else if (String(sh.getRange(1,4).getValue()||'').trim() !== 'Ca hiển thị') {
+    // Bản cũ: D là GV. Chèn D, giữ toàn bộ thông tin cũ không mất.
+    sh.insertColumnsAfter(3, 1);
+    sh.getRange(1,4).setValue('Ca hiển thị').setFontWeight('bold').setBackground('#F6F3EE');
+    capNhatNhanCaDayBu(sh);
+  } else capNhatNhanCaDayBu(sh);
   return sh;
 }
 
 function layDanhSachCa(ss) {
   var sh = ss && ss.getSheetByName('CÀI ĐẶT CA DẠY BÙ');
   if (!sh) return CA_DAY_BU_MAC_DINH.map(function(r) { return { ma:r[0], thu:r[1], gio:r[2], gv:r[3], nhan:nhanCaDayBu(r[0],r[1],r[2]), toiDaBe:Number(r[5]), toiDaTrinhDo:Number(r[6]) }; });
-  var data = sh.getDataRange().getValues(), out = [];
-  for (var i = 1; i < data.length; i++) {
-    var r = data[i];
-    if (!String(r[0] || '').trim() || String(r[4] || '').trim() !== 'Dùng') continue;
-    if (GV_DAY_BU.indexOf(String(r[3] || '').trim()) < 0) continue;
-    var ma=String(r[0]).trim(), thu=String(r[1]).trim(), gio=String(r[2]).trim();
-    out.push({ ma:ma, thu:thu, gio:gio, gv:String(r[3]).trim(), nhan:nhanCaDayBu(ma,thu,gio),
-      toiDaBe:Number(r[5]) || CFG.TOI_DA_CA, toiDaTrinhDo:Number(r[6]) || CFG.TOI_DA_TRINH_DO });
+  var data=sh.getDataRange().getValues(), out=[];
+  for (var i=1;i<data.length;i++) {
+    var r=data[i], ma=String(r[0]||'').trim(), thu=String(r[1]||'').trim(), gio=String(r[2]||'').trim();
+    if (!ma || String(r[5]||'').trim() !== 'Dùng') continue;
+    if (GV_DAY_BU.indexOf(String(r[4]||'').trim())<0) continue;
+    out.push({ma:ma, thu:thu, gio:gio, gv:String(r[4]).trim(), nhan:String(r[3]||nhanCaDayBu(ma,thu,gio)).trim(), toiDaBe:Number(r[6])||CFG.TOI_DA_CA, toiDaTrinhDo:Number(r[7])||CFG.TOI_DA_TRINH_DO});
   }
   return out;
 }
 
 function layGvBuUuTienTheoLop(ss) {
-  var sh = ss && ss.getSheetByName('CÀI ĐẶT CA DẠY BÙ'), out = {};
+  var sh=ss && ss.getSheetByName('CÀI ĐẶT CA DẠY BÙ'), out={};
   if (!sh) return out;
-  var data = sh.getDataRange().getValues();
-  for (var i = 1; i < data.length; i++) {
-    var lop = String(data[i][8] || '').trim(), gv = String(data[i][10] || '').trim();
-    if (lop && GV_DAY_BU.indexOf(gv) >= 0) out[lop] = gv;
+  var data=sh.getDataRange().getValues();
+  for (var i=1;i<data.length;i++) {
+    var lop=String(data[i][9]||'').trim(), gv=String(data[i][11]||'').trim();
+    if (lop && GV_DAY_BU.indexOf(gv)>=0) out[lop]=gv;
   }
   return out;
 }
@@ -567,7 +576,9 @@ function khoaCotQuanLy() {
       if ((olds[i].getDescription() || '').indexOf('Chỉ quản lý sửa') >= 0) olds[i].remove();
     }
   } catch (e) {}
-  var range = sh.getRange(1, 7, 500, 2); // G Trạng thái + H Ca xếp — ô I Ghi chú GV được sửa
+  // Chỉ khóa Trạng thái (G). Ca xếp (H) có dropdown để quản lý sửa tay;
+  // không khóa H vì một số tài khoản quản lý Google Sheet bị từ chối dù đã add editor.
+  var range = sh.getRange(1, 7, 500, 1);
   var prot = range.protect().setDescription('Chỉ quản lý sửa');
   prot.addEditors(EMAIL_QUAN_LY);
   if (prot.canDomainEdit()) prot.setDomainEdit(false);

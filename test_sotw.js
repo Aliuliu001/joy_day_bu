@@ -330,7 +330,7 @@ console.log('\n=== T1: Nâng cấp sheet SOTW ===');
   const pMau = bao.protectedRanges.find(pp => (pp.desc || '').indexOf('Dòng mẫu') >= 0);
   const pQl = bao.protectedRanges.find(pp => (pp.desc || '').indexOf('Chỉ quản lý sửa') >= 0);
   ok(!!pMau && pMau.editors.length === 3 && pMau.w === 12, 'Bảo vệ đủ 2 dòng mẫu gồm Ca đặc biệt/GV ưu tiên');
-  ok(!!pQl && pQl.w === 2, 'Khóa đúng 2 cột Trạng thái/Ca xếp — Ghi chú GV được sửa');
+  ok(!!pQl && pQl.w === 1, 'Chỉ khóa Trạng thái; quản lý được đổi Ca xếp bằng dropdown');
 
   // chạy lại lần 2 → không thêm dòng mẫu trùng
   sandbox.nangCapSheetSotw();
@@ -988,9 +988,9 @@ console.log('\n=== T38: Cài đặt ca tạo đủ 6 ca và ưu tiên theo lớp
   eq(cd.getRange(2, 1, 6, 1).getValues().filter(r => r[0]).length, 6, 'Tạo sẵn 6 ca Dạy Bù');
   const ca = sandbox.layDanhSachCa(ss);
   eq(ca.length, 6, 'Đọc 6 ca từ sheet cài đặt');
-  cd.getRange(2, 11).setValue('Ms. Vân');
+  cd.getRange(2, 12).setValue('Ms. Vân');
   const uuTien = sandbox.layGvBuUuTienTheoLop(ss);
-  eq(uuTien[cd.getRange(2, 9).getValue()], 'Ms. Vân', 'Ưu tiên GV theo lớp đọc từ sheet cài đặt');
+  eq(uuTien[cd.getRange(2, 10).getValue()], 'Ms. Vân', 'Ưu tiên GV theo lớp đọc từ sheet cài đặt');
 }
 
 
