@@ -1093,8 +1093,10 @@ console.log('\n=== T43: Ca đặc biệt ĐB-01 ưu tiên và đi trọn workflo
   sandbox.taoCaiDatCaDayBu(STATE.ss);
   const db=sandbox.parseCaDacBiet('ĐB-01 | Thứ 4 | 14h00 - 15h30 | Ms. Vân');
   eq([db.ma,db.thu,db.gio,db.gv],['ĐB-01','Thứ 4','14h00 - 15h30','Ms. Vân'],'Đọc đúng form ĐB-01 mới');
+  // Mô phỏng copy dòng mẫu: đã mang trạng thái tạm nhưng Ca xếp H còn trống.
+  bao.getRange(2,7).setValue('Đã xếp tạm');
   sandbox.xepLichTam(STATE.ss,bao,lich,true);
-  eq(bao.getRange(2,8).getValue(),'ĐB-01 | Thứ 4 | 14h00 - 15h30 | Ms. Vân','Ca đặc biệt ưu tiên ghi đúng nhãn sang Ca xếp');
+  eq(bao.getRange(2,8).getValue(),'ĐB-01 | Thứ 4 | 14h00 - 15h30 | Ms. Vân','Ca đặc biệt tự sửa Ca xếp dù dòng copy đã có trạng thái tạm');
   eq(bao.getRange(2,7).getValue(),'Đã xếp tạm','Ca đặc biệt vào trạng thái xếp tạm');
   eq(lich.getLastRow(),1,'Gom tạm ca đặc biệt chưa tạo LICH_BU');
   sandbox.chotBaoBuTaoLichTinPH();

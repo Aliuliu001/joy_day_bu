@@ -2284,9 +2284,13 @@ function xepLichTam(ss, bao, lich, daKiemTra) {
   for (var i=1;i<data.length;i++) if (String(data[i][6]||'').indexOf('Đã xếp tạm') >= 0 && String(data[i][7]||'')) demTheoCa[data[i][7]] = (demTheoCa[data[i][7]]||0)+1;
   for (var r=1;r<data.length;r++) {
     var row=data[r], ten=String(row[3]||'').trim(), st=String(row[6]||'').trim();
-    if (!ten || String(row[8]||'').indexOf(DAU_MAU)>=0 || ten.toLowerCase().indexOf('không bù')===0 || (st && st !== 'Chờ' && st.indexOf('Đã xếp tạm')<0)) continue;
+    var nhapDacBiet=String(row[10]||'').trim();
+    // Copy dòng mẫu có thể mang theo “Đã xếp tạm” nhưng H vẫn trống.
+    // Nếu K có ca đặc biệt, luôn sửa lại H theo K thay vì bỏ qua dòng đó.
+    var duocXuLyDacBiet=!!nhapDacBiet && (st==='' || st==='Chờ' || st.indexOf('Đã xếp tạm')>=0);
+    if (!ten || String(row[8]||'').indexOf(DAU_MAU)>=0 || ten.toLowerCase().indexOf('không bù')===0 || (!duocXuLyDacBiet && st && st !== 'Chờ' && st.indexOf('Đã xếp tạm')<0)) continue;
     // K có Ca đặc biệt thì ưu tiên tuyệt đối: không xét ca chuẩn, ghi chính nhãn ĐB sang H.
-    var nhapDacBiet=String(row[10]||'').trim(), caDacBiet=parseCaDacBiet(nhapDacBiet);
+    var caDacBiet=parseCaDacBiet(nhapDacBiet);
     if(nhapDacBiet && !caDacBiet){ bao.getRange(r+1,7).setValue('Cần sửa ca đặc biệt'); bao.getRange(r+1,8).clearContent(); bao.getRange(r+1,9).setValue('Ca đặc biệt phải theo mẫu: ĐB-01 | Thứ 4 | 14h00 - 15h30 | Ms. Vân'); continue; }
     if(caDacBiet){ bao.getRange(r+1,7).setValue('Đã xếp tạm'); bao.getRange(r+1,8).setValue(caDacBiet.nhan); stt++; continue; }
     var uu=String(row[11]||'').trim() || uuTien[String(row[2]||'').trim()] || '';
