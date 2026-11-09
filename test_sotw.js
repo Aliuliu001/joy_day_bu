@@ -1098,6 +1098,9 @@ console.log('\n=== T43: Ca đặc biệt ĐB-01 ưu tiên và đi trọn workflo
   bao.appendRow(['01/11/2026','Ms. Vân','L1','Bé ĐB','SP1','link','','','', '', 'ĐB-01 | Thứ 5 | 17h00 - 18h30 | Mr. Ngọc','']);
   lich.appendRow(['Ca','Thứ','Giờ','GV dạy','Tên bé','Lớp','Trình độ','Link Canva','PH xác nhận','Tin nhắn PH','Tin nhắn GV','Đã dạy','Ghi chú','Ngày học','Đã gửi GV lúc','Đã chốt lịch lúc','Ca xếp (chọn)','Mã buổi']);
   sandbox.taoCaiDatCaDayBu(STATE.ss);
+  sandbox.datDropdownCaBaoBu(STATE.ss, bao);
+  const validationH = bao.validations[bao.validations.length - 1];
+  eq(validationH.rule.allowInvalid, true, 'Cột H cho phép nhãn Ca đặc biệt để Gom nhóm không báo lỗi H3');
   const db=sandbox.parseCaDacBiet('ĐB-01 | Thứ 5 | 17h00 - 18h30 | Mr. Ngọc');
   eq([db.ma,db.thu,db.gio,db.gv],['ĐB-01','Thứ 5','17h00 - 18h30','Mr. Ngọc'],'Ca đặc biệt nhận đúng form ĐB-01 với Mr. Ngọc');
   // Mô phỏng copy dòng mẫu: đã mang trạng thái tạm nhưng Ca xếp H còn trống.

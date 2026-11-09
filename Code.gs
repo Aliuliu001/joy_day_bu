@@ -2197,7 +2197,11 @@ function timCaTheoNhan(ss, nhan) {
 function datDropdownCaBaoBu(ss, bao) {
   if (!bao) return;
   var nhan = layDanhSachCa(ss).map(function(c) { return c.nhan; });
-  if (nhan.length) datDropdown(bao, 8, Math.max(100, bao.getLastRow() + 20), nhan);
+  // H nhận cả ca chuẩn và Ca đặc biệt một lần (ĐB-01). Nếu đặt chặn tuyệt đối,
+  // lúc Gom nhóm ghi nhãn ca đặc biệt vào H, Sheets báo lỗi xác thực ở chính ô đó.
+  // Ca nhập tay vẫn được kiểm tra đầy đủ trước khi Chốt BAO_BU.
+  if (nhan.length) bao.getRange(2, 8, Math.max(100, bao.getLastRow() + 20) - 1, 1).setDataValidation(
+    SpreadsheetApp.newDataValidation().requireValueInList(nhan, true).setAllowInvalid(true).build());
 }
 // Làm mới danh sách chọn sau khi quản lý thêm/sửa/bật-tắt ca. Không đổi lịch, không gửi tin.
 function lamMoiDanhSachCaXep(khongThongBao) {
