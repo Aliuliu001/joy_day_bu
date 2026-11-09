@@ -1147,6 +1147,9 @@ function gomNhom() {
     baoXong('Chưa có sheet. Bấm menu "🔧 Nâng cấp sheet SOTW" (hoặc "Tạo sheet") trước.');
     return;
   }
+  // Làm mới quy tắc cột H TRƯỚC khi xếp. Các Sheet cũ còn quy tắc chặn
+  // tuyệt đối sẽ báo lỗi H3 lúc máy ghi nhãn Ca đặc biệt từ cột K.
+  datDropdownCaBaoBu(ss, bao);
   var msgXep = xepLichTam(ss, bao, lich);
   var rs = guiSOTW(false);
   baoXong(msgXep + (rs.skip ? '\n\nℹ️ SOTW: ' + rs.msg : '\n\n🏆 SOTW: ' + rs.msg) + dongBoNote);
