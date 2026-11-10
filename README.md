@@ -67,8 +67,10 @@ Hệ thống chỉ đọc danh sách gốc, cập nhật HS mới/lớp mới v�
 
 ### 4. Khi đổi giờ/GV chung — sửa một chỗ
 Vào tab **CÀI ĐẶT CA DẠY BÙ**:
-- Bên trái: 6 ca Dạy Bù. Muốn thêm ca, đổi giờ, đổi GV hoặc bật/tắt ca, sửa trực tiếp dòng ca đó; chỉ Ms. Vân và Mr. Đức Anh nhận xếp tự động.
-- Khi sửa xong, dropdown **Ca xếp** ở BAO_BU và LICH_BU tự làm mới ngay. Nếu mạng/Sheet đang chậm, bấm **⚙️ Quản lý Dạy Bù → 🗂️ Cập nhật dữ liệu phụ → 🔄 Làm mới danh sách Ca xếp**. Nút này chỉ cập nhật danh sách chọn, **không đổi lịch, không xếp lại bé, không gửi tin**.
+- Bên trái: các ca Dạy Bù. Muốn thêm ca, đổi giờ hoặc đổi GV, sửa trực tiếp dòng ca đó; chỉ Ms. Vân và Mr. Đức Anh nhận xếp tự động.
+- Cột **Trạng thái** chỉ có: **ON** = ca mở, hiện trong Ca xếp; **OFF** = tạm đóng, không hiện trong Ca xếp.
+- Cột **Ca hiển thị** tự ghép `Mã ca | Thứ | Giờ | GV`; không cần tự gõ.
+- Khi sửa xong, dropdown **Ca xếp** ở BAO_BU và LICH_BU tự làm mới ngay. Nếu mạng/Sheet đang chậm, bấm **⚙️ Quản lý Dạy Bù → 🗂️ Cập nhật dữ liệu phụ → 🔄 Làm mới danh sách Ca xếp**. Hộp báo sẽ nêu số ca đang ON. Nút này chỉ cập nhật danh sách chọn, **không đổi lịch, không xếp lại bé, không gửi tin**.
 - Bên phải: mỗi lớp có một ô **GV dạy bù ưu tiên**. Chỉ chọn Ms. Vân/Mr. Đức Anh cho lớp cần gom về đúng giáo viên dạy thay; để trống nếu không có yêu cầu.
 - Đây là cài đặt dùng lâu dài. **Ca đặc biệt** ở BAO_BU chỉ dành cho ngoại lệ một lần.
 

@@ -169,6 +169,14 @@
 - [x] Ca đặc biệt cho phép mọi GV đang hoạt động, gồm `Mr. Ngọc`; không giới hạn chỉ Ms. Vân/Mr. Đức Anh.
 - [x] `node test_sotw.js`: **233 PASS / 0 FAIL**.
 
+### TASK 11 — Đổi trạng thái ca thành ON/OFF + sửa dropdown cũ ✅
+
+- [x] Cột Trạng thái dùng rõ `ON` (mở) / `OFF` (tạm đóng), thay cho chữ Dùng/Dừng dễ đọc nhầm.
+- [x] Khi chạy nâng cấp, dữ liệu cũ `Dùng`/`Dừng` tự chuyển sang `ON`/`OFF`; không tự đổi lịch các bé.
+- [x] Trước khi ghi danh sách Ca xếp mới, xoá rule dropdown cũ ở BAO_BU và LICH_BU; không còn chuyện danh sách cũ giữ lại.
+- [x] Nút làm mới nêu số ca đang ON.
+- [x] Test T44 PASS: OFF bị loại, ON hiện ngay trong Ca xếp.
+
 ### TASK 7 — Nghiệm thu, push ⏳
 
 - [x] Rà luồng cũ, chạy toàn bộ test và kiểm tra định dạng diff.

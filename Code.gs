@@ -104,14 +104,25 @@ var LOP_DUC_ANH = ['S1.006 - Lychee', 'S2.004 - Cherry', 'C2.004 - Kiwi', 'T1.00
 // Ca mặc định chỉ dùng để tạo sheet CÀI ĐẶT CA DẠY BÙ lần đầu.
 // Sau đó việc sửa giờ/GV/ca thực hiện trực tiếp trên sheet, không cần sửa Code.gs.
 var CA_DAY_BU_MAC_DINH = [
-  ['T4-1', 'Thứ 4', '17h30 - 19h00', 'Mr. Đức Anh', 'Dùng', 4, 2],
-  ['T5-1', 'Thứ 5', '17h30 - 19h00', 'Ms. Vân', 'Dùng', 4, 2],
-  ['T6-1', 'Thứ 6', '13h30 - 15h00', 'Ms. Vân', 'Dùng', 4, 2],
-  ['T6-2', 'Thứ 6', '15h00 - 16h30', 'Ms. Vân', 'Dùng', 4, 2],
-  ['T6-3', 'Thứ 6', '13h30 - 15h00', 'Mr. Đức Anh', 'Dùng', 4, 2],
-  ['T6-4', 'Thứ 6', '15h00 - 16h30', 'Mr. Đức Anh', 'Dùng', 4, 2]
+  ['T4-1', 'Thứ 4', '17h30 - 19h00', 'Mr. Đức Anh', 'ON', 4, 2],
+  ['T5-1', 'Thứ 5', '17h30 - 19h00', 'Ms. Vân', 'ON', 4, 2],
+  ['T6-1', 'Thứ 6', '13h30 - 15h00', 'Ms. Vân', 'ON', 4, 2],
+  ['T6-2', 'Thứ 6', '15h00 - 16h30', 'Ms. Vân', 'ON', 4, 2],
+  ['T6-3', 'Thứ 6', '13h30 - 15h00', 'Mr. Đức Anh', 'ON', 4, 2],
+  ['T6-4', 'Thứ 6', '15h00 - 16h30', 'Mr. Đức Anh', 'ON', 4, 2]
 ];
 
+// ON/OFF là trạng thái chính thức. Giữ đọc "Dùng" cũ để sheet đang chạy không bị mất ca
+// trước khi anh bấm Nâng cấp một lần.
+function caDangMo(trangThai) {
+  var s=String(trangThai||'').trim().toUpperCase();
+  return s==='ON' || s==='DÙNG';
+}
+function datChonTrangThaiCa(sh) {
+  if(!sh || sh.getLastRow()<2) return;
+  sh.getRange(2,6,Math.max(100,sh.getLastRow()+20)-1,1).setDataValidation(
+    SpreadsheetApp.newDataValidation().requireValueInList(['ON','OFF'],true).setAllowInvalid(false).build());
+}
 function capNhatNhanCaDayBu(sh) {
   if (!sh) return;
   var last = sh.getLastRow();
@@ -139,7 +150,21 @@ function taoCaiDatCaDayBu(ss) {
     sh.insertColumnsAfter(3, 1);
     sh.getRange(1,4).setValue('Ca hiển thị').setFontWeight('bold').setBackground('#F6F3EE');
     capNhatNhanCaDayBu(sh);
-  } else capNhatNhanCaDayBu(sh);
+  }
+  // Chuẩn hoá dữ liệu cũ một lần: “Dùng/Dừng” đổi rõ ràng thành ON/OFF.
+  var last=sh.getLastRow();
+  if(last>=2){
+    var trangThai=sh.getRange(2,6,last-1,1).getValues();
+    var doi=false;
+    for(var i=0;i<trangThai.length;i++){
+      var s=String(trangThai[i][0]||'').trim().toUpperCase();
+      if(s==='DÙNG'||s==='DUNG'){trangThai[i][0]='ON';doi=true;}
+      else if(s==='DỪNG' || s==='OFF'){trangThai[i][0]='OFF';doi=true;}
+    }
+    if(doi) sh.getRange(2,6,last-1,1).setValues(trangThai);
+  }
+  capNhatNhanCaDayBu(sh);
+  datChonTrangThaiCa(sh);
   return sh;
 }
 
@@ -149,7 +174,7 @@ function layDanhSachCa(ss) {
   var data=sh.getDataRange().getValues(), out=[];
   for (var i=1;i<data.length;i++) {
     var r=data[i], ma=String(r[0]||'').trim(), thu=String(r[1]||'').trim(), gio=String(r[2]||'').trim();
-    if (!ma || String(r[5]||'').trim() !== 'Dùng') continue;
+    if (!ma || !caDangMo(r[5])) continue;
     if (GV_DAY_BU.indexOf(String(r[4]||'').trim())<0) continue;
     var gv=String(r[4]||'').trim();
     // Không tin nhãn cũ ở cột D: dựng lại để dropdown luôn đúng giờ/GV hiện hành.
@@ -2200,18 +2225,21 @@ function timCaTheoNhan(ss, nhan) {
 function datDropdownCaBaoBu(ss, bao) {
   if (!bao) return;
   var nhan = layDanhSachCa(ss).map(function(c) { return c.nhan; });
+  var o=bao.getRange(2, 8, Math.max(100, bao.getLastRow() + 20) - 1, 1);
+  // Bỏ rule cũ trước: nếu tất cả ca OFF, dropdown tuyệt đối không được giữ danh sách cũ.
+  o.clearDataValidations();
   // H nhận cả ca chuẩn và Ca đặc biệt một lần (ĐB-01). Nếu đặt chặn tuyệt đối,
   // lúc Gom nhóm ghi nhãn ca đặc biệt vào H, Sheets báo lỗi xác thực ở chính ô đó.
   // Ca nhập tay vẫn được kiểm tra đầy đủ trước khi Chốt BAO_BU.
-  if (nhan.length) bao.getRange(2, 8, Math.max(100, bao.getLastRow() + 20) - 1, 1).setDataValidation(
+  if (nhan.length) o.setDataValidation(
     SpreadsheetApp.newDataValidation().requireValueInList(nhan, true).setAllowInvalid(true).build());
 }
 // Làm mới danh sách chọn sau khi quản lý thêm/sửa/bật-tắt ca. Không đổi lịch, không gửi tin.
 function lamMoiDanhSachCaXep(khongThongBao) {
-  var ss=laySS(), bao=ss.getSheetByName('BAO_BU'), lich=ss.getSheetByName('LICH_BU');
+  var ss=laySS(), bao=ss.getSheetByName('BAO_BU'), lich=ss.getSheetByName('LICH_BU'), soCa=layDanhSachCa(ss).length;
   if(bao) datDropdownCaBaoBu(ss,bao);
   if(lich) datDropdownCaLich(ss,lich);
-  if(!khongThongBao) baoXong('✅ Đã làm mới danh sách Ca xếp ở BAO_BU và LICH_BU. Không có bé nào bị đổi lịch.');
+  if(!khongThongBao) baoXong('✅ Đã làm mới danh sách Ca xếp: '+soCa+' ca đang ON. Không có bé nào bị đổi lịch.');
 }
 // Mã buổi liên kết đúng một dòng BAO_BU với một dòng LICH_BU. BAO_BU chỉ dùng đến L;
 // mã được cất trong tab kỹ thuật ẩn nên GV/quản lý không phải thấy hoặc sửa cột M.
@@ -2263,9 +2291,11 @@ function datLaiLichSauDoiCa(ss, lich, dong, ca) {
 function datDropdownCaLich(ss, lich) {
   if (!lich) return;
   var nhan = layDanhSachCa(ss).map(function(c) { return c.nhan; });
+  var o=lich.getRange(2,17,Math.max(200,lich.getLastRow()+20)-1,1);
   // LICH_BU có thể có lịch cũ: không để validation chặn nâng cấp chỉ vì một nhãn lịch sử.
-  // Ca mới vẫn chọn từ danh sách; trước khi gửi GV, hệ thống kiểm lại ca đang Dùng.
-  if (nhan.length) lich.getRange(2,17,Math.max(200,lich.getLastRow()+20)-1,1).setDataValidation(
+  // Ca mới vẫn chọn từ danh sách; trước khi gửi GV, hệ thống kiểm lại ca đang ON.
+  o.clearDataValidations();
+  if (nhan.length) o.setDataValidation(
     SpreadsheetApp.newDataValidation().requireValueInList(nhan,true).setAllowInvalid(true).build());
 }
 function datDropdownBaoBu(ss, bao) {

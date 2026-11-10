@@ -57,6 +57,7 @@ class MockRange {
   setBackground(v) { this.sheet.bgRules.push({ r: this.r, c: this.c, h: this.h, w: this.w, bg: v }); return this; }
   setFontSize() { return this; }
   setDataValidation(rule) { this.sheet.validations.push({ r: this.r, c: this.c, h: this.h, w: this.w, rule }); return this; }
+  clearDataValidations() { this.sheet.validations.push({ r: this.r, c: this.c, h: this.h, w: this.w, rule: null }); return this; }
   protect() {
     const p = {
       desc: '', editors: [],
@@ -1114,6 +1115,24 @@ console.log('\n=== T43: Ca đặc biệt ĐB-01 ưu tiên và đi trọn workflo
   lich.getRange(2,9).setValue('✅ Đi được'); sandbox.chotLichTaoTinGV(); sandbox.guiTinChoGV();
   eq(bao.getRange(2,7).getValue(),'Đã báo GV','Ca đặc biệt gửi thành công đồng bộ về BAO_BU');
   ok(!!sandbox.parseCaDacBiet('T4 14h00-15h30 Ms. Vân'),'Vẫn đọc form ca đặc biệt cũ để không kẹt dữ liệu');
+}
+
+console.log('\n=== T44: Trạng thái ON/OFF và làm mới Ca xếp ===');
+{
+  STATE.ss = new MockSS(); STATE.alerts.length = 0;
+  const bao = STATE.ss.insertSheet('BAO_BU'), lich = STATE.ss.insertSheet('LICH_BU');
+  bao.appendRow(['Ngày báo','GV báo','Lớp','Tên bé','Trình độ','Link Canva','Trạng thái','Ca xếp']);
+  lich.appendRow(['Ca','Thứ','Giờ','GV dạy','Tên bé','Lớp','Trình độ','Link Canva','PH xác nhận','Tin nhắn PH','Tin nhắn GV','Đã dạy','Ghi chú','Ngày học','Đã gửi GV lúc','Đã chốt lịch lúc','Ca xếp (chọn)']);
+  const cd = sandbox.taoCaiDatCaDayBu(STATE.ss);
+  eq(cd.getRange(2,6).getValue(), 'ON', 'Ca mặc định dùng trạng thái ON, không dùng chữ Dùng/Dừng');
+  cd.getRange(2,6).setValue('OFF');
+  sandbox.onEdit({range:cd.getRange(2,6)});
+  ok(!sandbox.layDanhSachCa(STATE.ss).some(c => c.ma === 'T4-1'), 'Ca OFF không nằm trong danh sách Ca xếp');
+  cd.getRange(2,6).setValue('ON');
+  sandbox.onEdit({range:cd.getRange(2,6)});
+  ok(sandbox.layDanhSachCa(STATE.ss).some(c => c.ma === 'T4-1'), 'Ca ON xuất hiện ngay trong danh sách Ca xếp');
+  sandbox.lamMoiDanhSachCaXep();
+  ok(lastAlert().includes('ca đang ON'), 'Làm mới thủ công nêu số ca đang ON');
 }
 
 console.log('\n============================');
