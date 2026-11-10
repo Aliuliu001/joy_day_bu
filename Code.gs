@@ -730,19 +730,21 @@ function datList(sh, dong, cot, danhSach) {
   o.setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(danhSach, true).setAllowInvalid(true).build());
 }
 
-// Ô chọn BAO_BU (thứ tự mới): B=GV, C=Lớp, D=Tên bé (chọn nhanh từ DS), E=Trình độ
+// Ô chọn BAO_BU (thứ tự mới): B=GV, C=Lớp, D=Tên bé (chọn nhanh từ DS), E=Trình độ.
+// Dòng 2–3 là ví dụ bị khóa, không được mang validation của dữ liệu thật: D2 có "Không bù".
 function datDropdownBaoBu(ss, bao) {
-  var src = nguonBAOBU(ss);
-  datDropdown(bao, 2, 100, GV_LIST);
-  datList(bao, 2, 3, src.lops.length ? src.lops : LOP_LIST.slice());
-  datList(bao, 2, 4, src.tenAll);
-  datDropdown(bao, 5, 100, TRINH_DO);
-  if (src.lops.length || src.tenAll.length) {
-    // mở rộng dropdown theo data cho cả 100 dòng
-    bao.getRange(2, 3, 100, 1).setDataValidation(SpreadsheetApp.newDataValidation()
-      .requireValueInList(src.lops.length ? src.lops : LOP_LIST, true).setAllowInvalid(true).build());
-    if (src.tenAll.length) datDropdown(bao, 4, 100, src.tenAll);
+  var src = nguonBAOBU(ss), batDau=4, soDong=Math.max(100,bao.getLastRow()+20)-batDau+1;
+  // Gỡ rule cũ ở hai dòng mẫu trước; nếu còn rule D2 thì Nâng cấp không thể ghi "Không bù".
+  bao.getRange(2,2,2,4).clearDataValidations();
+  function datTuDong(cot, danhSach, choPhepKhac) {
+    if(!danhSach || !danhSach.length) { bao.getRange(batDau,cot,soDong,1).clearDataValidations(); return; }
+    bao.getRange(batDau,cot,soDong,1).setDataValidation(SpreadsheetApp.newDataValidation()
+      .requireValueInList(danhSach,true).setAllowInvalid(!!choPhepKhac).build());
   }
+  datTuDong(2,GV_LIST,false);
+  datTuDong(3,src.lops.length ? src.lops : LOP_LIST.slice(),true);
+  datTuDong(4,src.tenAll,true);
+  datTuDong(5,TRINH_DO,false);
 }
 
 // GV đổi ô B (GV) / C (Lớp) / D (Tên bé) ở 1 dòng → cập nhật dropdown cho CHÍNH DÒNG đó.
@@ -2299,14 +2301,20 @@ function datDropdownCaLich(ss, lich) {
     SpreadsheetApp.newDataValidation().requireValueInList(nhan,true).setAllowInvalid(true).build());
 }
 function datDropdownBaoBu(ss, bao) {
-  var src = nguonBAOBU(ss);
-  datDropdown(bao, 2, 100, GV_LIST); datList(bao, 2, 3, src.lops.length ? src.lops : LOP_LIST.slice());
-  datList(bao, 2, 4, src.tenAll); datDropdown(bao, 5, 100, TRINH_DO);
-  if (src.lops.length || src.tenAll.length) {
-    bao.getRange(2, 3, 100, 1).setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(src.lops.length ? src.lops : LOP_LIST, true).setAllowInvalid(true).build());
-    if (src.tenAll.length) datDropdown(bao, 4, 100, src.tenAll);
+  var src=nguonBAOBU(ss), batDau=4, soDong=Math.max(100,bao.getLastRow()+20)-batDau+1;
+  // Dòng 2–3 là ví dụ bị khóa. Gỡ validation cũ để D2="Không bù" và H3 Ca đặc biệt không bị báo đỏ.
+  bao.getRange(2,2,2,4).clearDataValidations();
+  function datTuDong(cot, danhSach, choPhepKhac) {
+    var o=bao.getRange(batDau,cot,soDong,1);
+    o.clearDataValidations();
+    if(danhSach && danhSach.length) o.setDataValidation(SpreadsheetApp.newDataValidation()
+      .requireValueInList(danhSach,true).setAllowInvalid(!!choPhepKhac).build());
   }
-  // H là dropdown chỉ quản lý: chỉ ca đang Dùng từ nguồn chuẩn.
+  datTuDong(2,GV_LIST,false);
+  datTuDong(3,src.lops.length ? src.lops : LOP_LIST.slice(),true);
+  datTuDong(4,src.tenAll,true);
+  datTuDong(5,TRINH_DO,false);
+  // H là danh sách chọn nhanh ca ON; Ca đặc biệt hợp lệ vẫn được phép giữ trong ô.
   datDropdownCaBaoBu(ss, bao);
 }
 function xepLichTam(ss, bao, lich, daKiemTra) {

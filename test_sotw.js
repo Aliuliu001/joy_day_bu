@@ -57,7 +57,13 @@ class MockRange {
   setBackground(v) { this.sheet.bgRules.push({ r: this.r, c: this.c, h: this.h, w: this.w, bg: v }); return this; }
   setFontSize() { return this; }
   setDataValidation(rule) { this.sheet.validations.push({ r: this.r, c: this.c, h: this.h, w: this.w, rule }); return this; }
-  clearDataValidations() { this.sheet.validations.push({ r: this.r, c: this.c, h: this.h, w: this.w, rule: null }); return this; }
+  clearDataValidations() {
+    const overlap = (a1, a2, b1, b2) => a1 <= b2 && b1 <= a2;
+    this.sheet.validations = this.sheet.validations.filter(v =>
+      !overlap(this.r, this.r + this.h - 1, v.r, v.r + v.h - 1) ||
+      !overlap(this.c, this.c + this.w - 1, v.c, v.c + v.w - 1));
+    return this;
+  }
   protect() {
     const p = {
       desc: '', editors: [],
@@ -1115,6 +1121,24 @@ console.log('\n=== T43: Ca đặc biệt ĐB-01 ưu tiên và đi trọn workflo
   lich.getRange(2,9).setValue('✅ Đi được'); sandbox.chotLichTaoTinGV(); sandbox.guiTinChoGV();
   eq(bao.getRange(2,7).getValue(),'Đã báo GV','Ca đặc biệt gửi thành công đồng bộ về BAO_BU');
   ok(!!sandbox.parseCaDacBiet('T4 14h00-15h30 Ms. Vân'),'Vẫn đọc form ca đặc biệt cũ để không kẹt dữ liệu');
+}
+
+console.log('\n=== T45: Dòng mẫu và Ca đặc biệt không bị validation chặn ===');
+{
+  STATE.ss = new MockSS(); STATE.alerts.length = 0;
+  const bao=STATE.ss.insertSheet('BAO_BU'), lich=STATE.ss.insertSheet('LICH_BU');
+  bao.appendRow(['Ngày báo','GV báo','Lớp','Tên bé','Trình độ','Link Canva','Trạng thái','Ca xếp','Ghi chú','SOTW','Ca đặc biệt','GV dạy bù ưu tiên']);
+  bao.appendRow(['','Mr. Ngọc','S1.001 - Cashew','Không bù','','','','','(DÒNG MẪU) Lớp đi đủ','','','']);
+  bao.appendRow(['','Mr. Ngọc','S2.001 - Pumpkin Seed','Iphone','SP1','','','ĐB-01 | Thứ 5 | 17h00 - 18h00 | Mr. Ngọc','(DÒNG MẪU) Ca riêng','','ĐB-01 | Thứ 5 | 17h00 - 18h00 | Mr. Ngọc','']);
+  lich.appendRow(['Ca','Thứ','Giờ','GV dạy','Tên bé','Lớp','Trình độ','Link Canva','PH xác nhận','Tin nhắn PH','Tin nhắn GV','Đã dạy','Ghi chú','Ngày học','Đã gửi GV lúc','Đã chốt lịch lúc','Ca xếp (chọn)']);
+  sandbox.taoCaiDatCaDayBu(STATE.ss);
+  const ds=sandbox.taoBangSotw(STATE.ss);
+  ds.getRange(3,1,1,3).setValues([['Bé Test','S1.001 - Cashew','Mr. Ngọc']]);
+  sandbox.datDropdownBaoBu(STATE.ss, bao);
+  const tenValidations = bao.validations.filter(v => v.c === 4 && v.rule);
+  ok(tenValidations.every(v => v.r >= 4), 'Dropdown Tên bé chỉ bắt đầu từ dòng dữ liệu 4, không chặn dòng mẫu');
+  const caValidation = bao.validations.filter(v => v.c === 8 && v.rule).pop();
+  ok(!!caValidation && caValidation.rule.allowInvalid === true, 'Ca xếp chỉ gợi ý ca ON, không chặn Ca đặc biệt ở dòng mẫu/dòng thực');
 }
 
 console.log('\n=== T44: Trạng thái ON/OFF và làm mới Ca xếp ===');

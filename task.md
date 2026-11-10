@@ -169,6 +169,13 @@
 - [x] Ca đặc biệt cho phép mọi GV đang hoạt động, gồm `Mr. Ngọc`; không giới hạn chỉ Ms. Vân/Mr. Đức Anh.
 - [x] `node test_sotw.js`: **233 PASS / 0 FAIL**.
 
+### TASK 12 — Gỡ validation sai ở dòng mẫu và Ca đặc biệt ✅
+
+- [x] Dòng mẫu 2–3 không còn nhận dropdown tên bé; `Không bù` ở D2 không bị Google Sheets chặn khi Nâng cấp.
+- [x] Dropdown Ca xếp chỉ gợi ý ca ON nhưng cho phép nhãn Ca đặc biệt `ĐB-01 | ...` ở cả dòng mẫu và dòng thực.
+- [x] Luôn gỡ validation cũ trước khi ghi validation mới để không còn rule cũ gây báo đỏ.
+- [x] `node test_sotw.js`: **240 PASS / 0 FAIL**.
+
 ### TASK 11 — Đổi trạng thái ca thành ON/OFF + sửa dropdown cũ ✅
 
 - [x] Cột Trạng thái dùng rõ `ON` (mở) / `OFF` (tạm đóng), thay cho chữ Dùng/Dừng dễ đọc nhầm.
