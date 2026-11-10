@@ -1106,8 +1106,8 @@ console.log('\n=== T43: Ca đặc biệt ĐB-01 ưu tiên và đi trọn workflo
   lich.appendRow(['Ca','Thứ','Giờ','GV dạy','Tên bé','Lớp','Trình độ','Link Canva','PH xác nhận','Tin nhắn PH','Tin nhắn GV','Đã dạy','Ghi chú','Ngày học','Đã gửi GV lúc','Đã chốt lịch lúc','Ca xếp (chọn)','Mã buổi']);
   sandbox.taoCaiDatCaDayBu(STATE.ss);
   sandbox.datDropdownCaBaoBu(STATE.ss, bao);
-  const validationH = bao.validations[bao.validations.length - 1];
-  eq(validationH.rule.allowInvalid, true, 'Cột H cho phép nhãn Ca đặc biệt để Gom nhóm không báo lỗi H3');
+  const validationH = bao.validations.filter(v => v.c === 8 && v.r <= 2 && 2 < v.r + v.h).pop();
+  eq(validationH, undefined, 'Cột H của bé có K ca đặc biệt được miễn dropdown ca thường');
   const db=sandbox.parseCaDacBiet('ĐB-01 | Thứ 5 | 17h00 - 18h30 | Mr. Ngọc');
   eq([db.ma,db.thu,db.gio,db.gv],['ĐB-01','Thứ 5','17h00 - 18h30','Mr. Ngọc'],'Ca đặc biệt nhận đúng form ĐB-01 với Mr. Ngọc');
   // Mô phỏng copy dòng mẫu: đã mang trạng thái tạm nhưng Ca xếp H còn trống.
@@ -1137,8 +1137,10 @@ console.log('\n=== T45: Dòng mẫu và Ca đặc biệt không bị validation 
   sandbox.datDropdownBaoBu(STATE.ss, bao);
   const tenValidations = bao.validations.filter(v => v.c === 4 && v.rule);
   ok(tenValidations.every(v => v.r >= 4), 'Dropdown Tên bé chỉ bắt đầu từ dòng dữ liệu 4, không chặn dòng mẫu');
-  const caValidation = bao.validations.filter(v => v.c === 8 && v.rule).pop();
-  ok(!!caValidation && caValidation.rule.allowInvalid === true, 'Ca xếp chỉ gợi ý ca ON, không chặn Ca đặc biệt ở dòng mẫu/dòng thực');
+  const caValidationH2 = bao.validations.filter(v => v.c === 8 && v.r <= 2 && 2 < v.r + v.h).pop();
+  const caValidationH3 = bao.validations.filter(v => v.c === 8 && v.r <= 3 && 3 < v.r + v.h).pop();
+  eq(caValidationH2, undefined, 'Dòng mẫu 1 không nhận dropdown ca thường');
+  eq(caValidationH3, undefined, 'Dòng mẫu 2 có Ca đặc biệt không nhận dropdown ca thường');
 }
 
 console.log('\n=== T44: Trạng thái ON/OFF và làm mới Ca xếp ===');
@@ -1157,6 +1159,28 @@ console.log('\n=== T44: Trạng thái ON/OFF và làm mới Ca xếp ===');
   ok(sandbox.layDanhSachCa(STATE.ss).some(c => c.ma === 'T4-1'), 'Ca ON xuất hiện ngay trong danh sách Ca xếp');
   sandbox.lamMoiDanhSachCaXep();
   ok(lastAlert().includes('ca đang ON'), 'Làm mới thủ công nêu số ca đang ON');
+}
+
+console.log('\n=== T46: H dòng mẫu/ca đặc biệt miễn dropdown, ca thường chỉ nhận ON ===');
+{
+  STATE.ss = new MockSS(); STATE.alerts.length = 0;
+  const bao=STATE.ss.insertSheet('BAO_BU'), lich=STATE.ss.insertSheet('LICH_BU');
+  bao.appendRow(['Ngày báo','GV báo','Lớp','Tên bé','Trình độ','Link Canva','Trạng thái','Ca xếp','Ghi chú','SOTW','Ca đặc biệt','GV dạy bù ưu tiên']);
+  bao.appendRow(['','Mr. Ngọc','S1','Không bù','','','','','(DÒNG MẪU) Lớp đi đủ','','','']);
+  bao.appendRow(['','Mr. Ngọc','S2','Iphone','SP1','','','GIỮ NGUYÊN H3','(DÒNG MẪU) Ca riêng','','ĐB-01 | Thứ 4 | 14h00 - 15h30 | Ms. Vân','']);
+  bao.appendRow(['','Ms. Vân','L1','Bé ca thường','SP1','','','T4-1 | Thứ 4 | 17h30 - 19h00 | Mr. Đức Anh','','','']);
+  bao.appendRow(['','Ms. Vân','L1','Bé ca ĐB','SP1','','','GIỮ NGUYÊN H5','','','ĐB-01 | Thứ 5 | 17h00 - 18h30 | Mr. Ngọc','']);
+  lich.appendRow(['Ca','Thứ','Giờ','GV dạy','Tên bé','Lớp','Trình độ','Link Canva','PH xác nhận','Tin nhắn PH','Tin nhắn GV','Đã dạy','Ghi chú','Ngày học','Đã gửi GV lúc','Đã chốt lịch lúc','Ca xếp (chọn)']);
+  sandbox.taoCaiDatCaDayBu(STATE.ss);
+  sandbox.datDropdownCaBaoBu(STATE.ss, bao);
+  const ruleAt = row => bao.validations.filter(v => v.c === 8 && v.r <= row && row < v.r + v.h).pop();
+  eq(ruleAt(2), undefined, 'H2 dòng mẫu không có dropdown');
+  eq(ruleAt(3), undefined, 'H3 dòng mẫu không có dropdown và không bị tự đổi');
+  eq(ruleAt(4).rule.allowInvalid, false, 'H4 bé ca thường chỉ nhận danh sách ca ON');
+  eq(ruleAt(5), undefined, 'H5 có K ca đặc biệt không có dropdown ca thường');
+  eq([bao.getRange(3,8).getValue(),bao.getRange(5,8).getValue()],['GIỮ NGUYÊN H3','GIỮ NGUYÊN H5'],'Làm mới dropdown không ghi đè H3/H5');
+  sandbox.lamMoiDanhSachCaXep();
+  eq([bao.getRange(3,8).getValue(),bao.getRange(5,8).getValue()],['GIỮ NGUYÊN H3','GIỮ NGUYÊN H5'],'Nút Làm mới không đổi lịch hoặc giá trị H');
 }
 
 console.log('\n============================');

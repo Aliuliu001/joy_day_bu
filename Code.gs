@@ -388,10 +388,17 @@ function themLinkSotw(bao, gid) {
   }
 }
 
+// Một dòng có dấu này là hướng dẫn, tuyệt đối không phải dữ liệu bé thật.
+function laDongMauBaoBu(row) {
+  return String((row || [])[8] || '').indexOf(DAU_MAU) >= 0;
+}
+
 // 2 dòng mẫu BAO_BU (bảo vệ — không cho GV sửa, gom nhóm bỏ qua)
 function taoDongMau(bao) {
   try { chuyenCotMoiBAOBU(bao); } catch (e) {} // phòng sheet cũ đang ở thứ tự cột cũ
   var data = bao.getDataRange().getValues();
+  // Sheet có thể copy validation theo dòng khi chèn. Dòng mẫu không được có rule tên bé/ca xếp.
+  try { bao.getRange(2, 2, 2, 7).clearDataValidations(); } catch (e) {}
   var dem = 0;
   for (var i = 1; i < data.length; i++) {
     if ((data[i][8] || '').toString().indexOf(DAU_MAU) >= 0) dem++;
@@ -730,22 +737,8 @@ function datList(sh, dong, cot, danhSach) {
   o.setDataValidation(SpreadsheetApp.newDataValidation().requireValueInList(danhSach, true).setAllowInvalid(true).build());
 }
 
-// Ô chọn BAO_BU (thứ tự mới): B=GV, C=Lớp, D=Tên bé (chọn nhanh từ DS), E=Trình độ.
-// Dòng 2–3 là ví dụ bị khóa, không được mang validation của dữ liệu thật: D2 có "Không bù".
-function datDropdownBaoBu(ss, bao) {
-  var src = nguonBAOBU(ss), batDau=4, soDong=Math.max(100,bao.getLastRow()+20)-batDau+1;
-  // Gỡ rule cũ ở hai dòng mẫu trước; nếu còn rule D2 thì Nâng cấp không thể ghi "Không bù".
-  bao.getRange(2,2,2,4).clearDataValidations();
-  function datTuDong(cot, danhSach, choPhepKhac) {
-    if(!danhSach || !danhSach.length) { bao.getRange(batDau,cot,soDong,1).clearDataValidations(); return; }
-    bao.getRange(batDau,cot,soDong,1).setDataValidation(SpreadsheetApp.newDataValidation()
-      .requireValueInList(danhSach,true).setAllowInvalid(!!choPhepKhac).build());
-  }
-  datTuDong(2,GV_LIST,false);
-  datTuDong(3,src.lops.length ? src.lops : LOP_LIST.slice(),true);
-  datTuDong(4,src.tenAll,true);
-  datTuDong(5,TRINH_DO,false);
-}
+// Ô chọn BAO_BU được dựng ở gần workflow Dạy Bù bên dưới.
+// Chỉ giữ MỘT định nghĩa để mọi nút dùng đúng cùng luật validation.
 
 // GV đổi ô B (GV) / C (Lớp) / D (Tên bé) ở 1 dòng → cập nhật dropdown cho CHÍNH DÒNG đó.
 // cotSua=4: chọn TÊN BÉ trước → tự điền Lớp + (nếu ô GV trống) GV báo + lọc 2 dropdown còn lại
@@ -817,6 +810,23 @@ function onEdit(e) {
     // Sheet cũ (chưa nâng cấp) → tự đổi cột sang thứ tự mới ngay khi GV gõ
     chuyenCotMoiBAOBU(sh);
     if (dong < 2) return;
+    var dongHienTai = sh.getRange(dong, 1, 1, 11).getValues()[0];
+    // K là nguồn chuẩn cho ca phát sinh một lần. Chỉ bé thật mới đồng bộ H;
+    // dòng mẫu chỉ để hướng dẫn, tuyệt đối không tự biến H3 thành lịch.
+    if (cot === 11 && !laDongMauBaoBu(dongHienTai)) {
+      var nhapDacBiet = String(dongHienTai[10] || '').trim();
+      var caDacBiet = parseCaDacBiet(nhapDacBiet);
+      if (nhapDacBiet && caDacBiet) {
+        sh.getRange(dong, 8).setValue(caDacBiet.nhan);
+        sh.getRange(dong, 7).setValue('Đã xếp tạm');
+      } else if (nhapDacBiet) {
+        sh.getRange(dong, 8).clearContent();
+        sh.getRange(dong, 7).setValue('Cần sửa ca đặc biệt');
+        sh.getRange(dong, 9).setValue('Ca đặc biệt phải theo mẫu: ĐB-01 | Thứ 4 | 14h00 - 15h30 | Ms. Vân');
+      }
+      datDropdownCaBaoBu(laySS(), sh);
+      return;
+    }
     // Chọn nhanh: GV (B) → dropdown Lớp; Lớp (C) → dropdown Tên bé;
     // Tên bé (D) → tự điền Lớp + GV (đảo chiều)
     if (cot === 2 || cot === 3 || cot === 4) apCascading(sh, dong, undefined, cot);
@@ -2225,23 +2235,40 @@ function timCaTheoNhan(ss, nhan) {
   return null;
 }
 function datDropdownCaBaoBu(ss, bao) {
-  if (!bao) return;
+  if (!bao) return { caOn: 0, mienDropdown: 0 };
   var nhan = layDanhSachCa(ss).map(function(c) { return c.nhan; });
-  var o=bao.getRange(2, 8, Math.max(100, bao.getLastRow() + 20) - 1, 1);
-  // Bỏ rule cũ trước: nếu tất cả ca OFF, dropdown tuyệt đối không được giữ danh sách cũ.
+  var denDong = Math.max(100, bao.getLastRow() + 20);
+  var o = bao.getRange(2, 8, denDong - 1, 1);
+  // Xóa TOÀN BỘ rule cũ trước. Không giữ validation ở dòng mẫu hoặc dòng có K,
+  // vì chip dropdown của Google vẫn có thể đánh dấu nhãn ĐB là không hợp lệ.
   o.clearDataValidations();
-  // H nhận cả ca chuẩn và Ca đặc biệt một lần (ĐB-01). Nếu đặt chặn tuyệt đối,
-  // lúc Gom nhóm ghi nhãn ca đặc biệt vào H, Sheets báo lỗi xác thực ở chính ô đó.
-  // Ca nhập tay vẫn được kiểm tra đầy đủ trước khi Chốt BAO_BU.
-  if (nhan.length) o.setDataValidation(
-    SpreadsheetApp.newDataValidation().requireValueInList(nhan, true).setAllowInvalid(true).build());
+  if (!nhan.length) return { caOn: 0, mienDropdown: 0 };
+
+  var rule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(nhan, true).setAllowInvalid(false).build();
+  var data = bao.getRange(2, 1, denDong - 1, 11).getValues();
+  var batDau = 0, mienDropdown = 0;
+  function datDoan(tu, den) {
+    if (tu < den) bao.getRange(tu + 2, 8, den - tu, 1).setDataValidation(rule);
+  }
+  for (var i = 0; i < data.length; i++) {
+    var laMau = laDongMauBaoBu(data[i]);
+    var coCaDacBiet = String(data[i][10] || '').trim() !== '';
+    if (laMau || coCaDacBiet) {
+      datDoan(batDau, i);
+      batDau = i + 1;
+      mienDropdown++;
+    }
+  }
+  datDoan(batDau, data.length);
+  return { caOn: nhan.length, mienDropdown: mienDropdown };
 }
 // Làm mới danh sách chọn sau khi quản lý thêm/sửa/bật-tắt ca. Không đổi lịch, không gửi tin.
 function lamMoiDanhSachCaXep(khongThongBao) {
   var ss=laySS(), bao=ss.getSheetByName('BAO_BU'), lich=ss.getSheetByName('LICH_BU'), soCa=layDanhSachCa(ss).length;
-  if(bao) datDropdownCaBaoBu(ss,bao);
+  var kqBao = bao ? datDropdownCaBaoBu(ss,bao) : { mienDropdown: 0 };
   if(lich) datDropdownCaLich(ss,lich);
-  if(!khongThongBao) baoXong('✅ Đã làm mới danh sách Ca xếp: '+soCa+' ca đang ON. Không có bé nào bị đổi lịch.');
+  if(!khongThongBao) baoXong('✅ Đã làm mới danh sách Ca xếp: '+soCa+' ca đang ON; '+kqBao.mienDropdown+' ô dòng mẫu/ca đặc biệt được miễn dropdown. Không có bé nào bị đổi lịch.');
 }
 // Mã buổi liên kết đúng một dòng BAO_BU với một dòng LICH_BU. BAO_BU chỉ dùng đến L;
 // mã được cất trong tab kỹ thuật ẩn nên GV/quản lý không phải thấy hoặc sửa cột M.

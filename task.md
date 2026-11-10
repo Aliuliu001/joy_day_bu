@@ -184,6 +184,17 @@
 - [x] Nút làm mới nêu số ca đang ON.
 - [x] Test T44 PASS: OFF bị loại, ON hiện ngay trong Ca xếp.
 
+### TASK 13 — Sửa dứt điểm validation Ca xếp ở Sheet thật 🔄
+
+- [x] Tìm đúng nguyên nhân trong code: có **2 hàm cùng tên** `datDropdownBaoBu`; JavaScript chỉ chạy bản cuối nên rất dễ sửa nhầm.
+- [x] Gộp còn 1 đường tạo dropdown và xóa rule cũ trước khi ghi rule mới.
+- [x] Dòng mẫu (2–3) và bé có **Ca đặc biệt** ở cột K được **miễn dropdown ca thường** ở cột H, nên không thể hiện cảnh báo đỏ do danh sách ca ON.
+- [x] Bé dùng ca thường vẫn có dropdown chỉ gồm các ca đang **ON**; ca OFF không xuất hiện.
+- [x] Nút **Làm mới danh sách Ca xếp** chỉ thay danh sách chọn, không sửa bất kỳ giá trị/lịch nào trong H hoặc K.
+- [x] Cột K được sửa ở bé thật: ca ĐB hợp lệ tự đồng bộ sang H; dòng mẫu không tự sinh lịch.
+- [x] Test hồi quy thật: `node test_sotw.js` = **247 PASS / 0 FAIL**; `git diff --check` sạch.
+- [ ] Còn cần kiểm trực tiếp trên Google Sheet đang dùng sau khi `clasp push`: H3 không đỏ, H5 không đỏ và nhận đúng từ K5, một dòng ca thường chỉ chọn ca ON.
+
 ### TASK 7 — Nghiệm thu, push ⏳
 
 - [x] Rà luồng cũ, chạy toàn bộ test và kiểm tra định dạng diff.
