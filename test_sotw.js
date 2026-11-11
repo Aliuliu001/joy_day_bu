@@ -1183,6 +1183,33 @@ console.log('\n=== T46: H dòng mẫu/ca đặc biệt miễn dropdown, ca thư�
   eq([bao.getRange(3,8).getValue(),bao.getRange(5,8).getValue()],['GIỮ NGUYÊN H3','GIỮ NGUYÊN H5'],'Nút Làm mới không đổi lịch hoặc giá trị H');
 }
 
+console.log('\n=== T47: Tin GV gom đúng tài liệu từng bé + giữ nguồn GV ===');
+{
+  const ca1 = { ma:'T6-2', thu:'Thứ 6', gio:'15h00 - 16h30', bes:[
+    {ten:'Bé An', lop:' S1.001 ', link:'https://slide-a', ghiChu:'Ôn Unit 4', gvNguon:'GV B'},
+    {ten:'Bé Bình', lop:'S1.001', link:' https://slide-a ', ghiChu:' Ôn Unit 4 ', gvNguon:'GV B'},
+    {ten:'Bé Chi', lop:'S1.001', link:'https://slide-a', ghiChu:'Luyện nghe', gvNguon:'GV B'},
+    {ten:'Bé Dũng', lop:'S2.003', link:'', ghiChu:'', gvNguon:''}
+  ]};
+  const ca2 = { ma:'T7-1', thu:'Thứ 7', gio:'08h00 - 09h30', bes:[
+    {ten:'Bé Em', lop:'S3.001', link:'https://slide-e', ghiChu:'Ôn từ vựng', gvNguon:'GV B'}
+  ]};
+  const tin = sandbox.taoNoiDungTinGV('GV A', [ca1, ca2]);
+  ok(tin.includes('📚 LỊCH HỌC BÙ — GV A') && tin.includes('CA T6-2') && tin.includes('CA T7-1'), 'Một GV nhận một tin có các khối ca riêng');
+  ok(tin.includes('Bé An') && tin.includes('Bé Bình') && tin.includes('Bé Chi') && tin.includes('Bé Dũng'), 'Mỗi bé luôn có dòng tên riêng');
+  ok(tin.includes('Dùng chung Slide + Ghi chú với Bé An'), 'Cùng lớp/slide/ghi chú (bỏ khoảng trắng thừa) chỉ in tài liệu một lần');
+  ok(tin.includes('Bé Chi') && tin.includes('Ghi chú: Luyện nghe'), 'Ghi chú khác đi đúng dưới tên bé, không gom theo riêng nội dung');
+  ok(tin.includes('Bé Dũng') && tin.includes('chưa gửi Slide') && tin.includes('chưa gửi Ghi chú'), 'Thiếu slide/ghi chú vẫn gửi và cảnh báo đúng bé');
+  ok(tin.includes('Chưa xác định GV nguồn Slide/Ghi chú'), 'Lịch cũ thiếu nguồn vẫn gửi kèm cảnh báo kiểm tra');
+  ok((tin.match(/══════════════════/g) || []).length === 2 && (tin.match(/──────────/g) || []).length === 3, 'Có phân cách rõ giữa ca và giữa bé');
+  const ss = new MockSS(); const bao = ss.insertSheet('BAO_BU');
+  bao.appendRow(['Ngày báo','GV báo','Lớp','Tên bé','Trình độ','Link Canva']);
+  bao.appendRow(['01/11/2026','GV B','L1','Bé Nguồn','SP1','https://slide']);
+  const ma = sandbox.layMaBuoiBao(ss, bao.getRange(2,1,1,6).getValues()[0]);
+  eq(sandbox.layGvNguonTaiLieu(ss, ma), 'GV B', 'Nguồn Slide/Ghi chú được lưu kín từ GV báo dù ca cuối có thể giao GV A');
+  ok(ss.getSheetByName('DỮ LIỆU KỸ THUẬT').isSheetHidden(), 'Nguồn GV chỉ nằm trong tab kỹ thuật ẩn');
+}
+
 console.log('\n============================');
 console.log(`PASS: ${PASS}  FAIL: ${FAIL}`);
 process.exit(FAIL > 0 ? 1 : 0);

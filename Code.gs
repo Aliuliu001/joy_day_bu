@@ -1734,49 +1734,80 @@ function dongBoCaCuoiVeBaoBu(ss, bao, lich, rows, luc) {
   });
   return loi;
 }
+function chuanKhoaTinGV(v) { return String(v || '').replace(/\s+/g, ' ').trim(); }
+function khoaTaiLieuTinGV(b) { return [chuanKhoaTinGV(b.lop), chuanKhoaTinGV(b.link), chuanKhoaTinGV(b.ghiChu)].join('|'); }
+function taoNoiDungTinGV(gv, cas) {
+  var tin = '📚 LỊCH HỌC BÙ — ' + gv + '\n';
+  (cas || []).forEach(function(c) {
+    tin += '\n══════════════════\n🕒 CA ' + c.ma + ' | ' + c.thu + ' | ' + c.gio + '\n\n';
+    var dauTienTheoTaiLieu = {};
+    c.bes.forEach(function(b, idx) {
+      if (idx) tin += '──────────\n';
+      tin += (idx + 1) + '. ' + b.ten + ' — Lớp ' + (b.lop || '(chưa có lớp)') + '\n';
+      var khoa = khoaTaiLieuTinGV(b), beDau = dauTienTheoTaiLieu[khoa];
+      if (beDau) {
+        tin += '   ↳ Dùng chung Slide + Ghi chú với ' + beDau.ten + '.\n';
+        return;
+      }
+      dauTienTheoTaiLieu[khoa] = b;
+      if (b.link) tin += '   Slide: ' + b.link + '\n';
+      else tin += '   ⚠️ GV của bé chưa gửi Slide. Nhờ thầy/cô báo Văn phòng hoặc liên hệ trực tiếp GV của bé.\n';
+      if (b.ghiChu) tin += '   Ghi chú: ' + b.ghiChu + '\n';
+      else tin += '   ⚠️ GV của bé chưa gửi Ghi chú. Nhờ thầy/cô báo Văn phòng hoặc liên hệ trực tiếp GV của bé.\n';
+      if (!b.gvNguon) tin += '   ⚠️ Chưa xác định GV nguồn Slide/Ghi chú — Văn phòng kiểm tra lại trước giờ học.\n';
+    });
+  });
+  return tin.trim();
+}
+function tachTinGVTheoCa(gv, cas) {
+  // Telegram giới hạn 4096 ký tự: chỉ tách giữa các ca, không cắt ngang thông tin bé.
+  var chunks = [], current = [];
+  (cas || []).forEach(function(c) {
+    var thu = current.concat([c]), thuText = taoNoiDungTinGV(gv, thu);
+    if (current.length && thuText.length > 4000) { chunks.push(taoNoiDungTinGV(gv, current)); current = [c]; }
+    else current = thu;
+  });
+  if (current.length) chunks.push(taoNoiDungTinGV(gv, current));
+  return chunks;
+}
 function guiTinChoGV(force) {
   var ss = laySS(), lich = ss.getSheetByName('LICH_BU'), bao=ss.getSheetByName('BAO_BU');
   if (!lich || !bao) { baoXong('Chưa có tab LICH_BU hoặc BAO_BU.'); return; }
   damBaoCotCaLich(ss,lich);
-  if (String(lich.getRange(1, 15).getValue() || '').trim() !== 'Đã gửi GV lúc') {
-    lich.getRange(1, 15).setValue('Đã gửi GV lúc').setFontWeight('bold').setBackground('#F6F3EE');
-  }
-  if (String(lich.getRange(1, 16).getValue() || '').trim() !== 'Đã chốt lịch lúc') {
-    lich.getRange(1, 16).setValue('Đã chốt lịch lúc').setFontWeight('bold').setBackground('#F6F3EE');
-  }
-  var data = lich.getDataRange().getValues(), theoCa = {}, chuaChot = 0;
+  if (String(lich.getRange(1, 15).getValue() || '').trim() !== 'Đã gửi GV lúc') lich.getRange(1, 15).setValue('Đã gửi GV lúc').setFontWeight('bold').setBackground('#F6F3EE');
+  if (String(lich.getRange(1, 16).getValue() || '').trim() !== 'Đã chốt lịch lúc') lich.getRange(1, 16).setValue('Đã chốt lịch lúc').setFontWeight('bold').setBackground('#F6F3EE');
+  var data = lich.getDataRange().getValues(), theoGV = {}, chuaChot = 0;
   for (var i = 1; i < data.length; i++) {
     var st = String(data[i][8] || ''), daGui = String(data[i][14] || '');
     if (st.indexOf('✅') < 0 && st.indexOf('Đi được') < 0) continue;
     if (String(data[i][15] || '').indexOf('GV:') !== 0) { chuaChot++; continue; }
     if (!force && daGui) continue;
-    var ma = data[i][0];
-    if (!theoCa[ma]) theoCa[ma] = { thu:data[i][1], gio:data[i][2], gv:data[i][3], bes:[], rows:[] };
-    theoCa[ma].bes.push({ ten:data[i][4], lop:data[i][5], td:data[i][6], link:data[i][7], ghiChu:data[i][12] });
-    theoCa[ma].rows.push(i + 1);
+    var gv=String(data[i][3]||'').trim(), ma=String(data[i][0]||'').trim();
+    if (!theoGV[gv]) theoGV[gv] = { cas:[], byCa:{} };
+    var ca=theoGV[gv].byCa[ma];
+    if (!ca) { ca={ma:ma,thu:data[i][1],gio:data[i][2],bes:[],rows:[]}; theoGV[gv].byCa[ma]=ca; theoGV[gv].cas.push(ca); }
+    var maBuoi=String(data[i][17]||'').trim();
+    ca.bes.push({ten:data[i][4],lop:data[i][5],td:data[i][6],link:String(data[i][7]||'').trim(),ghiChu:String(data[i][12]||'').trim(),gvNguon:layGvNguonTaiLieu(ss,maBuoi)});
+    ca.rows.push(i+1);
   }
-  var keys = Object.keys(theoCa);
-  if (!keys.length) {
-    if (chuaChot) baoXong('Có ' + chuaChot + ' bé PH đã chốt nhưng lịch chưa được chốt nội dung. Bấm 4️⃣ Chốt lịch → tạo tin PH / GV sau khi kiểm tra lại ca/GV/giờ.');
+  var gvs=Object.keys(theoGV);
+  if (!gvs.length) {
+    if (chuaChot) baoXong('Có ' + chuaChot + ' bé PH đã chốt nhưng lịch chưa được chốt nội dung. Bấm 5️⃣ Chốt LICH_BU → tạo tin GV sau khi kiểm tra lại ca/GV/giờ.');
     else baoXong(force ? 'Chưa có ca nào được chốt ✅.' : 'Không có tin GV mới. Các ca đã chốt đều đã gửi rồi.');
     return;
   }
-  var dem = 0, luc = Utilities.formatDate(new Date(), 'GMT+7', 'dd/MM HH:mm');
-  keys.forEach(function(ma) {
-    var c = theoCa[ma], tin = '📚 [HỌC BÙ ' + c.thu + ' ' + c.gio + '] ' + c.gv + ' dạy:\n';
-    c.bes.forEach(function(b, idx) { tin += (idx+1) + '. ' + b.ten + ' (' + b.lop + ' - ' + b.td + ')\n   Slide: ' + (b.link || '(chưa có)') + '\n'; });
-    var noteMap = {}, noteOrder = [];
-    c.bes.forEach(function(b) { var n=String(b.ghiChu||'').trim(); if (!n) return; if (!noteMap[n]) { noteMap[n]=[]; noteOrder.push(n); } if (b.lop && noteMap[n].indexOf(b.lop)<0) noteMap[n].push(b.lop); });
-    noteOrder.forEach(function(n) { tin += '📌 Ghi chú' + (noteMap[n].length ? ' ('+noteMap[n].join(', ')+')' : '') + ': ' + n + '\n'; });
-    if (guiTelegram(tin)) {
-      c.rows.forEach(function(r) { lich.getRange(r,15).setValue(luc); });
-      var loiDongBo=dongBoCaCuoiVeBaoBu(ss,bao,lich,c.rows,luc);
-      if(loiDongBo.length) Logger.log('Đã gửi GV nhưng chưa đồng bộ BAO_BU: '+loiDongBo.join(' | '));
-      c.loiDongBo=loiDongBo; dem++;
-    }
+  var dem=0, luc=Utilities.formatDate(new Date(), 'GMT+7', 'dd/MM HH:mm'), canhBao=[];
+  gvs.forEach(function(gv) {
+    var group=theoGV[gv], chunks=tachTinGVTheoCa(gv,group.cas), guiDu=true;
+    chunks.forEach(function(tin) { if (!guiTelegram(tin)) guiDu=false; });
+    if (!guiDu) return; // Chỉ đánh dấu khi TOÀN BỘ ca của GV đã gửi thành công.
+    var rows=[]; group.cas.forEach(function(c){rows=rows.concat(c.rows);});
+    rows.forEach(function(r) { lich.getRange(r,15).setValue(luc); });
+    var loiDongBo=dongBoCaCuoiVeBaoBu(ss,bao,lich,rows,luc);
+    if(loiDongBo.length) { Logger.log('Đã gửi GV nhưng chưa đồng bộ BAO_BU: '+loiDongBo.join(' | ')); canhBao=canhBao.concat(loiDongBo); }
+    dem++;
   });
-  var canhBao=[]; keys.forEach(function(ma){if(theoCa[ma].loiDongBo && theoCa[ma].loiDongBo.length) canhBao=canhBao.concat(theoCa[ma].loiDongBo);});
-  baoXong('Đã gửi ' + dem + '/' + keys.length + ' tin cho GV' + (force ? ' (gửi lại)' : ' mới') + '.' + (canhBao.length ? '\n⚠️ Tin đã gửi nhưng chưa đồng bộ được BAO_BU:\n• '+canhBao.join('\n• ')+'\nKhông gửi lại tin; kiểm tra Mã buổi rồi chạy đồng bộ lại.' : ''));
+  baoXong('Đã gửi ' + dem + '/' + gvs.length + ' tin cho GV' + (force ? ' (gửi lại)' : ' mới') + '.' + (canhBao.length ? '\n⚠️ Tin đã gửi nhưng chưa đồng bộ được BAO_BU:\n• '+canhBao.join('\n• ')+'\nKhông gửi lại tin; kiểm tra Mã buổi rồi chạy đồng bộ lại.' : ''));
 }
 function guiLaiTinChoGV() { if (xacNhan('Gửi LẠI toàn bộ tin cho các ca đã chốt?')) guiTinChoGV(true); }
 
@@ -2277,14 +2308,27 @@ function taoMaBuoi() { return 'DB-' + new Date().getTime() + '-' + Math.floor(Ma
 function khoaBaoBu(b) { return [String(b[0]||'').trim(),String(b[2]||'').trim(),String(b[3]||'').trim(),String(b[5]||'').trim()].join('|'); }
 function layBangLienKetBu(ss) {
   var sh=ss.getSheetByName(TAB_LIEN_KET_BU);
-  if(!sh){ sh=ss.insertSheet(TAB_LIEN_KET_BU); sh.appendRow(['Mã buổi','Khóa BAO_BU']); }
+  if(!sh){ sh=ss.insertSheet(TAB_LIEN_KET_BU); sh.appendRow(['Mã buổi','Khóa BAO_BU','GV nguồn Slide/Ghi chú']); }
+  // Nâng cấp bảng kỹ thuật cũ, không thêm cột nào vào BAO_BU/LICH_BU mà GV nhìn thấy.
+  if(String(sh.getRange(1,3).getValue()||'').trim() !== 'GV nguồn Slide/Ghi chú') sh.getRange(1,3).setValue('GV nguồn Slide/Ghi chú');
   try{sh.hideSheet();}catch(e){}
   return sh;
 }
 function layMaBuoiBao(ss, baoRow) {
   var sh=layBangLienKetBu(ss), d=sh.getDataRange().getValues(), k=khoaBaoBu(baoRow);
-  for(var i=1;i<d.length;i++) if(String(d[i][1]||'')===k) return String(d[i][0]||'').trim();
-  var ma=taoMaBuoi(); sh.appendRow([ma,k]); return ma;
+  var nguon=String(baoRow[1]||'').trim(); // B BAO_BU: người đã gửi slide/ghi chú của bé.
+  for(var i=1;i<d.length;i++) if(String(d[i][1]||'')===k) {
+    // Chỉ bù dữ liệu thiếu cho lịch cũ; không thay nguồn đã ghi của tài liệu.
+    if(nguon && !String(d[i][2]||'').trim()) sh.getRange(i+1,3).setValue(nguon);
+    return String(d[i][0]||'').trim();
+  }
+  var ma=taoMaBuoi(); sh.appendRow([ma,k,nguon]); return ma;
+}
+function layGvNguonTaiLieu(ss, maBuoi) {
+  if(!maBuoi) return '';
+  var sh=layBangLienKetBu(ss), d=sh.getDataRange().getValues();
+  for(var i=1;i<d.length;i++) if(String(d[i][0]||'').trim()===String(maBuoi).trim()) return String(d[i][2]||'').trim();
+  return '';
 }
 function dongBaoTheoMa(ss, bao, maBuoi) {
   if (!bao || !maBuoi) return 0;

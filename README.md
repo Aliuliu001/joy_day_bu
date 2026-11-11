@@ -86,6 +86,10 @@ Bấm **4️⃣ Xử lý PH xin đổi / quá hạn**, rồi bấm **2️⃣ Gom
 ### 8. PH xác nhận ✅ — bấm **5️⃣ Chốt LICH_BU → tạo tin GV**, rồi **6️⃣ Gửi lịch đã chốt cho GV**
 Chỉ bé `✅ Đi được` mới được tạo/gửi tin GV. Telegram gửi thành công thì BAO_BU tự cập nhật **ca cuối** và trạng thái `Đã báo GV`. Nếu gửi lỗi, chưa được xem là đã báo GV; không bấm Gửi lại chỉ để đồng bộ.
 
+**Tin gửi GV:** mỗi bé luôn có tên riêng. Trong cùng ca, máy chỉ ghi “Dùng chung Slide + Ghi chú” khi **cùng lớp, cùng Slide và cùng Ghi chú** (máy bỏ khoảng trắng thừa khi so). Nếu khác Slide/Ghi chú, phần của bé nằm ngay dưới tên bé đó; thiếu một phần vẫn gửi lịch và báo rõ cho GV liên hệ Văn phòng. Một GV có nhiều ca nhận một tin, chia khối từng ca rõ ràng; gửi lại cũng gửi đủ các ca của GV.
+
+**Nguồn tài liệu:** khi tạo lịch, hệ thống lưu kín GV đã báo Slide/Ghi chú trong tab kỹ thuật ẩn, không thêm cột anh/GV phải nhập. Vì vậy nếu GV báo ban đầu là B nhưng ca cuối giao A, A vẫn nhận đúng tài liệu của bé đó. Lịch cũ chưa có dấu nguồn vẫn gửi, kèm cảnh báo để Văn phòng kiểm tra trước giờ học.
+
 ### 9. CUỐI TUẦN — bấm **7️⃣ Kết tuần mới** (1 nút làm 4 việc)
 1. **TỰ backup** (đã backup rồi tự bỏ qua — không trùng; chống trùng theo từng dòng nên chạy bao nhiêu lần cũng an toàn)
 2. Chuyển bé **chưa chốt** (Chờ/Xin đổi) về BAO_BU → **giữ lại** tuần sau
