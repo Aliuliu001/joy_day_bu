@@ -1488,10 +1488,10 @@ function tinhTuanSotw() {
     + ' - ' + Utilities.formatDate(cn, 'GMT+7', 'dd/MM');
 }
 
+// Tin SOTW chỉ là bảng thông tin, không dùng ô lọc GV ở B1 để phán đoán tick đúng/sai.
 function docTickSotw(sotw) {
   var tuan = tinhTuanSotw();
   var moc = (sotw.getRange(1, 6).getValue() || '').toString();
-  var selector = (sotw.getRange(1, 2).getValue() || '').toString().trim();
   var last = sotw.getLastRow();
   var list = [];
   var warnings = [];
@@ -1509,46 +1509,72 @@ function docTickSotw(sotw) {
         gv = 'Chưa rõ GV';
         warnings.push('Lớp không có trong danh sách: ' + lop + ' (' + ten + ')');
       }
-      if (selector && gv !== selector) {
-        warnings.push('Đang chọn "' + selector + '" nhưng tick bé lớp ' + gv + ': ' + ten + ' — kiểm tra lại');
-      }
       list.push({ ten: ten, lop: lop, gv: gv, gt: (r[3] || '').toString().trim(), link: (r[4] || '').toString().trim() });
     }
   }
-  return { tuan: tuan, moc: moc, selector: selector, list: list, warnings: warnings };
+  return { tuan: tuan, moc: moc, list: list, warnings: warnings };
 }
 
-function taoTinSotw(d) {
+function sotwXoaHtml(v) {
+  return String(v || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function sotwKhoaSapXep(v) {
+  return String(v || '').toLowerCase().replace(/đ/g, 'd').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+function sotwSoSanh(a, b) {
+  a = sotwKhoaSapXep(a); b = sotwKhoaSapXep(b);
+  return a < b ? -1 : (a > b ? 1 : 0);
+}
+
+// Trả từng tin hoàn chỉnh, không cắt giữa một dòng học sinh hoặc link ảnh.
+function taoCacPhanSotw(d, gioiHan) {
+  var max = gioiHan || 3500; // Chừa nhiều đệm dưới giới hạn Telegram 4096.
   var theoGv = {};
-  d.list.forEach(function (p) {
-    if (!theoGv[p.gv]) theoGv[p.gv] = [];
-    theoGv[p.gv].push(p);
+  (d.list || []).forEach(function(p) {
+    if (!theoGv[p.gv]) theoGv[p.gv] = {};
+    if (!theoGv[p.gv][p.lop]) theoGv[p.gv][p.lop] = [];
+    theoGv[p.gv][p.lop].push(p);
   });
-  var tin = '🏆 [' + d.tuan + ']\n';
-  var thuTu = GV_LIST.filter(function (g) { return theoGv[g]; });
-  Object.keys(theoGv).forEach(function (g) { if (thuTu.indexOf(g) < 0) thuTu.push(g); });
-  thuTu.forEach(function (gv) {
-    tin += '\n👨‍🏫 ' + gv + ':\n';
-    var theoLop = {};
-    theoGv[gv].forEach(function (p) {
-      if (!theoLop[p.lop]) theoLop[p.lop] = [];
-      theoLop[p.lop].push(p);
-    });
-    Object.keys(theoLop).forEach(function (lop) {
-      tin += '• ' + (lop || '(chưa rõ lớp)') + ':\n';
-      theoLop[lop].forEach(function (p) {
-        tin += '  - ' + p.ten + (p.gt ? ' (' + p.gt + ')' : '') + (p.link ? ' 🔗 ' + p.link : '') + '\n';
+  var gvList = Object.keys(theoGv).sort(sotwSoSanh);
+  var bodies = [], body = '', soBe = 0, dau = 1, gvCu = '', lopCu = '';
+  function themPhan() { if (body) { bodies.push({ body: body, dau: dau, cuoi: soBe }); body = ''; dau = soBe + 1; gvCu = ''; lopCu = ''; } }
+  gvList.forEach(function(gv) {
+    Object.keys(theoGv[gv]).sort(sotwSoSanh).forEach(function(lop) {
+      theoGv[gv][lop].forEach(function(p) {
+        var tieuDe = gvCu === gv && lopCu === lop ? '' : '\n' + sotwXoaHtml(gv) + ' - ' + sotwXoaHtml(lop || '(chưa rõ lớp)') + '\nTên bé | Giới tính | Ảnh\n';
+        var anh = p.link ? '<a href="' + sotwXoaHtml(p.link) + '">🖼️ Mở ảnh</a>' : 'Chưa có ảnh';
+        var dong = (soBe + 1) + '. ' + sotwXoaHtml(p.ten) + ' | ' + sotwXoaHtml(p.gt || 'Chưa rõ') + ' | ' + anh + '\n';
+        // 90 ký tự là phần tiêu đề Phần X/Y sẽ được thêm sau khi biết tổng số phần.
+        if (body && body.length + tieuDe.length + dong.length > max - 90) themPhan();
+        if (!body) tieuDe = '\n' + sotwXoaHtml(gv) + ' - ' + sotwXoaHtml(lop || '(chưa rõ lớp)') + '\nTên bé | Giới tính | Ảnh\n';
+        body += tieuDe + dong;
+        gvCu = gv; lopCu = lop; soBe++;
       });
     });
   });
+  themPhan();
   var daNop = {};
-  d.list.forEach(function (p) { daNop[p.gv] = 1; });
-  var gvCanBao = GV_LIST.slice(); // Ms. Hồng Anh đã được xoá khỏi GV_LIST.
-  var chua = gvCanBao.filter(function (g) { return !daNop[g]; });
-  if (chua.length) tin += '\n⚠️ Chưa nộp SOTW: ' + chua.join(', ');
-  if (d.warnings.length) tin += '\n⚠️ Kiểm tra lại:\n• ' + d.warnings.join('\n• ');
-  return tin;
+  (d.list || []).forEach(function(p) { daNop[p.gv] = 1; });
+  var canhBao = [];
+  var chua = GV_LIST.filter(function(g) { return !daNop[g]; });
+  if (chua.length) canhBao.push('⚠️ Chưa nộp SOTW: ' + chua.join(', '));
+  var thieuAnh = (d.list || []).filter(function(p) { return !p.link; }).map(function(p) { return p.ten; });
+  if (thieuAnh.length) canhBao.push('⚠️ ' + thieuAnh.length + ' bé chưa có link ảnh: ' + thieuAnh.join(', ') + '.');
+  if (d.warnings && d.warnings.length) canhBao.push('⚠️ Kiểm tra lại:\n• ' + d.warnings.join('\n• '));
+  var cuoi = canhBao.join('\n');
+  if (cuoi && bodies.length && bodies[bodies.length - 1].body.length + cuoi.length > max - 90) {
+    bodies.push({ body: '\n' + cuoi + '\n', dau: soBe, cuoi: soBe });
+  } else if (cuoi && bodies.length) {
+    bodies[bodies.length - 1].body += '\n' + cuoi + '\n';
+  }
+  return bodies.map(function(p, i) {
+    return '🏆 [' + sotwXoaHtml(d.tuan) + ']\n📩 Phần ' + (i + 1) + '/' + bodies.length
+      + ' — SOTW (' + p.dau + '–' + p.cuoi + '/' + soBe + ' bé)\n' + p.body;
+  });
 }
+
+// Giữ tên cũ cho các nơi/test cũ chỉ cần xem trước một tin.
+function taoTinSotw(d) { return taoCacPhanSotw(d).join('\n\n'); }
 
 // Gửi SOTW. force=true → gửi lại dù đã có mốc.
 // KHÔNG xoá tick sau gửi (giữ để check) — xoá khi "Làm mới tuần mới".
@@ -1565,15 +1591,18 @@ function guiSOTW(force) {
   if (!force && d.moc.indexOf(d.tuan) >= 0) {
     return { sent: false, skip: true, msg: d.tuan + ' ĐÃ GỬI rồi (' + d.moc + ') — bỏ qua để tránh trùng. Cần gửi lại → bấm "4️⃣ 🏆 Gửi SOTW".' };
   }
-  var tin = taoTinSotw(d);
-  if (!guiTelegramSOTW(tin)) {
-    return { sent: false, msg: 'Gửi Telegram thất bại — xem Nhật ký thực thi.' };
+  var cacPhan = taoCacPhanSotw(d);
+  for (var i = 0; i < cacPhan.length; i++) {
+    if (!guiTelegramSOTW(cacPhan[i])) {
+      return { sent: false, msg: 'Đã gửi ' + i + '/' + cacPhan.length + ' phần. Phần ' + (i + 1)
+        + ' chưa gửi được — chưa đánh dấu đã gửi, hãy xử lý rồi gửi lại.' };
+    }
   }
   var mocMoi = d.tuan + ' — đã gửi ' + Utilities.formatDate(new Date(), 'GMT+7', 'dd/MM HH:mm');
   sotw.getRange(1, 6).setValue(mocMoi);
   return {
     sent: true,
-    msg: 'Đã gửi ' + d.list.length + ' bé SOTW cho Mr. Khôi.\nMốc: ' + mocMoi
+    msg: 'Đã gửi ' + d.list.length + ' bé SOTW thành ' + cacPhan.length + ' phần cho Mr. Khôi.\nMốc: ' + mocMoi
       + '\n(tick giữ nguyên đến khi bấm "5️⃣ Làm mới tuần mới")'
   };
 }
@@ -2124,10 +2153,13 @@ function guiTelegramDenBangToken(text, groupId, topicId, nhan, token) {
   var url = 'https://api.telegram.org/bot' + token + '/sendMessage';
 
   try {
+    var payload = { chat_id: groupId, message_thread_id: topicId, text: text };
+    // Riêng SOTW dùng HTML để link Drive gọn thành chữ “🖼️ Mở ảnh”.
+    if (nhan === 'Telegram SOTW') payload.parse_mode = 'HTML';
     var res = UrlFetchApp.fetch(url, {
       method: 'post',
       muteHttpExceptions: true,
-      payload: { chat_id: groupId, message_thread_id: topicId, text: text }
+      payload: payload
     });
     if (res.getResponseCode() !== 200) {
       baoXong((nhan || 'Telegram') + ' báo lỗi ' + res.getResponseCode() + ': ' + res.getContentText());

@@ -216,3 +216,12 @@
 - [x] Lưu kín GV nguồn Slide/Ghi chú trong tab `DỮ LIỆU KỸ THUẬT`; giữ đúng tài liệu khi GV báo B nhưng ca cuối giao A. Dấu nguồn chỉ để kiểm tra nội bộ, không hiện trong Telegram.
 - [x] Test T47 + toàn bộ suite: `node test_sotw.js` = **258 PASS / 0 FAIL**; `git diff --check` sạch.
 - [ ] Còn cần đẩy GitHub, cập nhật vào Apps Script/Sheet thật và anh xem một tin Telegram thật trước khi đóng nghiệm thu.
+
+## Đợt 8 — SOTW: bảng gọn, tự chia tin Telegram 🔄
+
+- [x] Cập nhật `plan.md` trước khi làm: nhóm `Tên GV - Tên lớp`, ABC theo GV/lớp, chỉ 3 cột Tên bé/Giới tính/Ảnh.
+- [x] Link Drive hiện thành chữ bấm `🖼️ Mở ảnh`; bé thiếu link vẫn hiện và phần cuối liệt kê tên bé thiếu ảnh.
+- [x] Bỏ cảnh báo do ô `GV đang chọn`; ô này chỉ còn dùng lọc danh sách trong Sheet.
+- [x] Tin dài tự chia `Phần X/Y`, không cắt giữa tên/link/dòng bé; gửi lỗi giữa chừng không ghi mốc đã gửi.
+- [x] `node test_sotw.js`: **274 PASS / 0 FAIL**; kiểm cú pháp `Code.gs` và `git diff --check` sạch.
+- [ ] Đẩy GitHub, dán `Code.gs` vào Apps Script/Sheet thật, sau đó gửi thử danh sách dài để kiểm tra có đủ `Phần 1/Y` đến `Phần Y/Y`.

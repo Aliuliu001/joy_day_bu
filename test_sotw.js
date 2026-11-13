@@ -271,6 +271,7 @@ const sandbox = {
       const payload = opts.payload || {};
       STATE.fetches.push({ url, text: payload.text || '', payload });
       if (url.indexOf('/getMe') >= 0) return { getResponseCode: () => 200, getContentText: () => JSON.stringify({ result: { username: 'joy_lichlam_sotw_daybu_bot' } }) };
+      if (STATE.failFetchAt && STATE.fetches.length === STATE.failFetchAt) return { getResponseCode: () => 500, getContentText: () => 'Lỗi mô phỏng' };
       return { getResponseCode: () => 200, getContentText: () => 'ok' };
     },
   },
@@ -965,6 +966,7 @@ console.log('\n=== T35: SOTW gửi đúng topic riêng ===');
   ok(STATE.fetches[0].url.includes('TEST_SOTW_TOKEN'), 'SOTW chỉ dùng SOTW_BOT_TOKEN riêng');
   ok(!STATE.fetches[0].url.includes('TEST_DAY_BU_TOKEN'), 'SOTW không dùng token Dạy Bù/chấm công cũ');
   eq(STATE.fetches[0].text, '🏆 Tin thử SOTW', 'Nội dung tin thử SOTW giữ nguyên');
+  eq(STATE.fetches[0].payload.parse_mode, 'HTML', 'SOTW dùng HTML để link Mở ảnh bấm được');
   STATE.fetches.length = 0;
 }
 
@@ -1214,6 +1216,53 @@ console.log('\n=== T47: Tin GV gom đúng tài liệu từng bé + giữ nguồn
   const ma = sandbox.layMaBuoiBao(ss, bao.getRange(2,1,1,6).getValues()[0]);
   eq(sandbox.layGvNguonTaiLieu(ss, ma), 'GV B', 'Nguồn Slide/Ghi chú được lưu kín từ GV báo dù ca cuối có thể giao GV A');
   ok(ss.getSheetByName('DỮ LIỆU KỸ THUẬT').isSheetHidden(), 'Nguồn GV chỉ nằm trong tab kỹ thuật ẩn');
+}
+
+console.log('\n=== T48: SOTW bảng gọn, chia phần và thiếu ảnh ===');
+{
+  const d = {
+    tuan: 'Tuần 09/11 - 15/11', moc: '', warnings: [],
+    list: [
+      {ten:'Zed', lop:'T2.010 - Zoo', gv:'Ms. Vân', gt:'Nam', link:'https://drive.google.com/file/d/z'},
+      {ten:'An', lop:'T2.004 - Pea', gv:'Ms. Vân', gt:'Nữ', link:'https://drive.google.com/file/d/a'},
+      {ten:'Bình', lop:'T2.004 - Pea', gv:'Ms. Vân', gt:'Nam', link:''},
+      {ten:'Cúc', lop:'T1.001 - Apple', gv:'Mr. Ngọc', gt:'Nữ', link:'https://drive.google.com/file/d/c'}
+    ]
+  };
+  const parts = sandbox.taoCacPhanSotw(d, 190);
+  ok(parts.length >= 2, 'Danh sách dài tự chia thành nhiều phần');
+  const all = parts.join('\n');
+  ok(parts.every((p, i) => p.includes(`Phần ${i + 1}/${parts.length}`)), 'Mỗi tin ghi đúng số phần tổng');
+  ok(all.includes('Ms. Vân - T2.004 - Pea') && all.includes('Mr. Ngọc - T1.001 - Apple'), 'Nhóm hiện Tên GV trước Tên lớp');
+  ok(all.indexOf('Mr. Ngọc - T1.001 - Apple') < all.indexOf('Ms. Vân - T2.004 - Pea'), 'Nhóm giáo viên xếp theo ABC');
+  ok(all.indexOf('T2.004 - Pea') < all.indexOf('T2.010 - Zoo'), 'Các lớp cùng GV xếp theo ABC');
+  ok(all.includes('An | Nữ | <a href="https://drive.google.com/file/d/a">🖼️ Mở ảnh</a>'), 'Mỗi bé có đúng tên, giới tính và link ảnh chữ bấm được');
+  ok(all.includes('Bình | Nam | Chưa có ảnh'), 'Bé thiếu link vẫn có trong danh sách và hiện Chưa có ảnh');
+  ok(parts[parts.length - 1].includes('⚠️ 1 bé chưa có link ảnh: Bình.'), 'Phần cuối liệt kê tên bé thiếu link ảnh');
+  ok(!all.includes('Đang chọn'), 'Không còn cảnh báo do GV đang chọn khác lớp học sinh');
+}
+
+console.log('\n=== T49: SOTW chỉ đánh dấu sau khi gửi đủ các phần ===');
+{
+  STATE.ss = new MockSS(); STATE.alerts.length = 0; STATE.fetches.length = 0;
+  const sotw = STATE.ss.insertSheet('DS HỌC SINH');
+  sotw.getRange(1, 1, 3, 6).setValues([
+    ['', '', '', '', '', ''],
+    ['Tên bé', 'Lớp', 'GV chính', 'Giới tính', 'Link ảnh', '☑ SOTW tuần này'],
+    ['Bé Gửi', 'L1', 'Ms. Vân', 'Nam', 'https://drive.google.com/file/d/gui', true]
+  ]);
+  const goc = sandbox.taoCacPhanSotw;
+  sandbox.taoCacPhanSotw = () => ['📩 Phần 1/2', '📩 Phần 2/2'];
+  const rsOk = sandbox.guiSOTW(false);
+  eq(STATE.fetches.length, 2, 'Gửi đủ hai phần theo thứ tự');
+  ok(rsOk.sent && rsOk.msg.includes('thành 2 phần'), 'Gửi đủ mới báo hoàn tất nhiều phần');
+  ok(String(sotw.getRange(1, 6).getValue()).includes('đã gửi'), 'Gửi đủ mới ghi mốc đã gửi');
+  sotw.getRange(1, 6).setValue(''); STATE.fetches.length = 0; STATE.failFetchAt = 2;
+  const rsLoi = sandbox.guiSOTW(false);
+  eq(STATE.fetches.length, 2, 'Lỗi phần 2 dừng đúng tại phần lỗi');
+  ok(!rsLoi.sent && rsLoi.msg.includes('1/2 phần'), 'Lỗi giữa chừng báo đúng số phần đã gửi');
+  eq(sotw.getRange(1, 6).getValue(), '', 'Lỗi giữa chừng không ghi mốc đã gửi');
+  STATE.failFetchAt = 0; sandbox.taoCacPhanSotw = goc;
 }
 
 console.log('\n============================');

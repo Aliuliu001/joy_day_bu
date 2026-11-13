@@ -188,6 +188,34 @@ Nếu Ms. Vân và Mr. Đức Anh cùng dạy bé thuộc lớp `S1.001` ở hai
 
 ---
 
+## Đợt 8 — SOTW: bảng gọn, không cắt tin Telegram ✅
+
+> Đã hoàn thành code + test tự động. Còn bước dùng thật: dán Code.gs vào Apps Script, lưu, tải lại Sheet và gửi thử một danh sách dài ở Topic SOTW.
+
+**Mục tiêu:** Tin SOTW chỉ hiện đúng ba cột `Tên bé | Giới tính | Ảnh`, không lộ link Drive dài, không bị Telegram cắt khi danh sách đông.
+
+### Quy tắc đã chốt
+
+1. **Nhóm hiển thị:** `Tên giáo viên - Tên lớp`, ví dụ `Ms. Vân - T2.004 - Pea`.
+2. **Thứ tự:** giáo viên theo ABC; các lớp của cùng giáo viên đứng liền nhau; lớp theo ABC. Học sinh trong một lớp giữ nguyên thứ tự trong Sheet.
+3. **Mỗi dòng học sinh:** `Số thứ tự. Tên bé | Giới tính | 🖼️ Mở ảnh`. Chữ `🖼️ Mở ảnh` là link Drive bấm được, không hiện URL dài.
+4. **Tin dài:** bot tự chia thành `📩 Phần X/Y — SOTW (A–B/Tổng bé)`. Không cắt giữa tên/link/dòng học sinh. Mỗi phần lặp lại nhãn GV–lớp khi cần để dễ theo dõi.
+5. **Báo thiếu ảnh:** chỉ ở phần cuối, một dòng: `⚠️ N bé chưa có link ảnh: Tên 1, Tên 2.` Các bé này vẫn có trong danh sách, cột Ảnh hiện `Chưa có ảnh`.
+6. **Bỏ cảnh báo lọc GV:** Ô `GV đang chọn` chỉ để lọc xem trên Sheet; tick học sinh đang thấy là hợp lệ. Xóa hoàn toàn cảnh báo “Đang chọn Ms. … nhưng tick bé lớp …”.
+7. **An toàn gửi:** chỉ ghi mốc “đã gửi” sau khi tất cả các phần gửi Telegram thành công. Hỏng ở phần N thì dừng, không ghi mốc, popup nói rõ đã gửi được bao nhiêu phần.
+8. **Cảnh báo cũ:** “Chưa nộp SOTW” và các cảnh báo dữ liệu còn cần thiết chỉ hiển thị ở phần cuối, không lặp lại mỗi phần.
+
+### Việc thực hiện
+
+1. Viết test đỏ cho: nhóm/sắp xếp ABC, link chữ có thể bấm, thiếu link ảnh, chia nhiều phần, không cắt dòng, lỗi ở giữa không ghi marker.
+2. Đổi bộ tạo tin SOTW từ một chuỗi dài sang danh sách các phần gửi an toàn.
+3. Dùng HTML Telegram cho riêng luồng SOTW để tạo `🖼️ Mở ảnh`; giữ luồng Dạy Bù không đổi.
+4. Xóa cảnh báo dựa vào ô lọc giáo viên.
+5. Chạy toàn bộ `node test_sotw.js`, kiểm tra cú pháp và diff, push GitHub.
+6. Dán Code.gs vào Apps Script gắn với Sheet, lưu, tải lại Sheet; gửi thử một danh sách dài để anh nhìn thấy đầy đủ `Phần 1/Y` đến `Phần Y/Y` ở Topic SOTW.
+
+---
+
 ## 5. Quy tắc anh đã chốt + đề xuất còn lại
 
 ### Đã chốt

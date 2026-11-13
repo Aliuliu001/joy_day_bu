@@ -90,6 +90,14 @@ Chỉ bé `✅ Đi được` mới được tạo/gửi tin GV. Telegram gửi t
 
 **Nguồn tài liệu:** khi tạo lịch, hệ thống lưu kín GV đã báo Slide/Ghi chú trong tab kỹ thuật ẩn, không thêm cột anh/GV phải nhập. Vì vậy nếu GV báo ban đầu là B nhưng ca cuối giao A, A vẫn nhận đúng tài liệu của bé đó. Dấu nguồn này chỉ để hệ thống kiểm tra nội bộ, không hiện trong tin Telegram.
 
+### 8A. Gửi SOTW — bảng gọn, kiểm đủ phần
+
+1. Trong tab **DS HỌC SINH**, tick các bé SOTW như bình thường. Ô **GV đang chọn** chỉ để lọc cho dễ nhìn; tick bé đang thấy là hợp lệ, không có cảnh báo chọn nhầm GV.
+2. Bot gửi theo nhóm `Tên giáo viên - Tên lớp`, xếp giáo viên và lớp theo ABC. Mỗi bé chỉ hiện: **Tên bé | Giới tính | 🖼️ Mở ảnh**; bấm `🖼️ Mở ảnh` để mở Drive.
+3. Danh sách dài sẽ tự thành `📩 Phần 1/Y`, `Phần 2/Y`… Người làm SOTW chỉ cần kiểm đủ từ **Phần 1/Y** đến **Phần Y/Y** là đủ danh sách.
+4. Bé chưa có link vẫn được gửi, cột ảnh hiện `Chưa có ảnh`. Cuối phần cuối có một dòng liệt kê tên các bé thiếu link ảnh để bổ sung.
+5. Nếu Telegram lỗi giữa chừng, hệ thống **không** đánh dấu “đã gửi”; popup ghi rõ đã gửi được bao nhiêu phần. Sau khi xử lý, bấm gửi lại SOTW để gửi trọn bộ.
+
 ### 9. CUỐI TUẦN — bấm **7️⃣ Kết tuần mới** (1 nút làm 4 việc)
 1. **TỰ backup** (đã backup rồi tự bỏ qua — không trùng; chống trùng theo từng dòng nên chạy bao nhiêu lần cũng an toàn)
 2. Chuyển bé **chưa chốt** (Chờ/Xin đổi) về BAO_BU → **giữ lại** tuần sau
