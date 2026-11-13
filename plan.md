@@ -57,10 +57,9 @@ Việc này **không phức tạp và không gây lẫn code** nếu gom theo kh
 ### C. Thiếu slide hoặc ghi chú vẫn gửi, nhưng cảnh báo đúng người
 
 - Vẫn gửi lịch để giáo viên không lỡ ca đã chốt.
-- Ngay dưới bé thiếu dữ liệu, hiện rõ một trong hai câu:
-  - `⚠️ GV của bé chưa gửi Slide. Nhờ thầy/cô báo Văn phòng hoặc liên hệ trực tiếp GV của bé.`
-  - `⚠️ GV của bé chưa gửi Ghi chú. Nhờ thầy/cô báo Văn phòng hoặc liên hệ trực tiếp GV của bé.`
-- Không coi ô trống là thông tin dùng chung của lớp; cảnh báo gắn đúng tên bé và lớp.
+- Ngay dưới bé thiếu Link Slide Canva **hoặc** thiếu Ghi chú, hiện đúng một câu:
+  - `⚠️ Học sinh chưa có Link Slide Canva hoặc Ghi chú ôn bài. Nhờ thầy cô dạy bù báo lại để Văn Phòng kiểm tra trước giờ nhé.`
+- Bé đã đủ cả Link Slide Canva và Ghi chú không hiện cảnh báo. Không coi ô trống là thông tin dùng chung của lớp; cảnh báo gắn đúng tên bé và lớp.
 
 ### D. Kiểm tra nhầm giáo viên A/B trước khi gửi
 
@@ -95,9 +94,9 @@ Khi lịch cuối xếp **GV A** nhưng slide/ghi chú lại xuất phát từ *
    ↳ Dùng chung Slide + Ghi chú với Bé An.
 ──────────
 3. Bé Chi — Lớp S2.003
-   ⚠️ GV của bé chưa gửi Slide. Nhờ thầy/cô báo Văn phòng
-   hoặc liên hệ trực tiếp GV của bé.
    Ghi chú: Luyện nghe trang 12.
+   ⚠️ Học sinh chưa có Link Slide Canva hoặc Ghi chú ôn bài.
+   Nhờ thầy cô dạy bù báo lại để Văn Phòng kiểm tra trước giờ nhé.
 
 ══════════════════
 🕒 CA T7-1 | Thứ 7 | 08h00–09h30
@@ -155,8 +154,8 @@ Nếu Ms. Vân và Mr. Đức Anh cùng dạy bé thuộc lớp `S1.001` ở hai
 2. Rà các hàm tạo/chốt `LICH_BU` và các nhánh đổi ca để xác định chỗ nào có thể vô tình lấy ghi chú/slide của GV khác.
 3. Thêm dấu nguồn kỹ thuật cho mỗi buổi khi tạo từ `BAO_BU` (không thêm cột người dùng phải nhập) để biết slide/ghi chú đi cùng GV báo nào.
 4. Khi ca cuối đổi từ GV B sang GV A, giữ đúng slide/ghi chú của bé do GV B cung cấp; tin gửi GV A phải ghi nhận đúng dữ liệu ấy, không thay bằng dữ liệu/lớp của GV A.
-5. Với lịch cũ chưa có dấu nguồn, vẫn gửi để không kẹt việc, nhưng gắn cảnh báo `⚠️ Chưa xác định GV nguồn Slide/Ghi chú — Văn phòng kiểm tra lại trước giờ học.`
-6. Test cả ba tình huống: A=B; A≠B nhưng dữ liệu bé giữ đúng; lịch cũ thiếu nguồn vẫn gửi kèm cảnh báo.
+5. Với lịch cũ chưa có dấu nguồn, vẫn gửi để không kẹt việc. Dấu nguồn chỉ dùng để kiểm tra nội bộ, không hiện cảnh báo này trong Telegram.
+6. Test cả ba tình huống: A=B; A≠B nhưng dữ liệu bé giữ đúng; lịch cũ thiếu nguồn vẫn gửi nhưng không lộ cảnh báo kỹ thuật.
 
 ### Task 5 — Soạn tin dễ đọc
 

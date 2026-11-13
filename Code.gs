@@ -1744,17 +1744,17 @@ function taoNoiDungTinGV(gv, cas) {
     c.bes.forEach(function(b, idx) {
       if (idx) tin += '──────────\n';
       tin += (idx + 1) + '. ' + b.ten + ' — Lớp ' + (b.lop || '(chưa có lớp)') + '\n';
-      var khoa = khoaTaiLieuTinGV(b), beDau = dauTienTheoTaiLieu[khoa];
+      var khoa = khoaTaiLieuTinGV(b), duTaiLieu = !!(b.link && b.ghiChu), beDau = duTaiLieu && dauTienTheoTaiLieu[khoa];
       if (beDau) {
         tin += '   ↳ Dùng chung Slide + Ghi chú với ' + beDau.ten + '.\n';
         return;
       }
-      dauTienTheoTaiLieu[khoa] = b;
+      // Bé thiếu một phần tài liệu phải hiện cảnh báo riêng, không dùng chung ô trống.
+      if (duTaiLieu) dauTienTheoTaiLieu[khoa] = b;
       if (b.link) tin += '   Slide: ' + b.link + '\n';
-      else tin += '   ⚠️ GV của bé chưa gửi Slide. Nhờ thầy/cô báo Văn phòng hoặc liên hệ trực tiếp GV của bé.\n';
       if (b.ghiChu) tin += '   Ghi chú: ' + b.ghiChu + '\n';
-      else tin += '   ⚠️ GV của bé chưa gửi Ghi chú. Nhờ thầy/cô báo Văn phòng hoặc liên hệ trực tiếp GV của bé.\n';
-      if (!b.gvNguon) tin += '   ⚠️ Chưa xác định GV nguồn Slide/Ghi chú — Văn phòng kiểm tra lại trước giờ học.\n';
+      // Cảnh báo chỉ dành cho dữ liệu dạy còn thiếu; nguồn GV là dấu kỹ thuật nội bộ.
+      if (!b.link || !b.ghiChu) tin += '   ⚠️ Học sinh chưa có Link Slide Canva hoặc Ghi chú ôn bài. Nhờ thầy cô dạy bù báo lại để Văn Phòng kiểm tra trước giờ nhé.\n';
     });
   });
   return tin.trim();

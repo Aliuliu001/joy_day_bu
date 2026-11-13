@@ -1199,8 +1199,14 @@ console.log('\n=== T47: Tin GV gom đúng tài liệu từng bé + giữ nguồn
   ok(tin.includes('Bé An') && tin.includes('Bé Bình') && tin.includes('Bé Chi') && tin.includes('Bé Dũng'), 'Mỗi bé luôn có dòng tên riêng');
   ok(tin.includes('Dùng chung Slide + Ghi chú với Bé An'), 'Cùng lớp/slide/ghi chú (bỏ khoảng trắng thừa) chỉ in tài liệu một lần');
   ok(tin.includes('Bé Chi') && tin.includes('Ghi chú: Luyện nghe'), 'Ghi chú khác đi đúng dưới tên bé, không gom theo riêng nội dung');
-  ok(tin.includes('Bé Dũng') && tin.includes('chưa gửi Slide') && tin.includes('chưa gửi Ghi chú'), 'Thiếu slide/ghi chú vẫn gửi và cảnh báo đúng bé');
-  ok(tin.includes('Chưa xác định GV nguồn Slide/Ghi chú'), 'Lịch cũ thiếu nguồn vẫn gửi kèm cảnh báo kiểm tra');
+  const canhBaoThieu = 'Học sinh chưa có Link Slide Canva hoặc Ghi chú ôn bài. Nhờ thầy cô dạy bù báo lại để Văn Phòng kiểm tra trước giờ nhé.';
+  ok(tin.includes('Bé Dũng') && tin.includes(canhBaoThieu), 'Thiếu slide/ghi chú vẫn gửi và hiện một cảnh báo đúng bé');
+  eq((tin.match(/Học sinh chưa có Link Slide Canva hoặc Ghi chú ôn bài/g) || []).length, 1, 'Chỉ bé thiếu dữ liệu mới hiện cảnh báo');
+  ok(!tin.includes('Chưa xác định GV nguồn Slide/Ghi chú'), 'Nguồn GV thiếu là thông tin nội bộ, không hiện trong tin Telegram');
+  const tinThieuMotPhan = sandbox.taoNoiDungTinGV('GV A', [{ma:'T8-1',thu:'Thứ 2',gio:'17h00',bes:[
+    {ten:'Bé Thiếu Ghi Chú',lop:'L9',link:'https://slide',ghiChu:'',gvNguon:'GV A'}
+  ]}]);
+  ok(tinThieuMotPhan.includes('Slide: https://slide') && tinThieuMotPhan.includes(canhBaoThieu), 'Thiếu riêng Ghi chú cũng hiện đúng một cảnh báo chung');
   ok((tin.match(/══════════════════/g) || []).length === 2 && (tin.match(/──────────/g) || []).length === 3, 'Có phân cách rõ giữa ca và giữa bé');
   const ss = new MockSS(); const bao = ss.insertSheet('BAO_BU');
   bao.appendRow(['Ngày báo','GV báo','Lớp','Tên bé','Trình độ','Link Canva']);

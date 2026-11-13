@@ -88,7 +88,7 @@ Chỉ bé `✅ Đi được` mới được tạo/gửi tin GV. Telegram gửi t
 
 **Tin gửi GV:** mỗi bé luôn có tên riêng. Trong cùng ca, máy chỉ ghi “Dùng chung Slide + Ghi chú” khi **cùng lớp, cùng Slide và cùng Ghi chú** (máy bỏ khoảng trắng thừa khi so). Nếu khác Slide/Ghi chú, phần của bé nằm ngay dưới tên bé đó; thiếu một phần vẫn gửi lịch và báo rõ cho GV liên hệ Văn phòng. Một GV có nhiều ca nhận một tin, chia khối từng ca rõ ràng; gửi lại cũng gửi đủ các ca của GV.
 
-**Nguồn tài liệu:** khi tạo lịch, hệ thống lưu kín GV đã báo Slide/Ghi chú trong tab kỹ thuật ẩn, không thêm cột anh/GV phải nhập. Vì vậy nếu GV báo ban đầu là B nhưng ca cuối giao A, A vẫn nhận đúng tài liệu của bé đó. Lịch cũ chưa có dấu nguồn vẫn gửi, kèm cảnh báo để Văn phòng kiểm tra trước giờ học.
+**Nguồn tài liệu:** khi tạo lịch, hệ thống lưu kín GV đã báo Slide/Ghi chú trong tab kỹ thuật ẩn, không thêm cột anh/GV phải nhập. Vì vậy nếu GV báo ban đầu là B nhưng ca cuối giao A, A vẫn nhận đúng tài liệu của bé đó. Dấu nguồn này chỉ để hệ thống kiểm tra nội bộ, không hiện trong tin Telegram.
 
 ### 9. CUỐI TUẦN — bấm **7️⃣ Kết tuần mới** (1 nút làm 4 việc)
 1. **TỰ backup** (đã backup rồi tự bỏ qua — không trùng; chống trùng theo từng dòng nên chạy bao nhiêu lần cũng an toàn)

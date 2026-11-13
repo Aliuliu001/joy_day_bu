@@ -212,7 +212,7 @@
 
 - [x] Mỗi GV nhận một tin, tách rõ từng ca; nếu quá dài, chỉ tách tại ranh giới ca.
 - [x] Mỗi bé giữ dòng riêng. Chỉ dùng chung tài liệu khi cùng lớp, Slide và Ghi chú (bỏ khoảng trắng thừa khi đối chiếu).
-- [x] Slide/Ghi chú khác hoặc thiếu vẫn nằm/cảnh báo ngay dưới đúng tên bé; không chặn gửi.
-- [x] Lưu kín GV nguồn Slide/Ghi chú trong tab `DỮ LIỆU KỸ THUẬT`; giữ đúng tài liệu khi GV báo B nhưng ca cuối giao A. Lịch cũ thiếu nguồn vẫn gửi kèm cảnh báo kiểm tra.
-- [x] Test T47 + toàn bộ suite: `node test_sotw.js` = **256 PASS / 0 FAIL**; `git diff --check` sạch.
+- [x] Slide/Ghi chú khác vẫn nằm đúng dưới tên bé. Nếu thiếu một trong hai, hiện đúng một cảnh báo: “Học sinh chưa có Link Slide Canva hoặc Ghi chú ôn bài…”; không chặn gửi.
+- [x] Lưu kín GV nguồn Slide/Ghi chú trong tab `DỮ LIỆU KỸ THUẬT`; giữ đúng tài liệu khi GV báo B nhưng ca cuối giao A. Dấu nguồn chỉ để kiểm tra nội bộ, không hiện trong Telegram.
+- [x] Test T47 + toàn bộ suite: `node test_sotw.js` = **258 PASS / 0 FAIL**; `git diff --check` sạch.
 - [ ] Còn cần đẩy GitHub, cập nhật vào Apps Script/Sheet thật và anh xem một tin Telegram thật trước khi đóng nghiệm thu.
