@@ -13,7 +13,7 @@ set "LOG=%USERPROFILE%\Desktop\NHAT_KY_CAP_NHAT_DAY_BU.txt"
   git pull origin main
   echo.
   echo Dang cap nhat vao Google Sheet...
-  clasp push
+  call clasp push
   echo.
   echo ==========================================
   echo XONG! Mo Google Sheet va bam Ctrl+Shift+R

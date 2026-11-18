@@ -104,6 +104,10 @@ Chỉ bé `✅ Đi được` mới được tạo/gửi tin GV. Telegram gửi t
 3. Xoá BAO_BU + LICH_BU (giữ dòng mẫu + bé chưa xếp)
 4. Xoá tick SOTW + mốc
 
+**Backup chỉ lưu hồ sơ cuối:** bé `✅ Đi được`, `❌ Nghỉ`, hoặc đã có kết quả `✅ Đã học` / `❌ Vắng`. Bé đang `Chờ`, `🔄 Xin đổi` hoặc `Tuần sau (quá hạn)` **không** vào backup tháng.
+
+**Hai cột mới ở cuối Backup:** từ lần backup sau khi cập nhật, mỗi dòng mới có thêm `Link Canva` và `Ghi chú` đúng của bé đó. Các dòng backup cũ được giữ nguyên, không tự điền đoán lại.
+
 *(Cùng có backup tự động tối T7 22h — chỉ LƯU, không xoá — được cài lúc "Nâng cấp sheet".)*
 
 ---

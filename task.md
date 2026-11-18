@@ -225,3 +225,12 @@
 - [x] Tin dài tự chia `Phần X/Y`, không cắt giữa tên/link/dòng bé; gửi lỗi giữa chừng không ghi mốc đã gửi.
 - [x] `node test_sotw.js`: **274 PASS / 0 FAIL**; kiểm cú pháp `Code.gs` và `git diff --check` sạch.
 - [ ] Đẩy GitHub, dán `Code.gs` vào Apps Script/Sheet thật, sau đó gửi thử danh sách dài để kiểm tra có đủ `Phần 1/Y` đến `Phần Y/Y`.
+
+## Đợt 9 — Backup cuối tuần có tài liệu ✅ (chưa nghiệm thu trên Sheet thật)
+
+- [x] Chốt quy tắc: chỉ backup `✅ Đi được`, `❌ Nghỉ`, hoặc đã có `✅ Đã học` / `❌ Vắng`; không backup `Chờ`, `🔄 Xin đổi`, `Tuần sau (quá hạn)`.
+- [x] Từ backup mới, thêm hai cột cuối: `Link Canva`, `Ghi chú`; dữ liệu lấy đúng từng dòng `LICH_BU`.
+- [x] Backup cũ giữ nguyên 10 cột đầu; thống kê tháng tiếp tục đọc đúng số liệu cũ.
+- [x] Test mới bảo vệ tất cả trạng thái, chống trùng và dữ liệu Canva/Ghi chú. Toàn bộ suite: **279 PASS / 0 FAIL**.
+- [ ] Chạy file cập nhật trên máy Windows, sau đó thử một dòng backup thật và kiểm 12 cột trên Sheet.
+- [ ] So trực tiếp trường hợp tuần cũ 12/13 nếu còn dòng/ảnh lịch gốc; không tự đoán bé thiếu khi không còn dữ liệu nguồn.

@@ -1,0 +1,2 @@
+*.cmd whitespace=-blank-at-eol
+*.bat whitespace=-blank-at-eol

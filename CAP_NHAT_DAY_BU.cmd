@@ -22,7 +22,7 @@ if errorlevel 1 goto LOI_GIT
 
 echo.
 echo [2/2] Dang day Code vao Google Sheet...
-clasp push
+call clasp push
 if errorlevel 1 goto LOI_CLASP
 
 echo.

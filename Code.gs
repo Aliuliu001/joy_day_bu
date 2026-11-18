@@ -1900,17 +1900,30 @@ function backupTuanBuNoiBo(imLang) {
   var backup = ss.getSheetByName(tenBackup);
   if (!backup) {
     backup = ss.insertSheet(tenBackup);
-    backup.appendRow(['Ngày backup', 'Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'PH xác nhận', 'Đã dạy', 'Ngày học']);
-    backup.getRange(1, 1, 1, 10).setFontWeight('bold').setBackground('#F6F3EE');
-  } else if (String(backup.getRange(1, 10).getValue() || '').trim() !== 'Ngày học') {
-    // Backup cũ: thêm cột Ngày học ở CUỐI để không làm lệch các cột báo cáo hiện có.
-    backup.insertColumnsAfter(9, 1);
-    backup.getRange(1, 10).setValue('Ngày học').setFontWeight('bold').setBackground('#F6F3EE');
+    backup.appendRow(['Ngày backup', 'Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'PH xác nhận', 'Đã dạy', 'Ngày học', 'Link Canva', 'Ghi chú']);
+    backup.getRange(1, 1, 1, 12).setFontWeight('bold').setBackground('#F6F3EE');
+  } else {
+    // Chỉ thêm ở CUỐI: 10 cột lịch sử không bị đổi thứ tự nên thống kê cũ vẫn đúng.
+    if (String(backup.getRange(1, 10).getValue() || '').trim() !== 'Ngày học') {
+      backup.insertColumnsAfter(9, 1);
+      backup.getRange(1, 10).setValue('Ngày học');
+    }
+    if (String(backup.getRange(1, 11).getValue() || '').trim() !== 'Link Canva') backup.getRange(1, 11).setValue('Link Canva');
+    if (String(backup.getRange(1, 12).getValue() || '').trim() !== 'Ghi chú') backup.getRange(1, 12).setValue('Ghi chú');
+    backup.getRange(1, 1, 1, 12).setFontWeight('bold').setBackground('#F6F3EE');
   }
 
   var ngay = Utilities.formatDate(homNay, 'GMT+7', 'dd/MM/yyyy');
   function ngayHocCua(r) { return String(r[13] || '').trim() || ngay; }
   function khoaBackup(ngayHoc, r) { return [ngayHoc, r[0], r[1], r[2], r[3], r[4]].join('|'); }
+  // Chỉ lưu hồ sơ cuối: PH đã đi/nghỉ, hoặc buổi đã có kết quả học/vắng.
+  // Không đưa các bé đang Xin đổi, để tuần sau hay đang chờ vào backup tháng.
+  function duocBackup(r) {
+    var ph = String(r[8] || '').trim();
+    var daDay = String(r[11] || '').trim();
+    return ph.indexOf('✅') >= 0 || ph.indexOf('Đi được') >= 0 || ph.indexOf('❌ Nghỉ') >= 0
+      || daDay.indexOf('✅ Đã học') >= 0 || daDay.indexOf('❌ Vắng') >= 0;
+  }
 
   // Khóa: Ngày học|Ca|Thứ|Giờ|GV|Tên bé — không lẫn hai buổi khác ngày.
   var daCo = {};
@@ -1923,27 +1936,26 @@ function backupTuanBuNoiBo(imLang) {
   var dataLich = lich.getDataRange().getValues();
   var demTong = 0, demMoi = 0;
   for (var i = 1; i < dataLich.length; i++) {
-    if (!dataLich[i][4]) continue;
-    var st = (dataLich[i][8] || '').toString().trim();
-    if (st === '' || st.indexOf('Chờ') === 0) continue;
+    if (!dataLich[i][4] || !duocBackup(dataLich[i])) continue;
     demTong++;
     var ngayHoc = ngayHocCua(dataLich[i]);
     var key = khoaBackup(ngayHoc, dataLich[i]);
     if (daCo[key]) continue;
     backup.appendRow([ngay, dataLich[i][0], dataLich[i][1], dataLich[i][2], dataLich[i][3],
-      dataLich[i][4], dataLich[i][5], st, dataLich[i][11], ngayHoc]);
+      dataLich[i][4], dataLich[i][5], dataLich[i][8], dataLich[i][11], ngayHoc,
+      dataLich[i][7], dataLich[i][12]]);
     daCo[key] = 1;
     demMoi++;
   }
 
   if (demTong === 0) {
-    return ketQua('⚠️ Không có ca nào để backup (tất cả đang "Chờ Ms. Vân Anh").');
+    return ketQua('⚠️ Không có ca nào đủ điều kiện để backup (chỉ lưu: Đi được, Nghỉ, Đã học hoặc Vắng).');
   }
   if (demMoi === 0) {
-    return ketQua('✅ Không có dòng mới — toàn bộ ' + demTong + ' ca đã có trong "' + tenBackup + '" rồi.');
+    return ketQua('✅ Không có dòng mới — toàn bộ ' + demTong + ' ca đủ điều kiện đã có trong "' + tenBackup + '" rồi.');
   }
   return ketQua('✅ Đã backup thêm ' + demMoi + ' dòng vào "' + tenBackup + '"'
-    + ' (chạy lại sẽ không trùng).\n📝 Bao gồm: Đi được, Nghỉ, Vắng — chưa có phản hồi thì không backup.');
+    + ' (chạy lại sẽ không trùng).\n📝 Bao gồm: Đi được, Nghỉ, Đã học/Vắng; không lưu Chờ, Xin đổi hoặc để tuần sau.');
 }
 
 // Hàm công khai cho nút/trigger. Luôn trả kết quả rõ để Làm mới tuần biết có được phép xoá hay không.

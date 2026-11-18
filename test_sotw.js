@@ -861,6 +861,28 @@ console.log('\n=== T29: Backup — cùng bé/cùng ca ở hai ngày vẫn lưu �
   eq([sauLan1, sauLan2], [1, 2], 'Hai buổi khác ngày của cùng bé/cùng ca đều được backup');
 }
 
+console.log('\n=== T29B: Backup — chỉ lưu hồ sơ cuối + Link Canva/Ghi chú ===');
+{
+  STATE.ss = new MockSS();
+  const lich = STATE.ss.insertSheet('LICH_BU');
+  lich.appendRow(['Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'Trình độ', 'Link Canva', 'PH xác nhận', 'Tin nhắn PH', 'Tin nhắn GV', 'Đã dạy', 'Ghi chú', 'Ngày học']);
+  lich.appendRow(['T5-1', 'Thứ 5', '17h00-18h30', 'Mr. Ngọc', 'Bé Đi', 'L1', 'SP1', 'https://canva.example/di', '✅ Đi được', '', '', '', 'Ôn từ vựng Unit 3', '13/11/2026']);
+  lich.appendRow(['T5-1', 'Thứ 5', '17h00-18h30', 'Mr. Ngọc', 'Bé Nghỉ', 'L1', 'SP1', 'https://canva.example/nghi', '❌ Nghỉ', '', '', '', 'PH xin nghỉ', '13/11/2026']);
+  lich.appendRow(['T5-2', 'Thứ 5', '19h00-20h30', 'Mr. Ngọc', 'Bé Vắng', 'L1', 'SP1', 'https://canva.example/vang', 'Chờ Ms. Vân Anh', '', '', '❌ Vắng', 'Có mặt nhưng vắng', '13/11/2026']);
+  lich.appendRow(['T6-1', 'Thứ 6', '17h00-18h30', 'Mr. Ngọc', 'Bé Xin Đổi', 'L1', 'SP1', 'https://canva.example/doi', '🔄 Xin đổi', '', '', '', 'Chờ đổi lịch', '14/11/2026']);
+  lich.appendRow(['T6-2', 'Thứ 6', '19h00-20h30', 'Mr. Ngọc', 'Bé Tuần Sau', 'L1', 'SP1', 'https://canva.example/tuan-sau', 'Tuần sau (quá hạn)', '', '', '', 'Để tuần sau', '14/11/2026']);
+  lich.appendRow(['T6-3', 'Thứ 6', '19h00-20h30', 'Mr. Ngọc', 'Bé Chờ', 'L1', 'SP1', '', 'Chờ Ms. Vân Anh', '', '', '', '', '14/11/2026']);
+  sandbox.backupTuanBu(true);
+  const tenBk = 'Backup tháng ' + sandbox.Utilities.formatDate(new Date(), 'GMT+7', 'MM-yyyy');
+  const bk = sheet(tenBk);
+  eq(bk.rows[0].slice(0, 12), ['Ngày backup', 'Ca', 'Thứ', 'Giờ', 'GV dạy', 'Tên bé', 'Lớp', 'PH xác nhận', 'Đã dạy', 'Ngày học', 'Link Canva', 'Ghi chú'], 'Backup mới có đủ 12 cột, Link Canva/Ghi chú nằm ở cuối');
+  eq(bk.rows.slice(1).map(r => r[5]), ['Bé Đi', 'Bé Nghỉ', 'Bé Vắng'], 'Chỉ Đi được, Nghỉ và Đã học/Vắng được backup');
+  eq(bk.rows[1].slice(10, 12), ['https://canva.example/di', 'Ôn từ vựng Unit 3'], 'Backup giữ đúng Link Canva và Ghi chú của từng bé');
+  sandbox.backupTuanBu(true);
+  eq(bk.rows.length, 4, 'Chạy backup lại không tạo buổi trùng khi chỉ sửa/lặp dữ liệu');
+  eq(sandbox.tongHopBaoCaoBackup(bk.getDataRange().getValues()).nghi, 1, 'Thống kê vẫn đọc đúng cột cũ khi backup đã có 12 cột');
+}
+
 console.log('\n=== T30: Gửi tin GV có kiểm soát + dashboard ===');
 {
   STATE.ss = new MockSS(); STATE.fetches.length = 0; STATE.alerts.length = 0;
