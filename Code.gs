@@ -1527,6 +1527,7 @@ function sotwSoSanh(a, b) {
 }
 
 // Trả từng tin hoàn chỉnh, không cắt giữa một dòng học sinh hoặc link ảnh.
+// Trong cùng một phần: mỗi GV có một tiêu đề, đổi lớp chỉ thêm dòng lớp.
 function taoCacPhanSotw(d, gioiHan) {
   var max = gioiHan || 3500; // Chừa nhiều đệm dưới giới hạn Telegram 4096.
   var theoGv = {};
@@ -1537,17 +1538,29 @@ function taoCacPhanSotw(d, gioiHan) {
   });
   var gvList = Object.keys(theoGv).sort(sotwSoSanh);
   var bodies = [], body = '', soBe = 0, dau = 1, gvCu = '', lopCu = '';
-  function themPhan() { if (body) { bodies.push({ body: body, dau: dau, cuoi: soBe }); body = ''; dau = soBe + 1; gvCu = ''; lopCu = ''; } }
+  function themPhan() {
+    if (!body) return;
+    bodies.push({ body: body, dau: dau, cuoi: soBe });
+    body = ''; dau = soBe + 1; gvCu = ''; lopCu = '';
+  }
+  function tienTo(gv, lop) {
+    var lopText = sotwXoaHtml(lop || '(chưa rõ lớp)');
+    if (gvCu !== gv) return '\n' + sotwXoaHtml(gv) + '\nTên bé | Giới tính | Ảnh\n' + lopText + '\n';
+    if (lopCu !== lop) return lopText + '\n';
+    return '';
+  }
   gvList.forEach(function(gv) {
     Object.keys(theoGv[gv]).sort(sotwSoSanh).forEach(function(lop) {
-      theoGv[gv][lop].forEach(function(p) {
-        var tieuDe = gvCu === gv && lopCu === lop ? '' : '\n' + sotwXoaHtml(gv) + ' - ' + sotwXoaHtml(lop || '(chưa rõ lớp)') + '\nTên bé | Giới tính | Ảnh\n';
+      theoGv[gv][lop].sort(function(a, b) { return sotwSoSanh(a.ten, b.ten); }).forEach(function(p) {
         var anh = p.link ? '<a href="' + sotwXoaHtml(p.link) + '">🖼️ Mở ảnh</a>' : 'Chưa có ảnh';
         var dong = (soBe + 1) + '. ' + sotwXoaHtml(p.ten) + ' | ' + sotwXoaHtml(p.gt || 'Chưa rõ') + ' | ' + anh + '\n';
-        // 90 ký tự là phần tiêu đề Phần X/Y sẽ được thêm sau khi biết tổng số phần.
-        if (body && body.length + tieuDe.length + dong.length > max - 90) themPhan();
-        if (!body) tieuDe = '\n' + sotwXoaHtml(gv) + ' - ' + sotwXoaHtml(lop || '(chưa rõ lớp)') + '\nTên bé | Giới tính | Ảnh\n';
-        body += tieuDe + dong;
+        var prefix = tienTo(gv, lop);
+        // Không để cuối phần chỉ còn GV/lớp/header mà chưa có bé nào theo sau.
+        if (body && body.length + prefix.length + dong.length > max - 90) {
+          themPhan();
+          prefix = tienTo(gv, lop);
+        }
+        body += prefix + dong;
         gvCu = gv; lopCu = lop; soBe++;
       });
     });

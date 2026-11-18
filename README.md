@@ -93,7 +93,7 @@ Chỉ bé `✅ Đi được` mới được tạo/gửi tin GV. Telegram gửi t
 ### 8A. Gửi SOTW — bảng gọn, kiểm đủ phần
 
 1. Trong tab **DS HỌC SINH**, tick các bé SOTW như bình thường. Ô **GV đang chọn** chỉ để lọc cho dễ nhìn; tick bé đang thấy là hợp lệ, không có cảnh báo chọn nhầm GV.
-2. Bot gửi theo nhóm `Tên giáo viên - Tên lớp`, xếp giáo viên và lớp theo ABC. Mỗi bé chỉ hiện: **Tên bé | Giới tính | 🖼️ Mở ảnh**; bấm `🖼️ Mở ảnh` để mở Drive.
+2. Bot gom thành **một khối cho mỗi giáo viên**, xếp giáo viên và lớp theo ABC. Trong khối của giáo viên, lớp nào xuất hiện thì chèn tên lớp đó để phân biệt; tiêu đề **Tên bé | Giới tính | Ảnh** chỉ hiện một lần. Mỗi bé chỉ hiện tên, giới tính và `🖼️ Mở ảnh`; bấm ảnh để mở Drive.
 3. Danh sách dài sẽ tự thành `📩 Phần 1/Y`, `Phần 2/Y`… Người làm SOTW chỉ cần kiểm đủ từ **Phần 1/Y** đến **Phần Y/Y** là đủ danh sách.
 4. Bé chưa có link vẫn được gửi, cột ảnh hiện `Chưa có ảnh`. Cuối phần cuối có một dòng liệt kê tên các bé thiếu link ảnh để bổ sung.
 5. Nếu Telegram lỗi giữa chừng, hệ thống **không** đánh dấu “đã gửi”; popup ghi rõ đã gửi được bao nhiêu phần. Sau khi xử lý, bấm gửi lại SOTW để gửi trọn bộ.

@@ -217,14 +217,15 @@
 - [x] Test T47 + toàn bộ suite: `node test_sotw.js` = **258 PASS / 0 FAIL**; `git diff --check` sạch.
 - [ ] Còn cần đẩy GitHub, cập nhật vào Apps Script/Sheet thật và anh xem một tin Telegram thật trước khi đóng nghiệm thu.
 
-## Đợt 8 — SOTW: bảng gọn, tự chia tin Telegram 🔄
+## Đợt 8 — SOTW: gom gọn theo giáo viên, tự chia tin Telegram 🔄
 
-- [x] Cập nhật `plan.md` trước khi làm: nhóm `Tên GV - Tên lớp`, ABC theo GV/lớp, chỉ 3 cột Tên bé/Giới tính/Ảnh.
+- [x] Gom thành **một khối cho mỗi giáo viên**; trong khối, đổi lớp chỉ chèn dòng tên lớp để phân biệt.
+- [x] Tiêu đề `Tên bé | Giới tính | Ảnh` chỉ hiện một lần trong khối giáo viên; từng bé không lặp tên lớp.
 - [x] Link Drive hiện thành chữ bấm `🖼️ Mở ảnh`; bé thiếu link vẫn hiện và phần cuối liệt kê tên bé thiếu ảnh.
 - [x] Bỏ cảnh báo do ô `GV đang chọn`; ô này chỉ còn dùng lọc danh sách trong Sheet.
-- [x] Tin dài tự chia `Phần X/Y`, không cắt giữa tên/link/dòng bé; gửi lỗi giữa chừng không ghi mốc đã gửi.
-- [x] `node test_sotw.js`: **274 PASS / 0 FAIL**; kiểm cú pháp `Code.gs` và `git diff --check` sạch.
-- [ ] Đẩy GitHub, dán `Code.gs` vào Apps Script/Sheet thật, sau đó gửi thử danh sách dài để kiểm tra có đủ `Phần 1/Y` đến `Phần Y/Y`.
+- [x] Tin dài tự chia `Phần X/Y`; phần mới tự lặp lại ngữ cảnh giáo viên/lớp cần thiết, không cắt giữa dòng bé; gửi lỗi giữa chừng không ghi mốc đã gửi.
+- [x] TDD: test mới đã FAIL với format cũ, sau sửa `node test_sotw.js`: **285 PASS / 0 FAIL**.
+- [ ] Đẩy GitHub, chạy `CAP_NHAT_DAY_BU.cmd` trên Windows, sau đó gửi thử SOTW để kiểm format tin thật.
 
 ## Đợt 9 — Backup cuối tuần có tài liệu ✅ (chưa nghiệm thu trên Sheet thật)
 
