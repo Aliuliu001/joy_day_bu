@@ -234,3 +234,11 @@
 - [x] Test mới bảo vệ tất cả trạng thái, chống trùng và dữ liệu Canva/Ghi chú. Toàn bộ suite: **279 PASS / 0 FAIL**.
 - [ ] Chạy file cập nhật trên máy Windows, sau đó thử một dòng backup thật và kiểm 12 cột trên Sheet.
 - [ ] So trực tiếp trường hợp tuần cũ 12/13 nếu còn dòng/ảnh lịch gốc; không tự đoán bé thiếu khi không còn dữ liệu nguồn.
+
+## Đợt 10 — Chặn lỗi Exception khi đồng bộ Ca đặc biệt ✅ (chưa nghiệm thu trên Sheet thật)
+
+- [x] Tìm được đường có thể gây lỗi `Hàng bắt đầu của dải ô quá nhỏ`: một dòng BAO_BU bị trùng làm mã buổi trả về `-1`, nhưng code cũ lại dùng `-1` làm hàng để ghi lại sau khi gửi Telegram.
+- [x] Chặn trước khi ghi: không tìm thấy hoặc có nhiều dòng trùng thì dừng đồng bộ, báo rõ; không gọi Google Sheet với hàng âm.
+- [x] Viết test T40B mô phỏng dòng trùng; test xác nhận không còn Exception và không đồng bộ nhầm.
+- [x] Toàn bộ kiểm thử: **281 PASS / 0 FAIL**; kiểm cú pháp và `git diff --check` sạch.
+- [ ] Cập nhật bằng file Windows, sau đó thử thật 3 Ca đặc biệt trên Sheet trước khi kết luận đã hết lỗi.

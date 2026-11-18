@@ -1098,6 +1098,24 @@ console.log('\n=== T40: Chốt an toàn + đồng bộ ca cuối về BAO_BU ===
   eq(lich.getRange(2,14).getValue(), sandbox.layNgayThu(caDoi.thu), 'Đổi ca cập nhật ngày học');
 }
 
+console.log('\n=== T40B: Đồng bộ gửi GV không ghi vào dòng âm khi có dòng BAO_BU trùng ===');
+{
+  STATE.ss = new MockSS(); STATE.alerts.length = 0;
+  const bao = STATE.ss.insertSheet('BAO_BU'), lich = STATE.ss.insertSheet('LICH_BU');
+  bao.appendRow(['Ngày báo','GV báo','Lớp','Tên bé','Trình độ','Link Canva','Trạng thái','Ca xếp']);
+  bao.appendRow(['01/11/2026','Ms. Vân','L1','Bé Trùng','SP1','link','','']);
+  bao.appendRow(['01/11/2026','Ms. Vân','L1','Bé Trùng','SP1','link','','']);
+  lich.appendRow(['Ca','Thứ','Giờ','GV dạy','Tên bé','Lớp','Trình độ','Link Canva','PH xác nhận','Tin nhắn PH','Tin nhắn GV','Đã dạy','Ghi chú','Ngày học','Đã gửi GV lúc','Đã chốt lịch lúc','Ca xếp (chọn)','Mã buổi']);
+  lich.appendRow(['ĐB-01','Thứ 5','17h00 - 18h30','Mr. Ngọc','Bé Trùng','L1','SP1','link','✅ Đi được','','','','','','','','ĐB-01 | Thứ 5 | 17h00 - 18h30 | Mr. Ngọc','DB-TRUNG']);
+  const kyThuat = STATE.ss.insertSheet('DỮ LIỆU KỸ THUẬT');
+  kyThuat.appendRow(['Mã buổi','Khóa BAO_BU','GV nguồn Slide/Ghi chú']);
+  kyThuat.appendRow(['DB-TRUNG','01/11/2026|L1|Bé Trùng|link','Ms. Vân']);
+  let threw = false, loi = [];
+  try { loi = sandbox.dongBoCaCuoiVeBaoBu(STATE.ss, bao, lich, [2], '01/11 10:00'); } catch (e) { threw = true; }
+  ok(!threw, 'Dòng BAO_BU trùng không làm Google Sheet nhận hàng âm');
+  ok(loi.length === 1 && loi[0].includes('trùng'), 'Dòng BAO_BU trùng được báo rõ để sửa, không đồng bộ nhầm');
+}
+
 console.log('\n=== T41: Chặn chốt ca tắt/quá chỗ ===');
 {
   STATE.ss = new MockSS(); STATE.alerts.length = 0;

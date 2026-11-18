@@ -1756,7 +1756,7 @@ function dongBoCaCuoiVeBaoBu(ss, bao, lich, rows, luc) {
   var loi=[];
   (rows||[]).forEach(function(r){
     var maBuoi=String(lich.getRange(r,18).getValue()||'').trim(), dong=dongBaoTheoMa(ss,bao,maBuoi);
-    if(!dong){loi.push('Không tìm thấy dòng BAO_BU của mã buổi '+(maBuoi||'(thiếu mã)'));return;}
+    if(dong <= 0){loi.push((dong < 0 ? 'Có nhiều dòng BAO_BU trùng' : 'Không tìm thấy dòng BAO_BU')+' của mã buổi '+(maBuoi||'(thiếu mã)'));return;}
     var nhan=String(lich.getRange(r,17).getValue()||'').trim();
     bao.getRange(dong,8).setValue(nhan);
     bao.getRange(dong,7).setValue('Đã báo GV');
